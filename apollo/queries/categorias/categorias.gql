@@ -1,0 +1,26 @@
+query Categorias {
+  categoria {
+    data {
+      id
+      attributes {
+        nombre
+        descripcion
+        grupos_de_productos {
+          data {
+            id
+            attributes {
+              nombre
+            }
+          }
+        }
+        imagen {
+          data {
+            attributes {
+              url
+            }
+          }
+        }
+      }
+    }
+  }
+}

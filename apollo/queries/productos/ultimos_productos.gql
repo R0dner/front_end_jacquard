@@ -1,0 +1,55 @@
+query UltimosProductos {
+  productos(sort:"fecha_disponible:desc") {
+    data {
+      id
+      attributes {
+        codigo
+        nombre
+        descripcion
+        imagen_principal {
+          data {
+            attributes {
+              url
+            }
+          }
+        }
+        multimedia {
+          data {
+            id
+            attributes {
+              url
+            }
+          }
+        }
+        valoracion
+        precio_venta
+        precio_oferta
+        en_oferta
+        stock_disponible
+        color {
+          data {
+            attributes {
+              nombre
+              color_rgb
+            }
+          }
+        }
+        talla {
+          data {
+            attributes {
+              sigla
+            }
+          }
+        }
+        grupo_de_productos {
+          data {
+            attributes {
+              codigo
+              nombre
+            }
+          }
+        }
+      }
+    }
+  }
+}
