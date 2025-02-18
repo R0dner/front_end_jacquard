@@ -102,38 +102,9 @@ export default {
         toggle() {
             mutations.toggleNav()
         },
-        toggleDropdown(event) {
-            const parent = event.target.closest('.dropdown');
-            parent.classList.toggle('show');
+        
             
-            // Mostrar/ocultar el dropdown
-            const dropdownMenu = parent.querySelector('.dropdown-menu');
-            if (parent.classList.contains('show')) {
-                // Set display to block immediately to fix positioning issues
-                dropdownMenu.style.display = 'block';
-                dropdownMenu.style.opacity = '1';
-                dropdownMenu.style.transform = 'translateY(0) scale(1)';
-            } else {
-                dropdownMenu.style.opacity = '0';
-                dropdownMenu.style.transform = 'translateY(10px) scale(0.95)';
-                setTimeout(() => {
-                    dropdownMenu.style.display = 'none';
-                }, 300);
-            }
-            
-            // Close other dropdowns
-            document.querySelectorAll('.dropdown.show').forEach(dropdown => {
-                if (dropdown !== parent) {
-                    dropdown.classList.remove('show');
-                    const otherMenu = dropdown.querySelector('.dropdown-menu');
-                    otherMenu.style.opacity = '0';
-                    otherMenu.style.transform = 'translateY(10px) scale(0.95)';
-                    setTimeout(() => {
-                        otherMenu.style.display = 'none';
-                    }, 300);
-                }
-            });
         }
     }
-}
+
 </script>
