@@ -7,8 +7,6 @@
 						.logo
 							nuxt-link(to='/')
 								img(src='../assets/img/logo.png' alt='logo')
-						p
-							| Acerca de...
 				.col-lg-3.col-md-6.col-sm-6
 					.single-footer-widget
 				.col-lg-3.col-md-6.col-sm-6

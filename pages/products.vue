@@ -15,7 +15,7 @@
         <section class="products-collections-area ptb-60">
             <div class="container">
                 <div class="section-title">
-                    <h2><span class="dot"></span> Products</h2>
+                    <h2><span class="dot"></span> Productos</h2>
                 </div>
 
                 <div class="row">

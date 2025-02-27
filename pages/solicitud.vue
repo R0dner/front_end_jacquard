@@ -15,14 +15,14 @@
                 .row
                     .col-lg-1.col-md-12
                     .col-lg-5.col-md-12
-                        h3 Acerca del Cliente
+                        h3 Datos del Cliente
                         .contact-form
                             form#contactForm
                                 .row
                                     .col-lg-12.col-md-12
                                         .form-group
                                             label Cliente
-                                            input#name.form-control(type='text' name='name' placeholder='Seleccione cliente')
+                                            input#name.form-control(type='text' name='name' placeholder='Ingrese su nombre completo')
                                     .col-lg-6.col-md-12
                                         .form-group
                                             label Fecha de Solicitud
@@ -42,9 +42,9 @@
                                     .col-lg-12.col-md-12
                                         .form-group
                                             label Observaciones
-                                            textarea#message.form-control(name='message' cols='30' rows='8' placeholder='Enter your Message')
+                                            textarea#message.form-control(name='message' cols='30' rows='8' placeholder='Describa sus observaciones')
                                     .col-lg-12.col-md-12
-                                        button.btn.btn-primary(type='submit') Send Message
+                                        button.btn.btn-primary(type='submit') enviar solicitud
                     .col-lg-5.col-md-12
                         h3 Productos
                         .contact-form
@@ -53,27 +53,27 @@
                                     .col-lg-12.col-md-12
                                         .form-group
                                             label
-                                                | Name 
+                                                | Producto requerido 
                                                 span (required)*
-                                            input#name.form-control(type='text' name='name' placeholder='Enter your name')
+                                            input#name.form-control(type='text' name='name' placeholder='Seleccione su producto')
                                     .col-lg-12.col-md-12
                                         .form-group
                                             label
-                                                | Email 
+                                                | Talla solicitada 
                                                 span (required)*
-                                            input#email.form-control(type='email' name='email' placeholder='Enter your Email Address')
+                                            input#email.form-control(type='email' name='email' placeholder='Seleccione la talla deseada')
                                     .col-lg-12.col-md-12
                                         .form-group
                                             label
-                                                | Phone Number 
+                                                | Numero de prendas 
                                                 span (required)*
                                             input#phone_number.form-control(type='text' name='phone_number' placeholder='Enter your Phone Number')
                                     .col-lg-12.col-md-12
                                         .form-group
                                             label
-                                                | Your Message 
+                                                | Observaciones 
                                                 span (required)*
                                             textarea#message.form-control(name='message' cols='30' rows='8' placeholder='Enter your Message')
                                     .col-lg-12.col-md-12
-                                        button.btn.btn-primary(type='submit') Send Message
+                                        button.btn.btn-primary(type='submit') enviar solicitud
 </template>

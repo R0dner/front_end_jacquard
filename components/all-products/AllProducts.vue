@@ -3,11 +3,11 @@
         <div class="products-filter-options">
             <div class="row align-items-center">
                 <div class="col d-flex">
-                    <p>Showing 22 of 102 results</p>
+                    <p>Mostrando 22 de 102 resultados</p>
                 </div>
 
                 <div class="col d-flex">
-                    <span>Show:</span>
+                    <span>Mostrando:</span>
 
                     <div class="show-products-number">
                         <select>

@@ -3,7 +3,7 @@
         <div class="woocommerce-sidebar-area">
             <div class="collapse-widget filter-list-widget">
                 <h3 v-b-toggle.collapse-1 class="collapse-widget-title">
-                    Current Selection
+                    Seleccionados actualmente
                     <i class="fas fa-angle-up"></i>
                 </h3>
 
@@ -17,32 +17,30 @@
                     </ul>
 
                     <div class="delete-selected-filters">
-                        <a href="#"><i class="far fa-trash-alt"></i> <span>Clear All</span></a>
+                        <a href="#"><i class="far fa-trash-alt"></i> <span>Borrar seleciones</span></a>
                     </div>
                 </b-collapse>
             </div>
 
             <div class="collapse-widget collections-list-widget">
                 <h3 v-b-toggle.collapse-2 class="collapse-widget-title">
-                    Collections
+                    Nuestra coleccion
 
                     <i class="fas fa-angle-up"></i>
                 </h3>
                 <b-collapse visible id="collapse-2">
                     <ul class="collections-list-row">
-                        <li class="active"><a href="#">Women’s</a></li>
-                        <li><a href="#">Men</a></li>
-                        <li><a href="#">Clothing</a></li>
-                        <li><a href="#">Shoes</a></li>
-                        <li><a href="#">Accessories</a></li>
-                        <li><a href="#">Uncategorized</a></li>
+                        <li class="active"><a href="#">Mujeres</a></li>
+                        <li><a href="#">Hombres</a></li>
+                        <li><a href="#">Niños</a></li>
+                        <li><a href="#">Ofertas</a></li>
                     </ul>
                 </b-collapse>
             </div>
 
             <div class="collapse-widget brands-list-widget">
                 <h3 v-b-toggle.collapse-3 class="collapse-widget-title">
-                    Brands
+                    Marcas que manejamos
 
                     <i class="fas fa-angle-up"></i>
                 </h3>
@@ -61,7 +59,7 @@
 
             <div class="collapse-widget size-list-widget">
                 <h3 v-b-toggle.collapse-4 class="collapse-widget-title">
-                    Size
+                    Tallas
 
                     <i class="fas fa-angle-up"></i>
                 </h3>
@@ -129,26 +127,25 @@
 
             <div class="collapse-widget tag-list-widget">
                 <h3 v-b-toggle.collapse-7 class="collapse-widget-title">
-                    Popular Tags
+                    Mas buscados
 
                     <i class="fas fa-angle-up"></i>
                 </h3>
                 <b-collapse visible id="collapse-7">
                     <ul class="tags-list-row">
                         <li><a href="#">Vintage</a></li>
-                        <li><a href="#">Black</a></li>
-                        <li class="active"><a href="#">Discount</a></li>
-                        <li><a href="#">Good</a></li>
-                        <li><a href="#">Jeans</a></li>
-                        <li><a href="#">Summer</a></li>
-                        <li><a href="#">Winter</a></li>
+                        <li class="active"><a href="#">Ofertas</a></li>
+                        <li><a href="#">Ropa Verano</a></li>
+                        <li><a href="#">Camisas</a></li>
+                        <li><a href="#">Chompas</a></li>
+                        <li><a href="#">Ropa de Invierno</a></li>
                     </ul>
                 </b-collapse>
             </div>
 
             <div class="collapse-widget aside-products-widget">
                 <h3 class="aside-widget-title">
-                    Popular Products
+                    Productos populares
                 </h3>
 
                 <div class="aside-single-products">
@@ -159,7 +156,7 @@
                     </div>
 
                     <div class="products-content">
-                        <span><a href="#">Men's</a></span>
+                        <span><a href="#">Hombres</a></span>
                         <h3><a href="#">Belted chino trousers polo</a></h3>
 
                         <div class="product-price">
