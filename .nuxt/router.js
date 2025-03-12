@@ -4,19 +4,19 @@ import { normalizeURL, decode } from 'ufo'
 import { interopDefault } from './utils'
 import scrollBehavior from './router.scrollBehavior.js'
 
-const _0906ab41 = () => interopDefault(import('..\\pages\\admin.vue' /* webpackChunkName: "pages/admin" */))
-const _85bfd7d6 = () => interopDefault(import('..\\pages\\blog-details.vue' /* webpackChunkName: "pages/blog-details" */))
-const _64c5188e = () => interopDefault(import('..\\pages\\blog-one.vue' /* webpackChunkName: "pages/blog-one" */))
-const _3a61659e = () => interopDefault(import('..\\pages\\cart.vue' /* webpackChunkName: "pages/cart" */))
-const _49cb5c78 = () => interopDefault(import('..\\pages\\checkout.vue' /* webpackChunkName: "pages/checkout" */))
-const _406f2d12 = () => interopDefault(import('..\\pages\\contact.vue' /* webpackChunkName: "pages/contact" */))
-const _fc136046 = () => interopDefault(import('..\\pages\\gallery-one.vue' /* webpackChunkName: "pages/gallery-one" */))
-const _bd820b4a = () => interopDefault(import('..\\pages\\login.vue' /* webpackChunkName: "pages/login" */))
-const _7d20d23c = () => interopDefault(import('..\\pages\\products.vue' /* webpackChunkName: "pages/products" */))
-const _5a0b83d4 = () => interopDefault(import('..\\pages\\signup.vue' /* webpackChunkName: "pages/signup" */))
-const _3071b716 = () => interopDefault(import('..\\pages\\solicitud.vue' /* webpackChunkName: "pages/solicitud" */))
-const _22f11df3 = () => interopDefault(import('..\\pages\\products-details\\_id.vue' /* webpackChunkName: "pages/products-details/_id" */))
-const _50d15178 = () => interopDefault(import('..\\pages\\index.vue' /* webpackChunkName: "pages/index" */))
+const _4d600f50 = () => interopDefault(import('..\\pages\\admin.vue' /* webpackChunkName: "pages/admin" */))
+const _c3405db4 = () => interopDefault(import('..\\pages\\blog-details.vue' /* webpackChunkName: "pages/blog-details" */))
+const _a7bf3d6c = () => interopDefault(import('..\\pages\\blog-one.vue' /* webpackChunkName: "pages/blog-one" */))
+const _3453c3af = () => interopDefault(import('..\\pages\\cart.vue' /* webpackChunkName: "pages/cart" */))
+const _8cc58156 = () => interopDefault(import('..\\pages\\checkout.vue' /* webpackChunkName: "pages/checkout" */))
+const _58006d3e = () => interopDefault(import('..\\pages\\contact.vue' /* webpackChunkName: "pages/contact" */))
+const _68322cac = () => interopDefault(import('..\\pages\\gallery-one.vue' /* webpackChunkName: "pages/gallery-one" */))
+const _34cf432c = () => interopDefault(import('..\\pages\\login.vue' /* webpackChunkName: "pages/login" */))
+const _c01af71a = () => interopDefault(import('..\\pages\\products.vue' /* webpackChunkName: "pages/products" */))
+const _19cd5be7 = () => interopDefault(import('..\\pages\\signup.vue' /* webpackChunkName: "pages/signup" */))
+const _224c7ba5 = () => interopDefault(import('..\\pages\\solicitud.vue' /* webpackChunkName: "pages/solicitud" */))
+const _ac12f7fc = () => interopDefault(import('..\\pages\\products-details\\_id.vue' /* webpackChunkName: "pages/products-details/_id" */))
+const _1bf0bb53 = () => interopDefault(import('..\\pages\\index.vue' /* webpackChunkName: "pages/index" */))
 
 const emptyFn = () => {}
 
@@ -31,55 +31,55 @@ export const routerOptions = {
 
   routes: [{
     path: "/admin",
-    component: _0906ab41,
+    component: _4d600f50,
     name: "admin"
   }, {
     path: "/blog-details",
-    component: _85bfd7d6,
+    component: _c3405db4,
     name: "blog-details"
   }, {
     path: "/blog-one",
-    component: _64c5188e,
+    component: _a7bf3d6c,
     name: "blog-one"
   }, {
     path: "/cart",
-    component: _3a61659e,
+    component: _3453c3af,
     name: "cart"
   }, {
     path: "/checkout",
-    component: _49cb5c78,
+    component: _8cc58156,
     name: "checkout"
   }, {
     path: "/contact",
-    component: _406f2d12,
+    component: _58006d3e,
     name: "contact"
   }, {
     path: "/gallery-one",
-    component: _fc136046,
+    component: _68322cac,
     name: "gallery-one"
   }, {
     path: "/login",
-    component: _bd820b4a,
+    component: _34cf432c,
     name: "login"
   }, {
     path: "/products",
-    component: _7d20d23c,
+    component: _c01af71a,
     name: "products"
   }, {
     path: "/signup",
-    component: _5a0b83d4,
+    component: _19cd5be7,
     name: "signup"
   }, {
     path: "/solicitud",
-    component: _3071b716,
+    component: _224c7ba5,
     name: "solicitud"
   }, {
     path: "/products-details/:id?",
-    component: _22f11df3,
+    component: _ac12f7fc,
     name: "products-details-id"
   }, {
     path: "/",
-    component: _50d15178,
+    component: _1bf0bb53,
     name: "index"
   }],
 
