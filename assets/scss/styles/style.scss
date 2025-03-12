@@ -2979,7 +2979,8 @@ Products QuickView Modal Area CSS
                         }
                         &.active {
                             a {
-                                border-color: $black-color;
+                                border-color: $black-color; // Cambia el color del borde del botón activo
+                                
                             }
                         }
                     }
