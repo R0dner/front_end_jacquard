@@ -998,6 +998,202 @@ Navbar Area CSS
         animation: none !important;
     }
 }
+/*================================================
+User Dropdown Area CSS (Estilos combinados)
+=================================================*/
+
+/* Estilos para el contenedor de opciones (login y carrito) */
+.others-option {
+    display: flex;
+    align-items: center;
+    gap: 16px; /* Espacio entre los elementos */
+
+    /* Mover el login a la izquierda */
+    .auth-link {
+        order: 1; /* Coloca el login primero */
+        margin-right: 15px; /* Espacio entre el login y el carrito */
+    }
+
+    /* Mover el carrito a la derecha */
+    .cart-link {
+        order: 2; /* Coloca el carrito después del login */
+    }
+
+    /* Ajustar el tamaño del texto del usuario */
+    .user-text {
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        margin-left: 15px; /* Espacio entre el icono y el texto */
+    }
+
+    .username {
+        font-size: 10px; /* Tamaño del texto del usuario */
+        font-weight: 500;
+        color: rgba(240, 240, 240, 0.9); /* $light-text */
+        margin-right: 5px;
+    }
+
+    /* Ajustar el icono de la flecha */
+    .auth-link .fa-chevron-down {
+        font-size: 10px;
+        margin-left: 4px;
+        position: relative;
+        top: -1px;
+        transition: all 0.3s ease;
+    }
+
+    .fa-chevron-down.rotate-icon {
+        transform: rotate(-180deg);
+    }
+
+    /* Estilos para los iconos */
+    .option-item a {
+        color: rgba(240, 240, 240, 0.9); /* $light-text */
+        font-size: 18px; /* Tamaño del icono */
+        position: relative;
+        transition: all 0.3s ease;
+        padding: 8px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1); /* $white-color */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px; /* Tamaño del círculo */
+        height: 36px;
+
+        &:hover {
+            color: #f73859; /* $accent-color */
+            background: rgba(255, 255, 255, 0.15); /* $white-color */
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        &.auth-link, &.cart-link {
+            transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+
+            &:hover {
+                animation: pulse 1s infinite;
+            }
+        }
+    }
+}
+
+/* Estilos para el menú desplegable - Corregido */
+.dropdown-menu {
+    background: rgba($darker-bg, 0.98); /* Fondo oscuro con transparencia */
+    backdrop-filter: blur(10px); /* Efecto de desenfoque */
+    border: 1px solid rgba($white-color, 0.1); /* Borde sutil */
+    border-radius: 12px; /* Bordes redondeados */
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3); /* Sombra suave */
+    padding: 10px 0; /* Espaciado interno */
+    min-width: 200px; /* Ancho mínimo */
+    position: absolute;
+    top: 100%;
+    right: 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px) scale(0.95);
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    pointer-events: none;
+
+    &.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+    }
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        right: 16px;
+        width: 12px;
+        height: 12px;
+        background: rgba($darker-bg, 0.98);
+        backdrop-filter: blur(10px);
+        border-left: 1px solid rgba($white-color, 0.1);
+        border-top: 1px solid rgba($white-color, 0.1);
+        transform: rotate(45deg);
+    }
+    
+    /* Estilo general para todos los elementos del menú */
+    li.nav-item {
+        margin: 0;
+        width: 100%; /* Asegura que ocupe todo el ancho */
+        
+        a.nav-link {
+            display: block; /* Cambio importante: hace que el enlace actúe como bloque */
+            width: 100%; /* Ocupa todo el ancho */
+            background: transparent; /* Sin fondo */
+            padding: 10px 20px; /* Espaciado interno */
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba($light-text, 0.9); /* Color de texto */
+            text-transform: capitalize;
+            transition: all 0.3s ease;
+            border-radius: 0; /* Sin bordes redondeados */
+            text-align: left; /* Alinea el texto a la izquierda */
+            
+            &:hover {
+                background: rgba($accent-color, 0.1); /* Fondo al hover */
+                color: $accent-color; /* Color de texto al hover */
+                padding-left: 25px; /* Efecto de desplazamiento */
+            }
+            
+            i {
+                margin-right: 8px; /* Espacio entre el icono y el texto */
+                font-size: 14px;
+            }
+        }
+    }
+
+    /* Estilo específico para "Cerrar sesión" */
+    li.nav-item.logout-item {
+        width: 100%;
+        
+        a.nav-link {
+            color: $accent-color; /* Color rojo para "Cerrar sesión" */
+            background: transparent; /* Fondo transparente, no gris */
+            width: 100%; /* Ocupa todo el ancho disponible */
+            height: auto; /* Altura automática */
+            border-radius: 0; /* Sin bordes redondeados */
+            padding: 10px 20px; /* Padding normal como otros ítems */
+            margin: 0; /* Sin márgenes adicionales */
+            display: flex; /* Usa flexbox para alinear contenido */
+            align-items: center; /* Centra verticalmente */
+            box-shadow: none; /* Sin sombra */
+            
+            &:hover {
+                background: rgba($accent-color, 0.1); /* Fondo al hover */
+                box-shadow: none; /* Sin sombra en hover */
+                transform: none; /* Sin transformación en hover */
+            }
+        }
+    }
+}
+
+/* Asegúrate de que los ítems de opción solo afectan a los íconos principales */
+.others-option {
+    .option-item {
+        a.auth-link, a.cart-link {
+            /* Estos estilos solo deberían aplicar a los íconos principales, no a los ítems del dropdown */
+            color: rgba(240, 240, 240, 0.9);
+            font-size: 18px;
+            position: relative;
+            transition: all 0.3s ease;
+            padding: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+        }
+    }
+}
 
 /*================================================
 Modal CSS
@@ -7864,19 +8060,17 @@ Login Area CSS
         }
     }
 }
-.new-customer-content {
-    padding-left: 15px;
-
-    span {
-        display: block;
-        font: {
-            size: 17px;
-            weight: 600;
+.user-area {
+    .user-content {
+        text-align: center;
+        h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
         }
-        margin-bottom: 8px;
-    }
-    p {
-        margin-bottom: 20px;
+        p {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
     }
 }
 
@@ -8052,7 +8246,7 @@ Pagination CSS
    Footer Area CSS - Dark Version
    ================================================*/
    .footer-area {
-    background: linear-gradient(to bottom, #1a1c23, #111215);
+    background: $darker-bg;
     padding: 80px 0 0;
     position: relative;
     z-index: 1;
@@ -8064,7 +8258,7 @@ Pagination CSS
         left: 0;
         width: 100%;
         height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255,107,107,0.3), transparent);
+        background: linear-gradient(90deg, transparent, rgba($accent-color, 0.3), transparent);
     }
 
     // Efecto de luz sutil en el fondo
@@ -8075,7 +8269,7 @@ Pagination CSS
         left: 0;
         width: 100%;
         height: 100%;
-        background: radial-gradient(circle at 50% 0%, rgba(253, 252, 252, 0.05), transparent 50%);
+        background: radial-gradient(circle at 50% 0%, rgba($white-color, 0.05), transparent 50%);
         z-index: -1;
     }
 }
@@ -8088,16 +8282,18 @@ Pagination CSS
         
         a {
             display: inline-block;
-            transition: all 0.3s ease;
+            transition: $transition;
             
             &:hover {
                 transform: translateY(-3px);
-                filter: drop-shadow(0 0 10px rgb(221, 219, 219));
             }
         }
 
         img {
-            max-width: 380px;
+            max-width: 200px;
+            filter: brightness(0) invert(1);
+            opacity: 1;
+            transform: none;
         }
     }
 
@@ -8108,20 +8304,20 @@ Pagination CSS
         position: relative;
         margin-bottom: 25px;
         padding-bottom: 10px;
-        color: #fff;
+        color: $light-text;
         letter-spacing: 1px;
-        text-shadow: 0 0 15px rgba(255,107,107,0.3);
+        text-shadow: 0 0 15px rgba($accent-color, 0.3);
         
         &::before {
             content: '';
             position: absolute;
             bottom: 0;
             left: 0;
-            background: linear-gradient(90deg, #ff6b6b, #ffa36b);
+            background: linear-gradient(90deg, $accent-color, lighten($accent-color, 10%));
             width: 60px;
             height: 2px;
             transition: width 0.3s ease;
-            box-shadow: 0 0 10px rgba(255,107,107,0.5);
+            box-shadow: 0 0 10px rgba($accent-color, 0.5);
         }
         
         &:hover::before {
@@ -8132,7 +8328,7 @@ Pagination CSS
     p {
         font-size: 14px;
         line-height: 1.8;
-        color: #9ca0af;
+        color: $secondary-color;
     }
 
     .quick-links,
@@ -8146,11 +8342,11 @@ Pagination CSS
             font-size: 14px;
 
             a {
-                color: #9ca0af;
+                color: $secondary-color;
                 display: inline-block;
                 position: relative;
                 padding-left: 0;
-                transition: all 0.3s ease;
+                transition: $transition;
                 font-weight: 500;
 
                 &::before {
@@ -8158,16 +8354,16 @@ Pagination CSS
                     position: absolute;
                     left: -15px;
                     opacity: 0;
-                    transition: all 0.3s ease;
-                    color: #ff6b6b;
-                    text-shadow: 0 0 8px rgba(255,107,107,0.5);
+                    transition: $transition;
+                    color: $accent-color;
+                    text-shadow: 0 0 8px rgba($accent-color, 0.5);
                 }
 
                 &:hover, &:focus {
-                    color: #ff6b6b;
+                    color: $accent-color;
                     padding-left: 20px;
                     text-decoration: none;
-                    text-shadow: 0 0 8px rgba(255,107,107,0.3);
+                    text-shadow: 0 0 8px rgba($accent-color, 0.3);
                     
                     &::before {
                         opacity: 1;
@@ -8184,7 +8380,7 @@ Pagination CSS
         list-style-type: none;
 
         li {
-            color: #9ca0af;
+            color: $secondary-color;
             margin-bottom: 15px;
             font-size: 14px;
             position: relative;
@@ -8193,30 +8389,30 @@ Pagination CSS
             align-items: flex-start;
 
             i {
-                color: #ff6b6b;
+                color: $accent-color;
                 position: absolute;
                 left: 0;
                 top: 4px;
                 font-size: 16px;
-                transition: all 0.3s ease;
-                text-shadow: 0 0 8px rgba(255,107,107,0.3);
+                transition: $transition;
+                text-shadow: 0 0 8px rgba($accent-color, 0.3);
             }
 
             &:hover i {
                 transform: scale(1.1);
-                text-shadow: 0 0 12px rgba(255,107,107,0.5);
+                text-shadow: 0 0 12px rgba($accent-color, 0.5);
             }
 
             a {
-                color: #9ca0af;
-                transition: all 0.3s ease;
+                color: $secondary-color;
+                transition: $transition;
                 font-weight: 500;
 
                 &:hover, &:focus {
-                    color: #ff6b6b;
+                    color: $accent-color;
                     text-decoration: none;
                     padding-left: 5px;
-                    text-shadow: 0 0 8px rgba(255,107,107,0.3);
+                    text-shadow: 0 0 8px rgba($accent-color, 0.3);
                 }
             }
         }
@@ -8231,11 +8427,11 @@ Pagination CSS
             height: 35px;
             line-height: 35px;
             text-align: center;
-            background: linear-gradient(135deg, #ff6b6b, #ffa36b);
-            color: #fff;
+            background: linear-gradient(135deg, $accent-color, lighten($accent-color, 10%));
+            color: $light-text;
             border-radius: 50%;
             margin-right: 10px;
-            transition: all 0.3s ease;
+            transition: $transition;
             position: relative;
             overflow: hidden;
             
@@ -8246,14 +8442,14 @@ Pagination CSS
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: linear-gradient(135deg, #ffa36b, #ff6b6b);
+                background: linear-gradient(135deg, lighten($accent-color, 10%), $accent-color);
                 opacity: 0;
                 transition: opacity 0.3s ease;
             }
             
             &:hover {
                 transform: translateY(-3px);
-                box-shadow: 0 0 15px rgba(255,107,107,0.5);
+                box-shadow: 0 0 15px rgba($accent-color, 0.5);
                 
                 &::before {
                     opacity: 1;
@@ -8270,9 +8466,9 @@ Pagination CSS
 
 .copyright-area {
     margin-top: 60px;
-    background: rgba(26,28,35,0.95);
+    background: rgba($dark-bg, 0.95);
     padding: 20px 0;
-    border-top: 1px solid rgba(255,107,107,0.1);
+    border-top: 1px solid rgba($accent-color, 0.1);
     position: relative;
     
     &::before {
@@ -8282,12 +8478,12 @@ Pagination CSS
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,107,107,0.03), transparent);
+        background: linear-gradient(90deg, transparent, rgba($accent-color, 0.03), transparent);
     }
 
     p {
         margin: 0;
-        color: #9ca0af;
+        color: $secondary-color;
         font-size: 14px;
         font-weight: 500;
     }
@@ -8307,7 +8503,7 @@ Pagination CSS
                 height: 25px;
                 width: auto;
                 filter: brightness(0.8);
-                transition: all 0.3s ease;
+                transition: $transition;
             }
 
             &:hover {
@@ -8321,55 +8517,19 @@ Pagination CSS
     }
 }
 
-// Animaciones mejoradas
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes glowPulse {
-    0% {
-        filter: drop-shadow(0 0 5px rgba(255,107,107,0.3));
-    }
-    50% {
-        filter: drop-shadow(0 0 10px rgba(255,107,107,0.5));
-    }
-    100% {
-        filter: drop-shadow(0 0 5px rgba(255,107,107,0.3));
-    }
-}
-
-.single-footer-widget {
-    animation: fadeInUp 0.5s ease forwards;
-    opacity: 0;
-    
-    @for $i from 1 through 4 {
-        &:nth-child(#{$i}) {
-            animation-delay: $i * 0.1s;
-        }
-    }
-    
-    h3 {
-        animation: glowPulse 3s infinite;
-    }
-}
-
 // Media queries
-@media (max-width: 992px) {
-    .single-footer-widget {
-        margin-bottom: 30px;
-    }
-}
-
-@media (max-width: 768px) {
+@media (max-width: $mobile-breakpoint) {
     .footer-area {
         padding-top: 50px;
+    }
+    
+    .footer-logo {
+        text-align: center;
+        display: block;
+        
+        img {
+            max-width: 160px;
+        }
     }
 
     .copyright-area {

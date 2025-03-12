@@ -4,8 +4,8 @@
         <div class="page-title-area">
             <div class="container">
                 <ul>
-                    <li><nuxt-link to="/">Home</nuxt-link></li>
-                    <li>Cart</li>
+                    <li><nuxt-link to="/">Inicio</nuxt-link></li>
+                    <li>Carrito de compras</li>
                 </ul>
             </div>
         </div>
@@ -18,7 +18,7 @@
                     <div class="col-lg-12 col-md-12">
                         <div class="user-actions">
                             <i class="fas fa-sign-in-alt"></i>
-                            <span>Returning customer? <nuxt-link to="/login">Click here to login</nuxt-link></span>
+                            <span>Seguir comprando <nuxt-link to="/products">Click aqui</nuxt-link></span>
                         </div>
                     </div>
                 </div>
@@ -27,40 +27,26 @@
                     <div class="row">
                         <div class="col-lg-6 col-md-12">
                             <div class="billing-details">
-                                <h3 class="title">Billing Details</h3>
+                                <h3 class="title">Datos de Usuario</h3>
 
                                 <div class="row">
                                     <div class="col-lg-12 col-md-6">
                                         <div class="form-group">
-                                            <label>Full Name <span class="required">*</span></label>
+                                            <label>Nombre de Usuario <span class="required">*</span></label>
                                             <input type="text" id="fullName" v-model="personDetails.fullName" class="form-control">
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-12 col-md-6">
-                                        <div class="form-group">
-                                            <label>Address <span class="required">*</span></label>
-                                            <input type="text" id="address" v-model="personDetails.address" class="form-control">
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-12 col-md-6">
-                                        <div class="form-group">
-                                            <label>Town / City <span class="required">*</span></label>
-                                            <input type="text" id="city" v-model="personDetails.city" class="form-control">
                                         </div>
                                     </div>
 
                                     <div class="col-lg-6 col-md-6">
                                         <div class="form-group">
-                                            <label>Email Address <span class="required">*</span></label>
+                                            <label>Email del Usuario <span class="required">*</span></label>
                                             <input type="email" id="email" v-model="personDetails.email" class="form-control">
                                         </div>
                                     </div>
 
                                     <div class="col-lg-6 col-md-6">
                                         <div class="form-group">
-                                            <label>Phone <span class="required">*</span></label>
+                                            <label>Telefono <span class="required">*</span></label>
                                             <input type="text" id="phone" v-model="personDetails.phone" class="form-control">
                                         </div>
                                     </div>
@@ -70,13 +56,13 @@
 
                         <div class="col-lg-6 col-md-12">
                             <div class="order-details">
-                                <h3 class="title">Your Order</h3>
+                                <h3 class="title">Tu Pedido Actual</h3>
 
                                 <div class="order-table table-responsive">
                                     <table class="table table-bordered">
                                         <thead>
                                             <tr>
-                                                <th scope="col">Product Name</th>
+                                                <th scope="col">Nombre de Producto</th>
                                                 <th scope="col">Total</th>
                                             </tr>
                                         </thead>
@@ -95,7 +81,7 @@
                                             
                                             <tr>
                                                 <td class="order-subtotal">
-                                                    <span>Cart Subtotal</span>
+                                                    <span>Subtotal de Pedido</span>
                                                 </td>
 
                                                 <td class="order-subtotal-price">
@@ -104,16 +90,16 @@
                                             </tr>
                                             <tr>
                                                 <td class="order-shipping">
-                                                    <span>Shipping</span>
+                                                    <span>Envio</span>
                                                 </td>
 
                                                 <td class="shipping-price">
-                                                    <span>$10.00</span>
+                                                    <span>$0</span>
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td class="total-price">
-                                                    <span>Order Total</span>
+                                                    <span>Total a Pagar</span>
                                                 </td>
 
                                                 <td class="product-subtotal">
@@ -127,21 +113,21 @@
                                 <div class="payment-method">
                                     <p>
                                         <input type="radio" id="direct-bank-transfer" name="radio-group" checked>
-                                        <label for="direct-bank-transfer">Direct Bank Transfer</label>
+                                        <label for="direct-bank-transfer">Transferencia bancaria</label>
 
-                                        Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order will not be shipped until the funds have cleared in our account.
+                                        Realice su pago directamente en nuestra cuenta bancaria.
+                                    </p>
+                                    <p>
+                                        <input type="radio" id="cash-on-delivery" name="radio-group">
+                                        <label for="cash-on-delivery">Pago por Tarjeta</label>
                                     </p>
                                     <p>
                                         <input type="radio" id="paypal" name="radio-group">
                                         <label for="paypal">PayPal</label>
                                     </p>
-                                    <p>
-                                        <input type="radio" id="cash-on-delivery" name="radio-group">
-                                        <label for="cash-on-delivery">Cash on Delivery</label>
-                                    </p>
                                 </div>
 
-                                <a href="javascript:void(0)" @click="add" class="btn btn-primary order-btn">Place Order</a>
+                                <a href="javascript:void(0)" @click="add" class="btn btn-primary order-btn">Realizar Pedido</a>
                             </div>
                         </div>
                     </div>
