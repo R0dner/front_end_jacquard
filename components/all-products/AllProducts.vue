@@ -38,7 +38,8 @@
         :id="product.id"
         :product="{
           ...product.attributes,
-          imageUrl: getProductImageUrl(product)
+          imageUrl: getProductImageUrl(product),
+          inventory: product.attributes.inventario?.data?.attributes || null
         }"
         @clicked="toggleQuickView(product)"
         :className="`col-lg-3 col-md-6 col-sm-6 products-col-item`"
@@ -113,7 +114,6 @@ export default {
     ProductoItem,
   },
   props: {
-    // Permitir filtros iniciales desde el componente padre
     initialFilters: {
       type: Object,
       default: () => ({})
@@ -136,7 +136,7 @@ export default {
   computed: {
     // Generar un array de páginas para mostrar en la paginación
     paginationPages() {
-      const showPages = 5; // Número de páginas a mostrar
+      const showPages = 5; 
       const pages = [];
       
       // Calcular rango de páginas a mostrar
@@ -160,42 +160,30 @@ export default {
     async fetchProducts() {
       this.loading = true;
       try {
-        // Preparar los parámetros de consulta para Strapi
+        // Construir los parámetros de la solicitud
         const queryParams = {
           'pagination[page]': this.currentPage,
           'pagination[pageSize]': this.pageSize,
           sort: this.sortOrder,
-          populate: [
-            'imagen_principal',
-            'marca',
-            'grupo_de_productos', 
-            'variantes.talla',
-            'variantes.color',
-            'tags'
-          ].join(',')
+          populate: ['imagen_principal', 'marca', 'grupo_de_productos'].join(','),
         };
 
         // Agregar filtros si existen
         if (Object.keys(this.activeFilters).length > 0) {
-          queryParams.filters = JSON.stringify(this.activeFilters);
+          queryParams.filters = this.buildFilters();
         }
 
+        // Realizar la solicitud a Strapi
         const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-          params: queryParams
+          params: queryParams,
         });
 
+        // Procesar la respuesta
         this.products = response.data.data || [];
         this.totalProducts = response.data.meta.pagination.total;
         this.totalPages = response.data.meta.pagination.pageCount;
-
-        // Si la página actual es mayor que el total de páginas disponibles
-        // y hay páginas disponibles, retroceder a la última página disponible
-        if (this.currentPage > this.totalPages && this.totalPages > 0) {
-          this.currentPage = this.totalPages;
-          await this.fetchProducts();
-        }
       } catch (error) {
-        console.error('Error al obtener productos:', error);
+        console.error('Error al obtener productos:', error.response?.data || error.message);
       } finally {
         this.loading = false;
       }

@@ -67,8 +67,8 @@ const actions = {
     //     })
     // },
 
-    addToCart({ commit }, payload){
-        commit('ADD_TO_CART', payload)
+    addToCart({ commit }, product){
+        commit('ADD_TO_CART', product)
     },
 
     deleteCart({ commit }, id){

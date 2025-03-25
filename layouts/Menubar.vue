@@ -18,7 +18,7 @@
                                         <nuxt-link to="/" class="nav-link" exact @click.native="navigateTo('/')">Inicio</nuxt-link>
                                     </li>
                                     <li class="nav-item">
-                                        <nuxt-link to="/solicitud" class="nav-link" @click.native="navigateTo('/solicitud')">Solicitud</nuxt-link>
+                                        <nuxt-link to="/solicitud" class="nav-link" @click.native="navigateTo('/solicitud')">Tus Pedidos </nuxt-link>
                                     </li>
                                     <li class="nav-item">
                                         <nuxt-link to="/products" class="nav-link" @click.native="navigateTo('/products')">Galeria de productos</nuxt-link>

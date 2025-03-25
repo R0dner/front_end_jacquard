@@ -18,20 +18,20 @@
 
                                 <div 
                                     class="product-cart"
-                                    v-for="cart in cart"
-                                    :key="cart.id"
+                                    v-for="item in cart"
+                                    :key="item.id"
                                 >
                                     <div class="product-image">
-                                        <img :src="cart.image" :alt="cart.name" />
+                                        <img :src="item.image" :alt="item.name" />
                                     </div>
 
                                     <div class="product-content">
-                                        <h3><a href="#">{{cart.name}}</a></h3>
-                                        <span>Blue / XS</span>
+                                        <h3><a href="#">{{item.name}}</a></h3>
+                                        <span>{{ item.color }} / {{ item.size }}</span> 
                                         <div class="product-price">
-                                            <span>{{cart.quantity}}</span>
+                                            <span>{{item.quantity}}</span>
                                             <span>x</span>
-                                            <span class="price">${{cart.price}}</span>
+                                            <span class="price">${{item.price}}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -45,7 +45,6 @@
                             </div>
 
                             <div @click="closeSidebarPanel" class="product-cart-btn">
-                                <!--<nuxt-link to="/checkout" class="btn btn-primary">Proceed to Checkout</nuxt-link>-->
                                 <nuxt-link to="/cart" class="btn btn-light">Ver Mi Carrito</nuxt-link>
                             </div>
                         </div>
@@ -53,7 +52,6 @@
                             <h3>Carrito Vacio!</h3>
                             <div @click="closeSidebarPanel" class="product-cart-btn">
                                 <nuxt-link to="/products" class="btn btn-primary">Ver mas Productos</nuxt-link>
-                                <!--<nuxt-link to="/products" class="btn btn-light">Browse Latest!</nuxt-link>-->
                             </div>
                         </div>
                     </div>
