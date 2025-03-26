@@ -26,14 +26,6 @@ query UltimosProductos {
         precio_oferta
         en_oferta
         stock_disponible
-        color {
-          data {
-            attributes {
-              nombre
-              color_rgb
-            }
-          }
-        }
         talla {
           data {
             attributes {

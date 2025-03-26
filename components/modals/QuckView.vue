@@ -43,13 +43,16 @@
                                     </ul>
                                     <div class="product-color-switch">
                                         <h4>Colores Disponibles:</h4>
-                                        <ul>
-                                            <li @click="selectColor('Black')" :class="{ active: selectedColor === 'Black' }"><a href="#" title="Black" class="color-black"></a></li>
-                                            <li @click="selectColor('White')" :class="{ active: selectedColor === 'White' }"><a href="#" title="White" class="color-white"></a></li>
-                                            <li @click="selectColor('Green')" :class="{ active: selectedColor === 'Green' }"><a href="#" title="Green" class="color-green"></a></li>
-                                            <li @click="selectColor('Yellow Green')" :class="{ active: selectedColor === 'Yellow Green' }"><a href="#" title="Yellow Green" class="color-yellowgreen"></a></li>
-                                            <li @click="selectColor('Teal')" :class="{ active: selectedColor === 'Teal' }"><a href="#" title="Teal" class="color-teal"></a></li>
+                                        <ul v-if="productColors.length > 0">
+                                            <li v-for="color in productColors" :key="color.id" 
+                                                @click="selectColor(color.attributes.nombre)" 
+                                                :class="{ active: selectedColor === color.attributes.nombre }">
+                                                <span class="color-circle" 
+                                                      :style="{ 'background-color': color.attributes.color_rgb }"
+                                                      :title="color.attributes.nombre"></span>
+                                            </li>
                                         </ul>
+                                        <p v-else class="no-colors">Color único disponible</p>
                                     </div>
                                     <div class="product-size-wrapper">
                                         <h4>Tallas Disponibles:</h4>
@@ -100,7 +103,8 @@ export default {
             selectedSize: null,
             selectedColor: null,
             inventoryData: null,
-            loadingInventory: false
+            loadingInventory: false,
+            productColors: []
         }
     },
     methods: {
@@ -119,7 +123,6 @@ export default {
                     return;
                 }
                 
-                // Asegúrate de usar el endpoint correcto de tu API Strapi
                 const response = await this.$axios.get(`/api/inventarios`, {
                     params: {
                         'filters[producto][id][$eq]': this.product.id,
@@ -131,13 +134,32 @@ export default {
                     this.inventoryData = response.data.data[0].attributes;
                 } else {
                     console.warn('No inventory data found for this product');
-                    this.inventoryData = { stock_actual: 0 }; // Valor por defecto si no hay registro
+                    this.inventoryData = { stock_actual: 0 };
                 }
             } catch (error) {
                 console.error('Error fetching inventory:', error);
-                this.inventoryData = { stock_actual: 0 }; // Valor por defecto en caso de error
+                this.inventoryData = { stock_actual: 0 };
             } finally {
                 this.loadingInventory = false;
+            }
+        },
+        async fetchProductColors() {
+            try {
+                if (this.product.colores?.data) {
+                    this.productColors = this.product.colores.data;
+                } else {
+                    const response = await this.$axios.get(`/api/productos/${this.product.id}`, {
+                        params: { 'populate': 'colores' }
+                    });
+                    this.productColors = response.data.data?.attributes?.colores?.data || [];
+                }
+                
+                if (this.productColors.length > 0 && !this.selectedColor) {
+                    this.selectedColor = this.productColors[0].attributes.nombre;
+                }
+            } catch (error) {
+                console.error('Error fetching colors:', error);
+                this.productColors = [];
             }
         },
         addToCart(product) {
@@ -156,7 +178,7 @@ export default {
                 return;
             }
 
-            const cartProduct = [{
+            const cartItem = {
                 id: product.id,
                 name: product.nombre,
                 price: product.precio,
@@ -164,32 +186,15 @@ export default {
                 quantity: this.quantity,
                 size: this.selectedSize,
                 color: this.selectedColor,
-                maxQuantity: this.currentStock // Agregamos el stock máximo disponible
-            }];
+                maxQuantity: this.currentStock,
+                colorCode: this.productColors.find(c => c.attributes.nombre === this.selectedColor)?.attributes.color_rgb
+            };
             
-            if (this.cart.length > 0) {
-                let id = product.id;
-                let cartIndex = this.cart.findIndex(cart => {
-                    return cart.id == id;
-                });
-                
-                if (cartIndex == -1) {
-                    this.$store.dispatch('addToCart', cartProduct);
-                    this.$toast("Agregado al carrito", {
-                        icon: 'fas fa-cart-plus'
-                    });
-                } else {
-                    this.$store.dispatch('updateCart', {
-                        id, unit: 1, cart: this.cart
-                    });
-                    this.$toast.info("Ya agregado al carrito y actualizado con uno más");
-                }
-            } else {
-                this.$store.dispatch('addToCart', cartProduct);
-                this.$toast("Agregado al carrito", {
-                    icon: 'fas fa-cart-plus'
-                });
-            }
+            // Versión compatible con Vuex estándar
+            this.$store.dispatch('addToCart', cartItem);
+            this.$toast("Agregado al carrito", {
+                icon: 'fas fa-cart-plus'
+            });
             this.closeQuickView();
         },
         increaseQuantity() {
@@ -213,7 +218,7 @@ export default {
             } else {
                 this.quantity--;
             }
-        },
+        }
     },
     computed: {
         isQuickViewOpen() {
@@ -238,16 +243,19 @@ export default {
             this.selectedSize = null;
             this.selectedColor = null;
             this.fetchInventory();
+            this.fetchProductColors();
         },
         isQuickViewOpen(newVal) {
             if (newVal && this.product.id) {
                 this.fetchInventory();
+                this.fetchProductColors();
             }
         }
     },
     mounted() {
         if (this.product.id) {
             this.fetchInventory();
+            this.fetchProductColors();
         }
     }
 }
@@ -256,7 +264,75 @@ export default {
 <style lang="scss" scoped>
 @import "../../assets/scss/styles/_transitions.scss";
 
-/* Estilos adicionales para estado agotado */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+}
+
+.modal.productQuickView {
+    display: block;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1050;
+    overflow: hidden;
+    outline: 0;
+}
+
+.product-color-switch {
+    margin-bottom: 20px;
+    
+    h4 {
+        margin-bottom: 12px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+    
+    ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        
+        li {
+            margin: 0;
+            cursor: pointer;
+            
+            .color-circle {
+                display: block;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                border: 1px solid #e0e0e0;
+                transition: all 0.3s ease;
+                
+                &:hover {
+                    transform: scale(1.1);
+                }
+            }
+            
+            &.active .color-circle {
+                box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333;
+            }
+        }
+    }
+    
+    .no-colors {
+        font-style: italic;
+        color: #666;
+        margin: 0;
+    }
+}
+
 button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -266,5 +342,19 @@ button:disabled {
     color: inherit;
     text-decoration: none;
     cursor: default;
+}
+
+.slide-fade-enter-active {
+    transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+    transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+    transform: translateY(20px);
+    opacity: 0;
 }
 </style>

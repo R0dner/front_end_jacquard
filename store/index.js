@@ -30,9 +30,29 @@ const mutations = {
         state.totalQuantity = totals(payload).qty
     },
     'ADD_TO_CART'(state, payload){
-        state.cart = [...state.cart, ...payload]
-        state.totalAmount = totals(state.cart).amount
-        state.totalQuantity = totals(state.cart).qty
+        // Verificar si payload es un array (para mantener compatibilidad)
+        const itemsToAdd = Array.isArray(payload) ? payload : [payload];
+        
+        // Buscar y actualizar items existentes o agregar nuevos
+        itemsToAdd.forEach(newItem => {
+            const existingIndex = state.cart.findIndex(item => 
+                item.id === newItem.id && 
+                item.size === newItem.size && 
+                item.color === newItem.color
+            );
+            
+            if (existingIndex >= 0) {
+                // Actualizar cantidad si ya existe
+                state.cart[existingIndex].quantity += newItem.quantity;
+            } else {
+                // Agregar nuevo item
+                state.cart.push(newItem);
+            }
+        });
+        
+        // Actualizar totales
+        state.totalAmount = totals(state.cart).amount;
+        state.totalQuantity = totals(state.cart).qty;
     },
     'DELETE_CART'(state, id){
         const currentCartToDelete = state.cart
