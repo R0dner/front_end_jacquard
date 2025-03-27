@@ -73,7 +73,6 @@
                                         <ul>
                                             <li>Subtotal <span>Bs. {{cartTotal}}</span></li>
                                             <li>Envio <span>Bs. 10.00</span></li>
-                                            <li>Impuestos <span>Bs. 10.00</span></li>
                                             <li>Total <span><b>Bs. {{parseFloat(cartTotal + 10).toFixed(2)}}</b></span></li>
                                         </ul>
                                         <nuxt-link to="/checkout" class="btn btn-light">Realizar Pedido</nuxt-link>

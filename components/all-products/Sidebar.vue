@@ -107,8 +107,8 @@
               <h3><a href="#" @click.prevent="navigateToProduct(producto.id)">{{ producto.nombre }}</a></h3>
 
               <div class="product-price">
-                <span class="new-price">${{ producto.precio_venta }}</span>
-                <span v-if="producto.precio_original" class="old-price">${{ producto.precio_original }}</span>
+                <span class="new-price">Bs.{{ producto.precio_venta }}</span>
+                <span v-if="producto.precio_original" class="old-price">Bs.{{ producto.precio_original }}</span>
               </div>
             </div>
           </div>

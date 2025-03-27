@@ -19,7 +19,7 @@
                                     <h3><a href="#">{{ product.nombre }}</a></h3>
                                     <div class="price">
                                         <span class="old-price" v-if="product.enOferta">${{ product.precioOferta.toFixed(2) }}</span>
-                                        <span class="new-price">${{ product.precio.toFixed(2) }}</span>
+                                        <span class="new-price">Bs.{{ product.precio.toFixed(2) }}</span>
                                     </div>
                                     <div class="product-review">
                                         <div class="rating">

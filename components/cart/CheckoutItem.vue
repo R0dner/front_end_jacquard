@@ -72,10 +72,9 @@
                                 <div v-if="paymentMethod === 'bank-transfer'" class="bank-transfer-details payment-details-section">
                                     <div class="bank-info mb-3">
                                         <h5>Datos bancarios para transferencia:</h5>
-                                        <p><strong>Banco:</strong> Banco Nacional</p>
-                                        <p><strong>Titular de la cuenta:</strong> Empresa XYZ S.A.</p>
+                                        <p><strong>Banco:</strong> Banco BCP</p>
+                                        <p><strong>Titular de la cuenta:</strong> Jaquard Tex </p>
                                         <p><strong>Número de cuenta:</strong> 123-456789-01</p>
-                                        <p><strong>CLABE:</strong> 012345678901234567</p>
                                         <p><strong>Referencia:</strong> {{ referenceNumber }}</p>
                                     </div>
 
@@ -132,7 +131,7 @@
                                                 </td>
 
                                                 <td class="product-total">
-                                                    <span class="subtotal-amount">${{cart.price * cart.quantity}}</span>
+                                                    <span class="subtotal-amount">Bs.{{cart.price * cart.quantity}}</span>
                                                 </td>
                                             </tr>
                                             
@@ -142,7 +141,7 @@
                                                 </td>
 
                                                 <td class="order-subtotal-price">
-                                                    <span class="order-subtotal-amount">${{cartTotal}}</span>
+                                                    <span class="order-subtotal-amount">Bs.{{cartTotal}}</span>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -151,7 +150,7 @@
                                                 </td>
 
                                                 <td class="shipping-price">
-                                                    <span>$0</span>
+                                                    <span>Bs. 0</span>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -182,20 +181,20 @@
 </template>
 
 <script>
-import firebase from '../../plugins/firebase';
 export default {
     data(){
         return{
             personDetails: {
                 fullName: '', 
                 email: '',
-                role: 'Usuario', // Valor por defecto
+                role: 'Usuario',
                 createdAt: new Date()
             },
-            paymentMethod: 'bank-transfer', // Valor por defecto: transferencia bancaria
-            receiptFile: null, // Archivo de comprobante
-            receiptFileName: '', // Nombre del archivo seleccionado
-            referenceNumber: 'ORD-' + Math.floor(Math.random() * 1000000) // Número de referencia para el pago
+            paymentMethod: 'bank-transfer',
+            receiptFile: null,
+            receiptFileName: '',
+            referenceNumber: 'ORD-' + Math.floor(Math.random() * 1000000),
+            isLoading: false // Nuevo estado para controlar carga
         }
     },
     computed: {
@@ -206,24 +205,19 @@ export default {
             return this.$store.getters.totalAmount
         },
         isFormValid() {
-            // Verificar si se ha subido un comprobante de pago
             return this.receiptFile !== null;
         }
     },
     created() {
-        // Escuchar el evento de login para actualizar los datos
         this.$nuxt.$on('user-logged-in', this.updateUserData);
-        
-        // Cargar los datos del usuario al iniciar el componente
         this.loadUserData();
     },
     beforeDestroy() {
-        // Quitar el listener al destruir el componente
         this.$nuxt.$off('user-logged-in', this.updateUserData);
     },
     methods: {
         loadUserData() {
-            if (!process.client) return; // Solo ejecutar en el cliente
+            if (!process.client) return;
 
             try {
                 const storedUser = localStorage.getItem('user');
@@ -239,62 +233,46 @@ export default {
         },
         updateUserData(userData) {
             if (userData) {
-                // Actualizar los datos del formulario con los datos del usuario
                 this.personDetails.fullName = userData.username || '';
                 this.personDetails.email = userData.email || '';
-                
-                // Determinar y asignar el rol del usuario
                 this.assignUserRole(userData);
-                
-                console.log('Datos de usuario cargados:', this.personDetails);
             }
         },
         assignUserRole(userData) {
-            // Verificar las diferentes posibilidades de estructura del rol
             if (userData.tipo_usuario) {
-                // Si existe el campo tipo_usuario, usarlo directamente
                 this.personDetails.role = userData.tipo_usuario;
             } else if (userData.role && typeof userData.role === 'object' && userData.role.name) {
-                // Compatibilidad con el formato anterior si existe
                 this.personDetails.role = userData.role.name;
             } else if (userData.role && typeof userData.role === 'string') {
-                // Compatibilidad con el formato anterior si existe
                 this.personDetails.role = userData.role;
             } else {
-                // Si no tiene un rol definido
                 this.personDetails.role = 'Usuario General';
             }
-            
-            // Registrar en consola para depuración
-            console.log('Tipo de usuario asignado:', this.personDetails.role);
         },
         handleFileUpload(event) {
             const file = event.target.files[0];
             if (file) {
-                // Validar tamaño del archivo (máximo 5MB)
                 if (file.size > 5 * 1024 * 1024) {
                     this.$toast.error('El archivo es demasiado grande. El tamaño máximo es 5MB.', {
                         icon: 'fas fa-exclamation-circle'
                     });
-                    event.target.value = ''; // Limpiar el input file
+                    event.target.value = '';
                     this.receiptFile = null;
                     this.receiptFileName = '';
                     return;
                 }
                 
-                // Validar tipo de archivo
                 const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
                 if (!validTypes.includes(file.type)) {
                     this.$toast.error('Formato de archivo no válido. Use JPG, PNG o PDF.', {
                         icon: 'fas fa-exclamation-circle'
                     });
-                    event.target.value = ''; // Limpiar el input file
+                    event.target.value = '';
                     this.receiptFile = null;
                     this.receiptFileName = '';
                     return;
                 }
                 
-                // Guardar el archivo y su nombre
                 this.receiptFile = file;
                 this.receiptFileName = file.name;
             }
@@ -307,48 +285,74 @@ export default {
                 return;
             }
             
+            this.isLoading = true;
+            
             try {
-                // Subir el comprobante a Firebase Storage
-                const storageRef = firebase.storage().ref();
-                const fileRef = storageRef.child(`receipts/${Date.now()}_${this.receiptFileName}`);
+                // 1. Primero subir el comprobante a Strapi
+                const formData = new FormData();
+                formData.append('files', this.receiptFile);
                 
-                // Subir el archivo
-                await fileRef.put(this.receiptFile);
-                
-                // Obtener la URL del archivo
-                const downloadURL = await fileRef.getDownloadURL();
-                
-                // Preparar los datos del pedido
-                const cartData = {
-                    details: this.personDetails,
-                    items: this.cart,
-                    payment: {
-                        method: this.paymentMethod,
-                        receiptURL: downloadURL,
-                        referenceNumber: this.referenceNumber,
-                        timestamp: new Date()
+                // Subir el archivo a Strapi
+                const uploadResponse = await this.$axios.$post(
+                    'http://127.0.0.1:1337/api/upload',
+                    formData,
+                    {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
                     }
-                }
+                );
                 
-                // Guardar en Firestore
-                const db = firebase.firestore();
-                const dbOrderRef = db.collection('orders');
-                await dbOrderRef.add(cartData);
+                // Obtener el ID del archivo subido
+                const comprobanteId = uploadResponse[0].id;
+                
+                // 2. Preparar los datos del pedido según el esquema de Strapi
+                const pedidoData = {
+                    data: {
+                        referencia: this.referenceNumber,
+                        fecha_pedido: new Date().toISOString(),
+                        cliente: {
+                            nombre: this.personDetails.fullName,
+                            email: this.personDetails.email,
+                            rol: this.personDetails.role
+                        },
+                        productos: this.cart.map(item => ({
+                            nombre: item.name,
+                            precio: item.price,
+                            cantidad: item.quantity,
+                            total: item.price * item.quantity
+                        })),
+                        metodo_pago: this.paymentMethod === 'bank-transfer' ? 'Transferencia bancaria' : 'Pago por QR',
+                        comprobante: comprobanteId,
+                        subtotal: this.cartTotal,
+                        costo_envio: 0, // Puedes modificarlo si tienes costos de envío
+                        total: this.cartTotal,
+                        estado: 'pendiente'
+                    }
+                };
+                
+                // 3. Enviar el pedido a Strapi
+                await this.$axios.$post(
+                    'http://127.0.0.1:1337/api/pedidos',
+                    pedidoData
+                );
                 
                 // Mostrar confirmación
-                this.$toast.success(`Gracias por tu pedido. Hemos recibido tu comprobante de pago.`, {
-                    icon: 'fas fa-cart-plus'
+                this.$toast.success(`Pedido realizado con éxito. Número de referencia: ${this.referenceNumber}`, {
+                    icon: 'fas fa-check-circle'
                 });
                 
                 // Vaciar carrito y redirigir
-                this.$store.dispatch('cartEmpty')
+                this.$store.dispatch('cartEmpty');
                 this.$router.push("/");
                 
             } catch (error) {
                 console.error('Error al procesar el pedido:', error);
-                this.$toast.error(`Ha ocurrido un error al procesar tu pedido. Por favor, intenta nuevamente.`, {
+                this.$toast.error(`Error al procesar el pedido: ${error.message}`, {
                     icon: 'fas fa-exclamation-circle'
                 });
+            } finally {
+                this.isLoading = false;
             }
         }
     }

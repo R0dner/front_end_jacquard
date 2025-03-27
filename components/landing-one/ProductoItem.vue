@@ -21,8 +21,8 @@
           nuxt-link(:to='`/products-details/${id}`') {{product.nombre}}
         .product-price
           span.old-price(v-if='product.en_oferta')
-            | ${{product.precio_oferta}}
-          span.new-price ${{product.precio_venta}}
+            | Bs.{{product.precio_oferta}}
+          span.new-price Bs.{{product.precio_venta}}
         .rating
           i.fas.fa-star
           i.fas.fa-star
@@ -32,14 +32,20 @@
         a.btn.btn-light.added-btn(
           v-if='getExistPId === id' 
           href='javascript:void(0)' 
-          @click='addToCart(product)'
+          @click='quickView'
         ) Ya fue Agregado!
         a.btn.btn-light(
           v-else 
           href='javascript:void(0)' 
-          @click='addToCart(product)'
+          @click='quickView'
           :class='{ "disabled-btn": currentStock === 0 }'
         ) {{ currentStock === 0 ? 'Agotado' : 'Agregar al Carrito' }}
+    
+    QuickView(
+      v-if="showQuickView"
+      :product="quickViewProduct"
+      @close="showQuickView = false"
+    )
   </template>
   
   <script>

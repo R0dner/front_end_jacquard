@@ -1,11 +1,13 @@
 query UltimosProductos {
-  productos(sort:"fecha_disponible:desc") {
+  productos(sort: "createdAt:desc", pagination: { limit: 12 }) {
     data {
       id
       attributes {
         codigo
         nombre
         descripcion
+        createdAt
+        updatedAt
         imagen_principal {
           data {
             attributes {

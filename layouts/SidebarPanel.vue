@@ -31,7 +31,7 @@
                                         <div class="product-price">
                                             <span>{{item.quantity}}</span>
                                             <span>x</span>
-                                            <span class="price">${{item.price}}</span>
+                                            <span class="price">Bs.{{item.price}}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -41,7 +41,7 @@
                             <div class="product-cart-subtotal">
                                 <span>Subtotal</span>
 
-                                <span class="subtotal">${{cartTotal}}</span>
+                                <span class="subtotal">Bs.{{cartTotal}}</span>
                             </div>
 
                             <div @click="closeSidebarPanel" class="product-cart-btn">
