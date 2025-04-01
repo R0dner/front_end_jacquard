@@ -32,6 +32,31 @@
                                 <div class="row">
                                     <div class="col-lg-12 col-md-6">
                                         <div class="form-group">
+                                            <label>Fecha de entrega solicitada <span class="required">*</span></label>
+                                            <input 
+                                                type="date" 
+                                                v-model="deliveryDate" 
+                                                class="form-control" 
+                                                :min="minDeliveryDate"
+                                                required
+                                            >
+                                            <small class="form-text text-muted">Seleccione una fecha con al menos 2 días de anticipación</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-12 col-md-6">
+                                        <div class="form-group">
+                                            <label>Hora de entrega solicitada <span class="required">*</span></label>
+                                            <select v-model="deliveryTime" class="form-control" required>
+                                                <option value="">Seleccione una hora</option>
+                                                <option v-for="time in availableTimes" :value="time" :key="time">{{ time }}</option>
+                                            </select>
+                                            <small class="form-text text-muted">Horario de atención: 8:00 AM - 6:00 PM</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-12 col-md-6">
+                                        <div class="form-group">
                                             <label>Nombre de Usuario <span class="required">*</span></label>
                                             <input type="text" id="fullName" v-model="personDetails.fullName" class="form-control" readonly>
                                         </div>
@@ -124,7 +149,6 @@
                                         </thead>
 
                                         <tbody>
-
                                             <tr v-for="(cart, i) in cart" :key="i">
                                                 <td class="product-name">
                                                     <a href="#">{{cart.name}}</a>
@@ -166,7 +190,18 @@
                                     </table>
                                 </div>
 
-                                <a href="javascript:void(0)" @click="add" class="btn btn-primary order-btn" :disabled="!isFormValid">Realizar Pedido</a>
+                                <div class="delivery-summary mb-3" v-if="deliveryDate && deliveryTime">
+                                    <h5>Resumen de entrega:</h5>
+                                    <p><strong>Fecha solicitada:</strong> {{ formatDeliveryDate(deliveryDate) }}</p>
+                                    <p><strong>Hora solicitada:</strong> {{ deliveryTime }}</p>
+                                </div>
+
+                                <a href="javascript:void(0)" @click="add" class="btn btn-primary order-btn" :disabled="!isFormValid || isLoading">
+                                    <span v-if="!isLoading">Realizar Pedido</span>
+                                    <span v-else>
+                                        <i class="fas fa-spinner fa-spin"></i> Procesando...
+                                    </span>
+                                </a>
                                 <div v-if="!isFormValid" class="text-danger mt-2">
                                     <small>Por favor, complete todos los campos requeridos y suba un comprobante de pago.</small>
                                 </div>
@@ -190,11 +225,13 @@ export default {
                 role: 'Usuario',
                 createdAt: new Date()
             },
+            deliveryDate: '',
+            deliveryTime: '',
             paymentMethod: 'bank-transfer',
             receiptFile: null,
             receiptFileName: '',
             referenceNumber: 'ORD-' + Math.floor(Math.random() * 1000000),
-            isLoading: false // Nuevo estado para controlar carga
+            isLoading: false
         }
     },
     computed: {
@@ -205,7 +242,26 @@ export default {
             return this.$store.getters.totalAmount
         },
         isFormValid() {
-            return this.receiptFile !== null;
+            return this.receiptFile !== null && 
+                   this.deliveryDate && 
+                   this.deliveryTime;
+        },
+        minDeliveryDate() {
+            // Fecha mínima es 2 días después de hoy
+            const minDate = new Date();
+            minDate.setDate(minDate.getDate() + 2);
+            return minDate.toISOString().split('T')[0];
+        },
+        availableTimes() {
+            // Generar horas disponibles cada 30 minutos desde las 8 AM hasta las 6 PM
+            const times = [];
+            for (let hour = 8; hour <= 18; hour++) {
+                times.push(`${hour.toString().padStart(2, '0')}:00`);
+                if (hour < 18) {
+                    times.push(`${hour.toString().padStart(2, '0')}:30`);
+                }
+            }
+            return times;
         }
     },
     created() {
@@ -216,6 +272,10 @@ export default {
         this.$nuxt.$off('user-logged-in', this.updateUserData);
     },
     methods: {
+        formatDeliveryDate(dateString) {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('es-ES', options);
+        },
         loadUserData() {
             if (!process.client) return;
 
@@ -278,79 +338,64 @@ export default {
             }
         },
         async add() {
-            if (!this.isFormValid) {
-                this.$toast.error('Por favor, complete todos los campos requeridos y suba un comprobante de pago.', {
-                    icon: 'fas fa-exclamation-circle'
-                });
-                return;
-            }
-            
+            if (!this.isFormValid) return;
+
             this.isLoading = true;
             
             try {
-                // 1. Primero subir el comprobante a Strapi
+                // 1. Subir comprobante
                 const formData = new FormData();
                 formData.append('files', this.receiptFile);
-                
-                // Subir el archivo a Strapi
                 const uploadResponse = await this.$axios.$post(
                     'http://127.0.0.1:1337/api/upload',
-                    formData,
-                    {
-                        headers: {
-                            'Content-Type': 'multipart/form-data'
-                        }
-                    }
+                    formData
                 );
-                
-                // Obtener el ID del archivo subido
-                const comprobanteId = uploadResponse[0].id;
-                
-                // 2. Preparar los datos del pedido según el esquema de Strapi
+
+                // 2. Obtener datos del usuario
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user || !user.id) throw new Error('Usuario no autenticado');
+
+                // 3. Determinar el rol correctamente (actualizado)
+                const userRole = user.role?.name || 
+                                user.tipo_usuario || 
+                                (user.role && typeof user.role === 'string' ? user.role : 'Usuario General');
+
+                // 4. Preparar datos del pedido
                 const pedidoData = {
                     data: {
                         referencia: this.referenceNumber,
                         fecha_pedido: new Date().toISOString(),
-                        cliente: {
-                            nombre: this.personDetails.fullName,
-                            email: this.personDetails.email,
-                            rol: this.personDetails.role
-                        },
+                        fecha_entrega_solicitada: new Date(`${this.deliveryDate}T${this.deliveryTime}:00`).toISOString(),
+                        user: user.id, 
+                        user_email: user.email, 
+                        user_role: userRole, 
                         productos: this.cart.map(item => ({
                             nombre: item.name,
                             precio: item.price,
                             cantidad: item.quantity,
-                            total: item.price * item.quantity
+                            talla: item.size || null,
                         })),
-                        metodo_pago: this.paymentMethod === 'bank-transfer' ? 'Transferencia bancaria' : 'Pago por QR',
-                        comprobante: comprobanteId,
+                        metodo_pago: this.paymentMethod === 'bank-transfer' 
+                            ? 'transferencia_bancaria' 
+                            : 'pago_qr', 
+                        comprobante: uploadResponse[0].id,
                         subtotal: this.cartTotal,
-                        costo_envio: 0, // Puedes modificarlo si tienes costos de envío
+                        costo_envio: 0,
                         total: this.cartTotal,
                         estado: 'pendiente'
                     }
                 };
-                
-                // 3. Enviar el pedido a Strapi
-                await this.$axios.$post(
-                    'http://127.0.0.1:1337/api/pedidos',
-                    pedidoData
-                );
-                
-                // Mostrar confirmación
-                this.$toast.success(`Pedido realizado con éxito. Número de referencia: ${this.referenceNumber}`, {
-                    icon: 'fas fa-check-circle'
-                });
-                
-                // Vaciar carrito y redirigir
+
+                // 5. Enviar pedido
+                await this.$axios.$post('http://127.0.0.1:1337/api/pedidos', pedidoData);
+
+                this.$toast.success(`Pedido #${this.referenceNumber} registrado`);
                 this.$store.dispatch('cartEmpty');
-                this.$router.push("/");
-                
+                this.$router.push("/orden-completada");
+
             } catch (error) {
-                console.error('Error al procesar el pedido:', error);
-                this.$toast.error(`Error al procesar el pedido: ${error.message}`, {
-                    icon: 'fas fa-exclamation-circle'
-                });
+                console.error('Error:', error);
+                this.$toast.error(error.response?.data?.error?.message || 'Error al procesar pedido');
             } finally {
                 this.isLoading = false;
             }
@@ -430,5 +475,55 @@ input.form-control[readonly] {
 .btn:disabled {
     cursor: not-allowed;
     opacity: 0.65;
+}
+
+/* Estilos para los campos de fecha y hora */
+.form-group label {
+    font-weight: 500;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.form-control {
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    padding: 10px 15px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 1em;
+}
+
+.delivery-summary {
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-left: 3px solid #28a745;
+}
+
+.delivery-summary h5 {
+    color: #28a745;
+    margin-bottom: 10px;
+}
+
+.delivery-summary p {
+    margin-bottom: 5px;
+}
+
+/* Spinner para el botón de carga */
+.fa-spinner {
+    margin-right: 5px;
 }
 </style>
