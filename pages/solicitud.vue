@@ -51,53 +51,59 @@
     </template>
     
     <script>
-    export default {
-        data() {
-            return {
-                pedidos: [],
-                isLoading: true
+export default {
+    data() {
+        return {
+            pedidos: [],
+            isLoading: true,
+            usuarioLogueado: null
+        }
+    },
+    async mounted() {
+        // Obtener usuario del localStorage
+        if (process.client) { // Solo en el lado del cliente
+            const usuario = localStorage.getItem('usuario');
+            if (usuario) {
+                this.usuarioLogueado = JSON.parse(usuario);
+            }
+        }
+        
+        await this.cargarPedidos();
+    },
+    methods: {
+        async cargarPedidos() {
+            try {
+                this.isLoading = true;
+                
+                let params = {
+                    sort: 'fecha_pedido:desc',
+                    populate: '*'
+                };
+                
+                // Si hay usuario logueado, filtrar por su email
+                if (this.usuarioLogueado?.email) {
+                    params.filters = {
+                        email_cliente: this.usuarioLogueado.email
+                    };
+                }
+                
+                const response = await this.$axios.get('/api/pedidos', { params });
+                
+                if (response.data?.data) {
+                    this.pedidos = response.data.data.map(item => ({
+                        id: item.id,
+                        ...item.attributes
+                    }));
+                } else {
+                    this.pedidos = [];
+                }
+            } catch (error) {
+                console.error('Error al cargar pedidos:', error);
+                this.pedidos = [];
+            } finally {
+                this.isLoading = false;
             }
         },
-        async created() {
-            await this.cargarPedidos()
-        },
-        methods: {
-            async cargarPedidos() {
-                try {
-                    this.isLoading = true
-                    
-                    // Obtener todos los pedidos sin filtrar por usuario
-                    const response = await this.$axios.get('/api/pedidos', {
-                        params: {
-                            sort: 'fecha_pedido:desc',
-                            populate: '*'
-                        }
-                    })
-                    
-                    console.log('Respuesta de Strapi:', response.data)
-                    
-                    // Extraer los datos según la estructura de Strapi
-                    if (response.data && response.data.data) {
-                        this.pedidos = response.data.data.map(item => {
-                            // Combinar el ID y los atributos para una estructura más completa
-                            return {
-                                id: item.id,
-                                ...item.attributes
-                            }
-                        })
-                    } else {
-                        console.warn('Estructura de respuesta inesperada:', response.data)
-                        this.pedidos = []
-                    }
-                    
-                    console.log('Pedidos procesados:', this.pedidos)
-                } catch (error) {
-                    console.error('Error al cargar los pedidos:', error)
-                    this.pedidos = []
-                } finally {
-                    this.isLoading = false
-                }
-            },
             getProductos(productosJson) {
                 // Parsear los productos si vienen como string JSON
                 if (typeof productosJson === 'string') {

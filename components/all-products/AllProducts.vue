@@ -160,28 +160,61 @@ export default {
     async fetchProducts() {
       this.loading = true;
       try {
-        // Construir los parámetros de la solicitud
-        const queryParams = {
-          'pagination[page]': this.currentPage,
-          'pagination[pageSize]': this.pageSize,
-          sort: this.sortOrder,
-          populate: ['imagen_principal', 'marca', 'grupo_de_productos'].join(','),
-        };
+        // Si estamos usando un objeto de parámetros completo (enviado desde el sidebar)
+        if (this.activeFilters && this.activeFilters.params) {
+          const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+            params: {
+              ...this.activeFilters.params,
+              'pagination[page]': this.currentPage,
+              'pagination[pageSize]': this.pageSize,
+            }
+          });
+          
+          // Procesar la respuesta
+          this.products = response.data.data || [];
+          this.totalProducts = response.data.meta.pagination.total;
+          this.totalPages = response.data.meta.pagination.pageCount;
+        } else {
+          // Construir los parámetros de la solicitud manualmente
+          const queryParams = {
+            'pagination[page]': this.currentPage,
+            'pagination[pageSize]': this.pageSize,
+            sort: this.sortOrder,
+            populate: ['imagen_principal', 'marca', 'grupo_de_productos', 'categoria'].join(','),
+          };
 
-        // Agregar filtros si existen
-        if (Object.keys(this.activeFilters).length > 0) {
-          queryParams.filters = this.buildFilters();
+          // Agregar filtros si existen
+          if (Object.keys(this.activeFilters).length > 0) {
+            // Implementación del método buildFilters que faltaba
+            Object.entries(this.activeFilters).forEach(([key, value]) => {
+              if (key === 'precio') {
+                const [min, max] = value.split('-').map(val => parseFloat(val));
+                if (!isNaN(min)) {
+                  queryParams['filters[precio_venta][$gte]'] = min;
+                }
+                if (!isNaN(max)) {
+                  queryParams['filters[precio_venta][$lte]'] = max;
+                }
+              } else if (key === 'categoria') {
+                queryParams['filters[categoria][id]'] = parseInt(value);
+              } else if (key === 'en_oferta' && value === true) {
+                queryParams['filters[en_oferta]'] = true;
+              } else {
+                queryParams[`filters[${key}]`] = value;
+              }
+            });
+          }
+
+          // Realizar la solicitud a Strapi
+          const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+            params: queryParams,
+          });
+
+          // Procesar la respuesta
+          this.products = response.data.data || [];
+          this.totalProducts = response.data.meta.pagination.total;
+          this.totalPages = response.data.meta.pagination.pageCount;
         }
-
-        // Realizar la solicitud a Strapi
-        const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-          params: queryParams,
-        });
-
-        // Procesar la respuesta
-        this.products = response.data.data || [];
-        this.totalProducts = response.data.meta.pagination.total;
-        this.totalPages = response.data.meta.pagination.pageCount;
       } catch (error) {
         console.error('Error al obtener productos:', error.response?.data || error.message);
       } finally {
@@ -235,6 +268,13 @@ export default {
       this.applyFilters(filters);
     });
     
+    // Evento nuevo - escuchar el evento "filters-changed" que envía el sidebar
+    this.$root.$on('filters-changed', (params) => {
+      this.activeFilters = { params };
+      this.currentPage = 1; // Reiniciar a la primera página
+      this.fetchProducts();
+    });
+    
     // Si el componente padre emite cambios en filtros
     this.$on('filter-changed', (filters) => {
       this.applyFilters(filters);
@@ -243,6 +283,7 @@ export default {
   beforeDestroy() {
     // Limpiar event listeners al destruir el componente
     this.$root.$off('sidebar-filters-changed');
+    this.$root.$off('filters-changed');
   }
 };
 </script>
