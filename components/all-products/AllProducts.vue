@@ -158,69 +158,71 @@ export default {
   },
   methods: {
     async fetchProducts() {
-      this.loading = true;
-      try {
-        // Si estamos usando un objeto de parámetros completo (enviado desde el sidebar)
-        if (this.activeFilters && this.activeFilters.params) {
-          const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-            params: {
-              ...this.activeFilters.params,
-              'pagination[page]': this.currentPage,
-              'pagination[pageSize]': this.pageSize,
-            }
-          });
-          
-          // Procesar la respuesta
-          this.products = response.data.data || [];
-          this.totalProducts = response.data.meta.pagination.total;
-          this.totalPages = response.data.meta.pagination.pageCount;
-        } else {
-          // Construir los parámetros de la solicitud manualmente
-          const queryParams = {
-            'pagination[page]': this.currentPage,
-            'pagination[pageSize]': this.pageSize,
-            sort: this.sortOrder,
-            populate: ['imagen_principal', 'marca', 'grupo_de_productos', 'categoria'].join(','),
-          };
-
-          // Agregar filtros si existen
-          if (Object.keys(this.activeFilters).length > 0) {
-            // Implementación del método buildFilters que faltaba
-            Object.entries(this.activeFilters).forEach(([key, value]) => {
-              if (key === 'precio') {
-                const [min, max] = value.split('-').map(val => parseFloat(val));
-                if (!isNaN(min)) {
-                  queryParams['filters[precio_venta][$gte]'] = min;
-                }
-                if (!isNaN(max)) {
-                  queryParams['filters[precio_venta][$lte]'] = max;
-                }
-              } else if (key === 'categoria') {
-                queryParams['filters[categoria][id]'] = parseInt(value);
-              } else if (key === 'en_oferta' && value === true) {
-                queryParams['filters[en_oferta]'] = true;
-              } else {
-                queryParams[`filters[${key}]`] = value;
-              }
-            });
-          }
-
-          // Realizar la solicitud a Strapi
-          const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-            params: queryParams,
-          });
-
-          // Procesar la respuesta
-          this.products = response.data.data || [];
-          this.totalProducts = response.data.meta.pagination.total;
-          this.totalPages = response.data.meta.pagination.pageCount;
+  this.loading = true;
+  try {
+    // Si estamos usando un objeto de parámetros completo (enviado desde el sidebar)
+    if (this.activeFilters && this.activeFilters.params) {
+      const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+        params: {
+          ...this.activeFilters.params,
+          'pagination[page]': this.currentPage,
+          'pagination[pageSize]': this.pageSize,
+          sort: this.sortOrder // Añadir el parámetro de ordenación
         }
-      } catch (error) {
-        console.error('Error al obtener productos:', error.response?.data || error.message);
-      } finally {
-        this.loading = false;
+      });
+      
+      // Procesar la respuesta
+      this.products = response.data.data || [];
+      this.totalProducts = response.data.meta.pagination.total;
+      this.totalPages = response.data.meta.pagination.pageCount;
+    } else {
+      // Construir los parámetros de la solicitud manualmente
+      const queryParams = {
+        'pagination[page]': this.currentPage,
+        'pagination[pageSize]': this.pageSize,
+        sort: this.sortOrder,
+        populate: ['imagen_principal', 'marca', 'grupo_de_productos', 'categoria'].join(','),
+      };
+
+      // Agregar filtros si existen
+      if (Object.keys(this.activeFilters).length > 0) {
+        Object.entries(this.activeFilters).forEach(([key, value]) => {
+          if (key === 'precio') {
+            const [min, max] = value.split('-').map(val => parseFloat(val));
+            if (!isNaN(min)) {
+              queryParams['filters[precio_venta][$gte]'] = min;
+            }
+            if (!isNaN(max)) {
+              queryParams['filters[precio_venta][$lte]'] = max;
+            }
+          } else if (key === 'categoria') {
+            queryParams['filters[categoria][id]'] = parseInt(value);
+          } else if (key === 'grupo_producto') {
+            queryParams['filters[grupo_de_productos][id]'] = parseInt(value);
+          } else if (key === 'en_oferta' && value === true) {
+            queryParams['filters[en_oferta]'] = true;
+          } else {
+            queryParams[`filters[${key}]`] = value;
+          }
+        });
       }
-    },
+
+      // Realizar la solicitud a Strapi
+      const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+        params: queryParams,
+      });
+
+      // Procesar la respuesta
+      this.products = response.data.data || [];
+      this.totalProducts = response.data.meta.pagination.total;
+      this.totalPages = response.data.meta.pagination.pageCount;
+    }
+  } catch (error) {
+    console.error('Error al obtener productos:', error.response?.data || error.message);
+  } finally {
+    this.loading = false;
+  }
+},
     getProductImageUrl(product) {
       // Verifica si la imagen principal existe y tiene la estructura correcta
       const imagenData = product.attributes?.imagen_principal?.data?.attributes;
@@ -252,6 +254,18 @@ export default {
       this.activeFilters = filters;
       this.currentPage = 1; // Reiniciar a la primera página
       this.fetchProducts();
+    },
+    // Método para extraer el grupo de producto de un producto
+    getProductGroup(product) {
+      // Intentar obtener el grupo de producto
+      const groupData = product.attributes?.grupo_de_productos?.data;
+      if (groupData) {
+        return {
+          id: groupData.id,
+          nombre: groupData.attributes?.nombre || 'Sin tipo'
+        };
+      }
+      return { id: null, nombre: 'Sin tipo' };
     }
   },
   mounted() {

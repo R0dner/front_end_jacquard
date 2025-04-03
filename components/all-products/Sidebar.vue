@@ -20,29 +20,22 @@
           </div>
         </b-collapse>
       </div>
-
-      <!-- Categorías -->
-      <div class="collapse-widget collections-list-widget">
-        <h3 v-b-toggle.collapse-2 class="collapse-widget-title">
-          Nuestra colección
-          <i class="fas fa-angle-up"></i>
-        </h3>
-        <b-collapse visible id="collapse-2">
-          <div v-if="loading.categorias" class="text-center py-3">
-            <div class="spinner-border spinner-border-sm" role="status">
-              <span class="sr-only">Cargando...</span>
-            </div>
-          </div>
-          <ul v-else class="collections-list-row">
-            <li v-for="categoria in categorias" :key="categoria.id" :class="{ active: isActive('categoria', categoria.id) }">
-              <a href="#" @click.prevent="applyFilter('categoria', categoria.id, categoria.nombre)">{{ categoria.nombre }}</a>
-            </li>
-            <li :class="{ active: isActive('en_oferta', true) }">
-              <a href="#" @click.prevent="applyFilter('en_oferta', true, 'Ofertas')">Ofertas</a>
-            </li>
-          </ul>
-        </b-collapse>
+      
+      <div class="filter-section">
+      <h4 class="section-title">Tipos de Producto</h4>
+      <div class="loading-indicator" v-if="loading.gruposProductos">
+        <span>Cargando tipos de producto...</span>
       </div>
+      <ul class="filter-list" v-else>
+        <li v-for="grupo in gruposProductos" :key="'grupo-'+grupo.id">
+          <a href="#" 
+             @click.prevent="applyFilter('grupo_producto', grupo.id)"
+             :class="{'active': isActive('grupo_producto', grupo.id)}">
+            {{ grupo.nombre }}
+          </a>
+        </li>
+      </ul>
+    </div>
 
       <!-- Precio - Versión mejorada -->
       <div class="collapse-widget price-list-widget">
@@ -138,10 +131,12 @@ export default {
     return {
       activeFilters: [],
       categorias: [],
+      gruposProductos: [], // Nuevo array para almacenar los grupos de productos
       productosPopulares: [],
       strapiBaseUrl: process.env.VUE_APP_STRAPI_URL || 'http://localhost:1337',
       loading: {
         categorias: false,
+        gruposProductos: false, // Nuevo estado de carga para grupos de productos
         productosPopulares: false,
         applying: false
       },
@@ -167,6 +162,7 @@ export default {
   },
   mounted() {
     this.loadCategorias();
+    this.loadGruposProductos(); // Cargar grupos de productos al montar el componente
     this.loadProductosPopulares();
     this.loadFiltersFromUrl();
     
@@ -227,6 +223,61 @@ export default {
       }
     },
 
+    // Nuevo método para cargar los grupos de productos
+    async loadGruposProductos() {
+      this.loading.gruposProductos = true;
+      try {
+        // Intenta con diferentes nombres posibles de endpoint
+        const endpoints = [
+          'grupos-productos',
+          'grupo-productos',
+          'grupos-producto',
+          'product-groups'
+        ];
+        
+        let lastError = null;
+        let success = false;
+        
+        for (const endpoint of endpoints) {
+          try {
+            const response = await axios.get(`${this.strapiBaseUrl}/api/${endpoint}`, {
+              params: {
+                'sort': 'nombre:asc',
+                'pagination[pageSize]': 50
+              }
+            });
+            
+            this.gruposProductos = response.data.data.map(item => ({
+              id: item.id,
+              nombre: item.attributes?.nombre || item.attributes?.name || `Tipo ${item.id}`,
+              codigo: item.attributes?.codigo || ''
+            }));
+            
+            success = true;
+            break; // Si tiene éxito, sal del bucle
+          } catch (error) {
+            lastError = error;
+            continue; // Intenta con el siguiente endpoint
+          }
+        }
+        
+        if (!success && lastError) {
+          throw lastError;
+        }
+      } catch (error) {
+        console.error('Error al cargar grupos de productos:', error);
+        this.$toast.error('Error al cargar tipos de productos');
+        // Proporciona grupos de ejemplo para que la UI no se rompa
+        this.gruposProductos = [
+          { id: 1, nombre: 'Chompas', codigo: 'chompas' },
+          { id: 2, nombre: 'Pantalones', codigo: 'pantalones' },
+          { id: 3, nombre: 'Accesorios', codigo: 'accesorios' }
+        ];
+      } finally {
+        this.loading.gruposProductos = false;
+      }
+    },
+
     async loadProductosPopulares() {
       this.loading.productosPopulares = true;
       try {
@@ -271,12 +322,26 @@ export default {
                 categoriaNombre = item.attributes.category.data.attributes.name;
                 categoriaId = item.attributes.category.data.id;
               }
+
+              // Manejo del grupo de producto
+              let grupoProducto = 'Sin tipo';
+              let grupoProductoId = null;
+              
+              if (item.attributes?.grupo_de_productos?.data?.attributes?.nombre) {
+                grupoProducto = item.attributes.grupo_de_productos.data.attributes.nombre;
+                grupoProductoId = item.attributes.grupo_de_productos.data.id;
+              } else if (item.attributes?.product_group?.data?.attributes?.name) {
+                grupoProducto = item.attributes.product_group.data.attributes.name;
+                grupoProductoId = item.attributes.product_group.data.id;
+              }
               
               return {
                 id: item.id,
                 nombre: item.attributes?.nombre || item.attributes?.name || `Producto ${item.id}`,
                 categoria: categoriaNombre,
                 categoria_id: categoriaId,
+                grupo_producto: grupoProducto,
+                grupo_producto_id: grupoProductoId,
                 precio_venta: item.attributes?.precio_venta || item.attributes?.price || 0,
                 precio_oferta: item.attributes?.precio_oferta || item.attributes?.sale_price || null,
                 en_oferta: item.attributes?.en_oferta || item.attributes?.on_sale || false,
@@ -316,7 +381,7 @@ export default {
       }
 
       // Si es un filtro exclusivo (sólo puede haber uno), eliminamos el anterior
-      if (['precio', 'categoria'].includes(type)) {
+      if (['precio', 'categoria', 'grupo_producto'].includes(type)) {
         const typeIndex = this.activeFilters.findIndex(filter => filter.type === type);
         if (typeIndex !== -1) {
           this.activeFilters.splice(typeIndex, 1);
@@ -328,6 +393,9 @@ export default {
         if (type === 'categoria') {
           const categoria = this.categorias.find(c => c.id === value);
           if (categoria) label = categoria.nombre;
+        } else if (type === 'grupo_producto') {
+          const grupo = this.gruposProductos.find(g => g.id === value);
+          if (grupo) label = grupo.nombre;
         } else if (type === 'en_oferta' && value === true) {
           label = 'Ofertas';
         } else if (type === 'precio') {
@@ -497,7 +565,7 @@ export default {
         'populate': '*'
       };
       
-      // Asegurarse de añadir las categorías al populate
+      // Asegurarse de añadir las relaciones necesarias al populate
       params.populate = ['imagen_principal', 'marca', 'grupo_de_productos', 'categoria'].join(',');
       
       // Recorrer los filtros activos
@@ -517,6 +585,10 @@ export default {
         else if (filter.type === 'categoria') {
           // Filtrado por categoria
           params['filters[categoria][id]'] = parseInt(filter.value);
+        }
+        else if (filter.type === 'grupo_producto') {
+          // Filtrado por grupo de producto
+          params['filters[grupo_de_productos][id]'] = parseInt(filter.value);
         }
         else if (filter.type === 'en_oferta' && filter.value === true) {
           // Filtrado por ofertas
@@ -607,39 +679,70 @@ export default {
 </script>
 
 <style scoped>
+/* Estilos generales para todas las secciones de filtro */
+.filter-section {
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.loading-indicator {
+  color: #6c757d;
+  font-size: 14px;
+  padding: 5px 0;
+}
+
+/* Estilos para listas de filtros (compartidos por todos los tipos de filtro) */
+.filter-list,
+.price-list-row {
+  padding: 0;
+  list-style: none;
+  margin: 0;
+}
+
+.filter-list li,
+.price-list-row li {
+  margin-bottom: 5px;
+}
+
+.filter-list li a,
+.price-list-row li a {
+  display: block;
+  padding: 6px 12px;
+  border-radius: 4px;
+  color: #333;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.filter-list li a:hover,
+.price-list-row li a:hover {
+  background-color: #f5f5f5;
+  color: #007bff;
+}
+
+.filter-list li a.active,
+.price-list-row li.active a {
+  background-color: #007bff;
+  color: white;
+  font-weight: 500;
+}
+
+/* Estilos específicos para el rango de precios */
 .price-range-wrap input {
   width: 100%;
   max-width: 120px;
 }
 
-.price-list-row {
-  padding: 0;
-  list-style: none;
-}
-
-.price-list-row li {
-  margin-bottom: 5px;
-}
-
-.price-list-row li a {
-  display: block;
-  padding: 5px 10px;
-  border-radius: 4px;
-  color: #333;
-  text-decoration: none;
-  transition: all 0.3s;
-}
-
-.price-list-row li a:hover {
-  background-color: #f5f5f5;
-}
-
-.price-list-row li.active a {
-  background-color: #007bff;
-  color: white;
-  font-weight: bold;
-}
-
+/* Estilos para el botón de eliminar filtros */
 .delete-selected-filters a {
   color: #dc3545;
   text-decoration: none;
@@ -649,9 +752,12 @@ export default {
   text-decoration: underline;
 }
 
+/* Estilos para elementos de carga */
 .spinner-border {
   width: 1rem;
   height: 1rem;
+  vertical-align: middle;
+  margin-right: 5px;
 }
 
 /* Estilos para los inputs de precio */
@@ -670,6 +776,7 @@ export default {
   color: white;
 }
 
+/* Estilos para productos individuales en el aside */
 .aside-single-products {
   margin-bottom: 15px;
   padding-bottom: 15px;
