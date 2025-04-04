@@ -32,12 +32,13 @@
                                             <ul>
                                                 <li>Color: <strong>{{cart.color}}</strong></li>
                                                 <li>Tamaño: <strong>{{cart.size}}</strong></li>
-                                                <li>Precio: <strong>Bs. {{cart.price}}</strong></li>
+                                                <li v-if="cart.onSale" class="on-sale-label">¡En oferta!</li>
                                             </ul>
                                         </td>
 
                                         <td class="product-price">
                                             <span class="unit-amount">Bs. {{cart.price}}</span>
+                                            <span v-if="cart.onSale" class="original-price">Bs. {{cart.originalPrice}}</span>
                                         </td>
 
                                         <td class="product-quantity">
@@ -50,7 +51,7 @@
 
                                         <td class="product-subtotal">
                                             <span class="subtotal-amount">Bs. {{cart.price * cart.quantity}}</span>
-
+                                            <span v-if="cart.onSale" class="original-subtotal">Bs. {{cart.originalPrice * cart.quantity}}</span>
                                             <a href="javascript:void(0)" @click="removeItemFromCart(cart.id)" class="remove"><i class="far fa-trash-alt"></i></a>
                                         </td>
                                     </tr>
@@ -124,3 +125,27 @@ export default {
     }
 }
 </script>
+
+<style scoped>
+.original-price {
+    display: block;
+    text-decoration: line-through;
+    color: #999;
+    font-size: 0.85em;
+    margin-top: 3px;
+}
+
+.original-subtotal {
+    display: block;
+    text-decoration: line-through;
+    color: #999;
+    font-size: 0.85em;
+    margin-top: 3px;
+}
+
+.on-sale-label {
+    color: #e41b17;
+    font-weight: bold;
+    margin-top: 5px;
+}
+</style>

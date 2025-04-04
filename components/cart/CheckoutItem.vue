@@ -405,7 +405,7 @@ export default {
 </script>
 
 <style scoped>
-/* Estilo para los campos de solo lectura */
+
 input.form-control[readonly] {
     background-color: #f8f9fa;
     border-color: #e9ecef;

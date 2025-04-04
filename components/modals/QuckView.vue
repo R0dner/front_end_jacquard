@@ -163,40 +163,53 @@ export default {
             }
         },
         addToCart(product) {
-            if (this.currentStock <= 0) {
-                this.$toast.error("Este producto está agotado");
-                return;
-            }
-            
-            if (!this.selectedSize || !this.selectedColor) {
-                this.$toast.error("Por favor, selecciona una talla y un color antes de agregar al carrito.");
-                return; 
-            }
-            
-            if (this.quantity > this.currentStock) {
-                this.$toast.error(`Solo hay ${this.currentStock} unidades disponibles`);
-                return;
-            }
+    if (this.currentStock <= 0) {
+        this.$toast.error("Este producto está agotado");
+        return;
+    }
+    
+    // Validación de talla obligatoria
+    if (!this.selectedSize) {
+        this.$toast.error("Por favor, selecciona una talla antes de agregar al carrito.");
+        return; 
+    }
+    
+    // Validación de color solo si hay colores disponibles
+    if (this.productColors.length > 0 && !this.selectedColor) {
+        this.$toast.error("Por favor, selecciona un color antes de agregar al carrito.");
+        return;
+    }
+    
+    if (this.quantity > this.currentStock) {
+        this.$toast.error(`Solo hay ${this.currentStock} unidades disponibles`);
+        return;
+    }
 
-            const cartItem = {
-                id: product.id,
-                name: product.nombre,
-                price: product.precio,
-                image: product.imageUrl,
-                quantity: this.quantity,
-                size: this.selectedSize,
-                color: this.selectedColor,
-                maxQuantity: this.currentStock,
-                colorCode: this.productColors.find(c => c.attributes.nombre === this.selectedColor)?.attributes.color_rgb
-            };
-            
-            // Versión compatible con Vuex estándar
-            this.$store.dispatch('addToCart', cartItem);
-            this.$toast("Agregado al carrito", {
-                icon: 'fas fa-cart-plus'
-            });
-            this.closeQuickView();
-        },
+    // Usar el precio de oferta si el producto está en oferta
+    const priceToUse = product.enOferta ? product.precioOferta : product.precio;
+
+    const cartItem = {
+        id: product.id,
+        name: product.nombre,
+        price: priceToUse,
+        originalPrice: product.precio, // Mantener el precio original para referencia
+        onSale: product.enOferta,
+        image: product.imageUrl,
+        quantity: this.quantity,
+        size: this.selectedSize,
+        color: this.productColors.length > 0 ? this.selectedColor : null, // Solo enviar color si hay opciones
+        maxQuantity: this.currentStock,
+        colorCode: this.selectedColor ? 
+            this.productColors.find(c => c.attributes.nombre === this.selectedColor)?.attributes.color_rgb : null
+    };
+    
+    // Versión compatible con Vuex estándar
+    this.$store.dispatch('addToCart', cartItem);
+    this.$toast("Agregado al carrito", {
+        icon: 'fas fa-cart-plus'
+    });
+    this.closeQuickView();
+},
         increaseQuantity() {
             if(this.quantity >= this.currentStock) {
                 this.$toast.error(`No puedes agregar más de ${this.currentStock} unidades`, {

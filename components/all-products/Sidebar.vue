@@ -22,20 +22,20 @@
       </div>
       
       <div class="filter-section">
-      <h4 class="section-title">Tipos de Producto</h4>
-      <div class="loading-indicator" v-if="loading.gruposProductos">
-        <span>Cargando tipos de producto...</span>
+        <h4 class="section-title">Tipos de Producto</h4>
+        <div class="loading-indicator" v-if="loading.gruposProductos">
+          <span>Cargando tipos de producto...</span>
+        </div>
+        <ul class="filter-list" v-else>
+          <li v-for="grupo in gruposProductos" :key="'grupo-'+grupo.id">
+            <a href="#" 
+               @click.prevent="applyFilter('grupo_producto', grupo.id)"
+               :class="{'active': isActive('grupo_producto', grupo.id)}">
+              {{ grupo.nombre }}
+            </a>
+          </li>
+        </ul>
       </div>
-      <ul class="filter-list" v-else>
-        <li v-for="grupo in gruposProductos" :key="'grupo-'+grupo.id">
-          <a href="#" 
-             @click.prevent="applyFilter('grupo_producto', grupo.id)"
-             :class="{'active': isActive('grupo_producto', grupo.id)}">
-            {{ grupo.nombre }}
-          </a>
-        </li>
-      </ul>
-    </div>
 
       <!-- Precio - Versión mejorada -->
       <div class="collapse-widget price-list-widget">
@@ -89,7 +89,7 @@
       <!-- Productos populares -->
       <div class="collapse-widget aside-products-widget">
         <h3 class="aside-widget-title">
-          Productos populares
+          Productos Con Descuento
         </h3>
 
         <div v-if="loading.productosPopulares" class="text-center py-3">
@@ -108,8 +108,9 @@
             <div class="products-content">
               <h3><a href="#" @click.prevent="navigateToProduct(producto.id)">{{ producto.nombre }}</a></h3>
               <div class="product-price">
-                <span class="new-price">Bs.{{ producto.precio_venta }}</span>
-                <span v-if="producto.precio_oferta" class="old-price">Bs.{{ producto.precio_oferta }}</span>
+                <span v-if="producto.en_oferta" class="old-price">Bs.{{ producto.precio_venta }}</span>
+                <span v-if="producto.en_oferta" class="new-price">Bs.{{ producto.precio_oferta }}</span>
+                <span v-else class="new-price">Bs.{{ producto.precio_venta }}</span>
               </div>
             </div>
           </div>
@@ -130,13 +131,11 @@ export default {
   data() {
     return {
       activeFilters: [],
-      categorias: [],
-      gruposProductos: [], // Nuevo array para almacenar los grupos de productos
+      gruposProductos: [], 
       productosPopulares: [],
       strapiBaseUrl: process.env.VUE_APP_STRAPI_URL || 'http://localhost:1337',
       loading: {
-        categorias: false,
-        gruposProductos: false, // Nuevo estado de carga para grupos de productos
+        gruposProductos: false, 
         productosPopulares: false,
         applying: false
       },
@@ -161,8 +160,7 @@ export default {
     this.debouncedNotifyProductsComponent = debounce(this.notifyProductsComponent, 300);
   },
   mounted() {
-    this.loadCategorias();
-    this.loadGruposProductos(); // Cargar grupos de productos al montar el componente
+    this.loadGruposProductos();
     this.loadProductosPopulares();
     this.loadFiltersFromUrl();
     
@@ -172,62 +170,9 @@ export default {
     this.$root.$off('update-filters', this.updateFiltersFromExternal);
   },
   methods: {
-    async loadCategorias() {
-      this.loading.categorias = true;
-      try {
-        // Intenta con diferentes endpoints comunes en Strapi
-        const endpoints = [
-          'categorias',
-          'grupo-productos',
-          'categories',
-          'product-categories'
-        ];
-        
-        let lastError = null;
-        
-        for (const endpoint of endpoints) {
-          try {
-            const response = await axios.get(`${this.strapiBaseUrl}/api/${endpoint}`, {
-              params: {
-                'sort': 'nombre:asc',
-                'pagination[pageSize]': 50
-              }
-            });
-            
-            this.categorias = response.data.data.map(item => ({
-              id: item.id,
-              nombre: item.attributes?.nombre || item.attributes?.name || `Categoría ${item.id}`
-            }));
-            lastError = null;
-            break; // Si tiene éxito, sal del bucle
-          } catch (error) {
-            lastError = error;
-            continue; // Intenta con el siguiente endpoint
-          }
-        }
-        
-        if (lastError) {
-          throw lastError;
-        }
-      } catch (error) {
-        console.error('Error al cargar categorías:', error);
-        this.$toast.error('Error al cargar categorías');
-        // Proporciona categorías de ejemplo para que la UI no se rompa
-        this.categorias = [
-          { id: 1, nombre: 'Electrónicos' },
-          { id: 2, nombre: 'Ropa' },
-          { id: 3, nombre: 'Hogar' }
-        ];
-      } finally {
-        this.loading.categorias = false;
-      }
-    },
-
-    // Nuevo método para cargar los grupos de productos
     async loadGruposProductos() {
       this.loading.gruposProductos = true;
       try {
-        // Intenta con diferentes nombres posibles de endpoint
         const endpoints = [
           'grupos-productos',
           'grupo-productos',
@@ -254,10 +199,10 @@ export default {
             }));
             
             success = true;
-            break; // Si tiene éxito, sal del bucle
+            break; 
           } catch (error) {
             lastError = error;
-            continue; // Intenta con el siguiente endpoint
+            continue; 
           }
         }
         
@@ -267,7 +212,6 @@ export default {
       } catch (error) {
         console.error('Error al cargar grupos de productos:', error);
         this.$toast.error('Error al cargar tipos de productos');
-        // Proporciona grupos de ejemplo para que la UI no se rompa
         this.gruposProductos = [
           { id: 1, nombre: 'Chompas', codigo: 'chompas' },
           { id: 2, nombre: 'Pantalones', codigo: 'pantalones' },
@@ -279,96 +223,58 @@ export default {
     },
 
     async loadProductosPopulares() {
-      this.loading.productosPopulares = true;
-      try {
-        // Intenta diferentes estrategias de ordenación
-        const sortOptions = [
-          'stock:desc', 
-          'createdAt:desc',
-          'updatedAt:desc',
-          'precio_venta:asc'
-        ];
-        
-        let lastError = null;
-        let success = false;
-        
-        for (const sortOption of sortOptions) {
-          try {
-            const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-              params: {
-                'sort': sortOption,
-                'pagination[pageSize]': 3,
-                'populate': '*'
-              }
-            });
-
-            this.productosPopulares = response.data.data.map(item => {
-              // Manejo flexible de la imagen principal
-              let imagenPrincipal = '../../assets/img/default-product.jpg';
-              if (item.attributes?.imagen_principal?.data?.attributes?.url) {
-                imagenPrincipal = `${this.strapiBaseUrl}${item.attributes.imagen_principal.data.attributes.url}`;
-              } else if (item.attributes?.images?.data?.[0]?.attributes?.url) {
-                imagenPrincipal = `${this.strapiBaseUrl}${item.attributes.images.data[0].attributes.url}`;
-              }
-              
-              // Manejo flexible de la categoría
-              let categoriaNombre = 'General';
-              let categoriaId = null;
-              
-              if (item.attributes?.categoria?.data?.attributes?.nombre) {
-                categoriaNombre = item.attributes.categoria.data.attributes.nombre;
-                categoriaId = item.attributes.categoria.data.id;
-              } else if (item.attributes?.category?.data?.attributes?.name) {
-                categoriaNombre = item.attributes.category.data.attributes.name;
-                categoriaId = item.attributes.category.data.id;
-              }
-
-              // Manejo del grupo de producto
-              let grupoProducto = 'Sin tipo';
-              let grupoProductoId = null;
-              
-              if (item.attributes?.grupo_de_productos?.data?.attributes?.nombre) {
-                grupoProducto = item.attributes.grupo_de_productos.data.attributes.nombre;
-                grupoProductoId = item.attributes.grupo_de_productos.data.id;
-              } else if (item.attributes?.product_group?.data?.attributes?.name) {
-                grupoProducto = item.attributes.product_group.data.attributes.name;
-                grupoProductoId = item.attributes.product_group.data.id;
-              }
-              
-              return {
-                id: item.id,
-                nombre: item.attributes?.nombre || item.attributes?.name || `Producto ${item.id}`,
-                categoria: categoriaNombre,
-                categoria_id: categoriaId,
-                grupo_producto: grupoProducto,
-                grupo_producto_id: grupoProductoId,
-                precio_venta: item.attributes?.precio_venta || item.attributes?.price || 0,
-                precio_oferta: item.attributes?.precio_oferta || item.attributes?.sale_price || null,
-                en_oferta: item.attributes?.en_oferta || item.attributes?.on_sale || false,
-                stock: item.attributes?.stock || 0,
-                imagen_principal: imagenPrincipal
-              };
-            });
-            
-            success = true;
-            break;
-          } catch (error) {
-            lastError = error;
-            continue;
-          }
-        }
-        
-        if (!success && lastError) {
-          throw lastError;
-        }
-      } catch (error) {
-        console.error('Error al cargar productos populares:', error);
-        this.$toast.error('Error al cargar productos populares');
-        this.productosPopulares = [];
-      } finally {
-        this.loading.productosPopulares = false;
+  this.loading.productosPopulares = true;
+  try {
+    // Modificar la solicitud para filtrar solo productos en oferta
+    const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+      params: {
+        'sort': 'precio_oferta:asc', // Ordenar por precio de oferta ascendente
+        'pagination[pageSize]': 3,
+        'populate': '*',
+        'filters[en_oferta]': true // Filtrar solo productos en oferta
       }
-    },
+    });
+
+    this.productosPopulares = response.data.data.map(item => {
+      // Manejo flexible de la imagen principal
+      let imagenPrincipal = '../../assets/img/default-product.jpg';
+      if (item.attributes?.imagen_principal?.data?.attributes?.url) {
+        imagenPrincipal = `${this.strapiBaseUrl}${item.attributes.imagen_principal.data.attributes.url}`;
+      } else if (item.attributes?.images?.data?.[0]?.attributes?.url) {
+        imagenPrincipal = `${this.strapiBaseUrl}${item.attributes.images.data[0].attributes.url}`;
+      }
+
+      let grupoProducto = 'Sin tipo';
+      let grupoProductoId = null;
+      
+      if (item.attributes?.grupo_de_productos?.data?.attributes?.nombre) {
+        grupoProducto = item.attributes.grupo_de_productos.data.attributes.nombre;
+        grupoProductoId = item.attributes.grupo_de_productos.data.id;
+      } else if (item.attributes?.product_group?.data?.attributes?.name) {
+        grupoProducto = item.attributes.product_group.data.attributes.name;
+        grupoProductoId = item.attributes.product_group.data.id;
+      }
+      
+      return {
+        id: item.id,
+        nombre: item.attributes?.nombre || item.attributes?.name || `Producto ${item.id}`,
+        grupo_producto: grupoProducto,
+        grupo_producto_id: grupoProductoId,
+        precio_venta: item.attributes?.precio_venta || item.attributes?.price || 0,
+        precio_oferta: item.attributes?.precio_oferta || item.attributes?.sale_price || null,
+        en_oferta: item.attributes?.en_oferta || item.attributes?.on_sale || false,
+        stock: item.attributes?.stock || 0,
+        imagen_principal: imagenPrincipal
+      };
+    });
+  } catch (error) {
+    console.error('Error al cargar productos en oferta:', error);
+    this.$toast.error('Error al cargar productos en oferta');
+    this.productosPopulares = [];
+  } finally {
+    this.loading.productosPopulares = false;
+  }
+},
 
     applyFilter(type, value, customLabel = null) {
       const existingIndex = this.activeFilters.findIndex(
@@ -381,7 +287,7 @@ export default {
       }
 
       // Si es un filtro exclusivo (sólo puede haber uno), eliminamos el anterior
-      if (['precio', 'categoria', 'grupo_producto'].includes(type)) {
+      if (['precio', 'grupo_producto'].includes(type)) {
         const typeIndex = this.activeFilters.findIndex(filter => filter.type === type);
         if (typeIndex !== -1) {
           this.activeFilters.splice(typeIndex, 1);
@@ -390,10 +296,7 @@ export default {
 
       let label = customLabel || value;
       if (!customLabel) {
-        if (type === 'categoria') {
-          const categoria = this.categorias.find(c => c.id === value);
-          if (categoria) label = categoria.nombre;
-        } else if (type === 'grupo_producto') {
+        if (type === 'grupo_producto') {
           const grupo = this.gruposProductos.find(g => g.id === value);
           if (grupo) label = grupo.nombre;
         } else if (type === 'en_oferta' && value === true) {
@@ -566,7 +469,7 @@ export default {
       };
       
       // Asegurarse de añadir las relaciones necesarias al populate
-      params.populate = ['imagen_principal', 'marca', 'grupo_de_productos', 'categoria'].join(',');
+      params.populate = ['imagen_principal', 'marca', 'grupo_de_productos'].join(',');
       
       // Recorrer los filtros activos
       this.activeFilters.forEach(filter => {
@@ -582,10 +485,6 @@ export default {
             params['filters[precio_venta][$lte]'] = max;
           }
         } 
-        else if (filter.type === 'categoria') {
-          // Filtrado por categoria
-          params['filters[categoria][id]'] = parseInt(filter.value);
-        }
         else if (filter.type === 'grupo_producto') {
           // Filtrado por grupo de producto
           params['filters[grupo_de_productos][id]'] = parseInt(filter.value);

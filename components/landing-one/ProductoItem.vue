@@ -19,10 +19,11 @@
       .product-content
         h3
           nuxt-link(:to='`/products-details/${id}`') {{product.nombre}}
-        .product-price
-          span.old-price(v-if='product.en_oferta')
-            | Bs.{{product.precio_oferta}}
-          span.new-price Bs.{{product.precio_venta}}
+          .product-price
+            span.old-price(v-if='product.en_oferta')
+              | Bs.{{product.precio_venta}}
+            span.new-price(v-if='product.en_oferta') Bs.{{product.precio_oferta}}
+            span.new-price(v-else) Bs.{{product.precio_venta}}
         .rating
           i.fas.fa-star
           i.fas.fa-star

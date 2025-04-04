@@ -79,6 +79,7 @@ export default {
 					this.user = data.user
 
 					// Guardar el usuario en localStorage
+					localStorage.setItem('user_email', data.user.email);
 					localStorage.setItem('user', JSON.stringify(data.user));
 					
 					// IMPORTANTE: Emitir evento global para notificar el login

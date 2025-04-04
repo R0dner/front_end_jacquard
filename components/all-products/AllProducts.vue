@@ -148,7 +148,6 @@ export default {
         startPage = Math.max(1, endPage - showPages + 1);
       }
       
-      // Generar array de páginas
       for (let i = startPage; i <= endPage; i++) {
         pages.push(i);
       }
@@ -160,23 +159,22 @@ export default {
     async fetchProducts() {
   this.loading = true;
   try {
-    // Si estamos usando un objeto de parámetros completo (enviado desde el sidebar)
+
     if (this.activeFilters && this.activeFilters.params) {
       const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
         params: {
           ...this.activeFilters.params,
           'pagination[page]': this.currentPage,
           'pagination[pageSize]': this.pageSize,
-          sort: this.sortOrder // Añadir el parámetro de ordenación
+          sort: this.sortOrder 
         }
       });
       
-      // Procesar la respuesta
       this.products = response.data.data || [];
       this.totalProducts = response.data.meta.pagination.total;
       this.totalPages = response.data.meta.pagination.pageCount;
     } else {
-      // Construir los parámetros de la solicitud manualmente
+
       const queryParams = {
         'pagination[page]': this.currentPage,
         'pagination[pageSize]': this.pageSize,
@@ -228,7 +226,7 @@ export default {
       const imagenData = product.attributes?.imagen_principal?.data?.attributes;
 
       if (imagenData?.url) {
-        // Si la URL de la imagen ya incluye el protocolo (http o https), úsala directamente
+
         if (imagenData.url.startsWith('http')) {
           return imagenData.url;
         }
