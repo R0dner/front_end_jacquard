@@ -2,7 +2,8 @@
     section.offer-area.ptb-60
         .container
             .row
-                .col-lg-4.col-md-6(v-for="category in categoria.data" :key="category.id")
+                // Añadir v-if para verificar que los datos existen
+                .col-lg-4.col-md-6(v-for="category in categoria.data" :key="category.id" v-if="categoria && categoria.data")
                     .offer-box
                         img(:src="api_url + category.attributes.imagen.data.attributes.url" height="400" )
                         .category
@@ -21,15 +22,14 @@ export default {
     name: "AreaOfertas",
     data() {
         return {
-            categorias: {},
             api_url: process.env.strapiBaseUri
         }
     },
     apollo: {
         categoria: {
-			prefetch: true,
-			query: categoriasQuery
-		}
+            prefetch: true,
+            query: categoriasQuery
+        }
     }
 }
 </script>

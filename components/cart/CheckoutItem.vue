@@ -361,37 +361,41 @@ export default {
                                 (user.role && typeof user.role === 'string' ? user.role : 'Usuario General');
 
                 // 4. Preparar datos del pedido
-                const pedidoData = {
-                    data: {
-                        referencia: this.referenceNumber,
-                        fecha_pedido: new Date().toISOString(),
-                        fecha_entrega_solicitada: new Date(`${this.deliveryDate}T${this.deliveryTime}:00`).toISOString(),
-                        user: user.id, 
-                        user_email: user.email, 
-                        user_role: userRole, 
-                        productos: this.cart.map(item => ({
-                            nombre: item.name,
-                            precio: item.price,
-                            cantidad: item.quantity,
-                            talla: item.size || null,
-                        })),
-                        metodo_pago: this.paymentMethod === 'bank-transfer' 
-                            ? 'transferencia_bancaria' 
-                            : 'pago_qr', 
-                        comprobante: uploadResponse[0].id,
-                        subtotal: this.cartTotal,
-                        costo_envio: 0,
-                        total: this.cartTotal,
-                        estado: 'pendiente'
-                    }
-                };
+const pedidoData = {
+    data: {
+        referencia: this.referenceNumber,
+        fecha_pedido: new Date().toISOString(),
+        fecha_entrega_solicitada: new Date(`${this.deliveryDate}T${this.deliveryTime}:00`).toISOString(),
+        user: user.id, 
+        user_email: user.email, 
+        user_role: userRole, 
+        productos: this.cart.map(item => ({
+            nombre: item.name,
+            precio: item.price,
+            cantidad: item.quantity,
+            talla: item.size || null,
+            // Agregar estos campos nuevos
+            en_oferta: item.onSale || false,
+            precio_original: item.originalPrice || item.price,
+            color: item.color || null
+        })),
+        metodo_pago: this.paymentMethod === 'bank-transfer' 
+            ? 'transferencia_bancaria' 
+            : 'pago_qr', 
+        comprobante: uploadResponse[0].id,
+        subtotal: this.cartTotal,
+        costo_envio: 0,
+        total: this.cartTotal,
+        estado: 'pendiente'
+    }
+};
 
                 // 5. Enviar pedido
                 await this.$axios.$post('http://127.0.0.1:1337/api/pedidos', pedidoData);
 
                 this.$toast.success(`Pedido #${this.referenceNumber} registrado`);
                 this.$store.dispatch('cartEmpty');
-                this.$router.push("/orden-completada");
+                this.$router.push("/");
 
             } catch (error) {
                 console.error('Error:', error);

@@ -29,7 +29,7 @@
                                         </a>
                                         <ul class="dropdown-menu">
                                             <li class="nav-item"><nuxt-link to="/blog-one" class="nav-link" @click.native="navigateTo('/blog-one')">Novedades</nuxt-link></li>
-                                            <li class="nav-item"><nuxt-link to="/blog-details" class="nav-link" @click.native="navigateTo('/blog-details')">Sobre nuestras prendas</nuxt-link></li>
+                                            <li class="nav-item"><nuxt-link to="/blog-details" class="nav-link" @click.native="navigateTo('/blog-details')">Sobre nosotros</nuxt-link></li>
                                         </ul>
                                     </li>
                                     <li class="nav-item">

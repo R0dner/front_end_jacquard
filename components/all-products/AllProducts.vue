@@ -266,37 +266,53 @@ export default {
       return { id: null, nombre: 'Sin tipo' };
     }
   },
-  mounted() {
-    // Aplicar filtros iniciales si existen
-    if (Object.keys(this.initialFilters).length > 0) {
-      this.activeFilters = this.initialFilters;
+  // Agregar este código al método mounted() de tu componente de galería de productos
+mounted() {
+  // Aplicar filtros iniciales si existen
+  if (Object.keys(this.initialFilters).length > 0) {
+    this.activeFilters = this.initialFilters;
+  }
+  
+  // Verificar si hay parámetros de filtro en la URL
+  const urlParams = this.$route.query;
+  if (urlParams) {
+    const filters = {};
+    
+    // Procesar parámetros de filtro desde la URL
+    if (urlParams.categoria) {
+      filters.categoria = urlParams.categoria;
     }
     
-    // Comienza a cargar los productos inmediatamente
-    this.fetchProducts();
+    if (urlParams.grupo_producto) {
+      filters.grupo_producto = urlParams.grupo_producto;
+    }
     
-    // Escuchar eventos de cambio de filtros desde el componente de sidebar
-    this.$root.$on('sidebar-filters-changed', (filters) => {
-      this.applyFilters(filters);
-    });
-    
-    // Evento nuevo - escuchar el evento "filters-changed" que envía el sidebar
-    this.$root.$on('filters-changed', (params) => {
-      this.activeFilters = { params };
-      this.currentPage = 1; // Reiniciar a la primera página
-      this.fetchProducts();
-    });
-    
-    // Si el componente padre emite cambios en filtros
-    this.$on('filter-changed', (filters) => {
-      this.applyFilters(filters);
-    });
-  },
-  beforeDestroy() {
-    // Limpiar event listeners al destruir el componente
-    this.$root.$off('sidebar-filters-changed');
-    this.$root.$off('filters-changed');
+    // Aplicar los filtros si se encontraron
+    if (Object.keys(filters).length > 0) {
+      this.activeFilters = filters;
+    }
   }
+  
+  // Comienza a cargar los productos inmediatamente
+  this.fetchProducts();
+  
+  // Escuchar eventos de cambio de filtros desde el componente de sidebar
+  this.$root.$on('sidebar-filters-changed', (filters) => {
+    this.applyFilters(filters);
+  });
+  
+  // Evento nuevo - escuchar el evento "filters-changed" que envía el sidebar
+  this.$root.$on('filters-changed', (params) => {
+    this.activeFilters = { params };
+    this.currentPage = 1; // Reiniciar a la primera página
+    this.fetchProducts();
+  });
+  
+  // Si el componente padre emite cambios en filtros
+  this.$on('filter-changed', (filters) => {
+    this.applyFilters(filters);
+  });
+}
 };
 </script>
 

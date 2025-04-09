@@ -57,13 +57,15 @@
           Timer
       },
       data(){
-          return {
-              api_url: process.env.strapiBaseUri,
-              getExistPId: null,
-              loadingInventory: false,
-              inventoryData: null
-          }
-      },
+            return {
+                api_url: process.env.strapiBaseUri,
+                getExistPId: null,
+                loadingInventory: false,
+                inventoryData: null,
+                showQuickView: false,  // Añadida esta propiedad
+                quickViewProduct: null  // Añadida esta propiedad
+            }
+        },
       props: ['id','product', 'className'],
       computed: {
           cart(){
@@ -80,9 +82,11 @@
           }
       },
       methods: {
-          quickView(e){
-              this.$emit('clicked')
-          },
+        quickView(e){
+            this.showQuickView = true;
+            this.quickViewProduct = this.product;
+            this.$emit('clicked');
+        },
           async fetchInventory() {
               this.loadingInventory = true;
               try {
@@ -183,7 +187,7 @@
     color: #666666 !important;
     cursor: not-allowed !important;
     pointer-events: none !important;
-  }z
+  }
   
   .product-image {
     position: relative;
