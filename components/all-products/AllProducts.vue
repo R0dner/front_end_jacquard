@@ -275,23 +275,23 @@ mounted() {
   
   // Verificar si hay parámetros de filtro en la URL
   const urlParams = this.$route.query;
-  if (urlParams) {
-    const filters = {};
-    
-    // Procesar parámetros de filtro desde la URL
-    if (urlParams.categoria) {
-      filters.categoria = urlParams.categoria;
-    }
-    
-    if (urlParams.grupo_producto) {
-      filters.grupo_producto = urlParams.grupo_producto;
-    }
-    
-    // Aplicar los filtros si se encontraron
-    if (Object.keys(filters).length > 0) {
-      this.activeFilters = filters;
-    }
+if (urlParams) {
+  const filters = {};
+  
+  // Procesar parámetros de filtro desde la URL
+  if (urlParams.categoria) {
+    filters.categoria = urlParams.categoria;
   }
+  
+  if (urlParams.grupo_producto) {
+    filters.grupo_producto = urlParams.grupo_producto;
+  }
+  
+  // Aplicar los filtros si se encontraron
+  if (Object.keys(filters).length > 0) {
+    this.activeFilters = filters;
+  }
+}
   
   // Comienza a cargar los productos inmediatamente
   this.fetchProducts();
