@@ -137,8 +137,510 @@ export default {
 </script>
 
 <style scoped>
-/* Estilos personalizados para SweetAlert2 */
+/* Estilos base y comunes (mantengo lo anterior) */
+.page-title-area {
+    padding: 15px 0;
+    background-color: #f8f9fa;
+    margin-bottom: 20px;
+}
+
+.page-title-area ul {
+    display: flex;
+    flex-wrap: wrap;
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.page-title-area li {
+    margin-right: 15px;
+    position: relative;
+}
+
+.page-title-area li:not(:last-child)::after {
+    content: "/";
+    margin-left: 15px;
+    color: #6c757d;
+}
+
+/* Sección de contacto */
+.contact-area {
+    padding: 60px 0;
+}
+
+.section-title {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+}
+
+.section-title h2 {
+    font-size: 28px;
+    font-weight: 700;
+    position: relative;
+    display: inline-block;
+}
+
+.section-title .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: #0a6cf5;
+    border-radius: 50%;
+    margin-right: 8px;
+    position: relative;
+    top: -2px;
+}
+
+/* Estilos para información de contacto */
+.contact-info {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+    height: 100%;
+}
+
+.contact-info h3 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+    color: #333;
+}
+
+.contact-info p {
+    margin-bottom: 25px;
+    color: #6c757d;
+    line-height: 1.6;
+}
+
+.contact-list {
+    padding: 0;
+    margin: 0 0 30px;
+    list-style-type: none;
+}
+
+.contact-list li {
+    position: relative;
+    padding-left: 30px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.contact-list li i {
+    position: absolute;
+    left: 0;
+    top: 5px;
+    color: #ff9d00;
+}
+
+.contact-list li a {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.contact-list li a:hover {
+    color: #f88c07;
+}
+
+/* Horario de atención */
+.opening-hours {
+    padding: 0;
+    margin: 0 0 30px;
+    list-style-type: none;
+}
+
+.opening-hours li {
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed #e9ecef;
+    padding-bottom: 10px;
+}
+
+.opening-hours li:last-child {
+    border-bottom: none;
+}
+
+.opening-hours li span {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Redes sociales */
+.social {
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.social li {
+    margin-right: 15px;
+}
+
+.social li a {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    background-color: #f8f9fa;
+    border-radius: 50%;
+    color: #333;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.social li a:hover {
+    background-color: #ff9100;
+    color: #fff;
+    transform: translateY(-3px);
+}
+
+/* Formulario de contacto */
+.contact-form {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+    height: 100%;
+}
+
+.contact-form h3 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+    color: #333;
+}
+
+.contact-form p {
+    margin-bottom: 25px;
+    color: #6c757d;
+    line-height: 1.6;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group label span {
+    color: #dc3545;
+    font-size: 14px;
+}
+
+.form-control {
+    width: 100%;
+    height: 50px;
+    padding: 10px 15px;
+    font-size: 15px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    border-color: #6c6c6d;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(239, 199, 145, 0.25);
+}
+
+textarea.form-control {
+    height: auto;
+    resize: vertical;
+}
+
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 1em;
+}
+
+/* Botón WhatsApp */
+.btn-primary {
+    background-color: #ff8400;
+    border-color: #ff9100;
+    color: #fff;
+    padding: 12px 30px;
+    font-size: 16px;
+    font-weight: 500;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-primary:hover {
+    background-color: #e98707;
+    border-color: #cc7400;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 191, 0, 0.3);
+}
+
+.btn-primary:focus {
+    box-shadow: 0 0 0 0.2rem rgba(255, 157, 0, 0.5);
+}
+
+/* Media queries para responsividad */
+@media (max-width: 1199px) {
+    .contact-info, .contact-form {
+        padding: 25px;
+    }
+    
+    .contact-area {
+        padding: 50px 0;
+    }
+}
+
+@media (max-width: 991px) {
+    .section-title h2 {
+        font-size: 26px;
+    }
+    
+    .contact-info, .contact-form {
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .contact-info h3, .contact-form h3 {
+        font-size: 20px;
+    }
+    
+    .contact-area {
+        padding: 40px 0;
+    }
+    
+    .social li a {
+        width: 35px;
+        height: 35px;
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 767px) {
+    .section-title {
+        margin-bottom: 30px;
+    }
+    
+    .section-title h2 {
+        font-size: 24px;
+    }
+    
+    .contact-info, .contact-form {
+        padding: 20px 15px;
+    }
+    
+    .contact-area {
+        padding: 30px 0;
+    }
+    
+    .contact-info h3, .contact-form h3 {
+        font-size: 18px;
+        margin-bottom: 15px;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-control {
+        height: 45px;
+        font-size: 14px;
+    }
+    
+    .btn-primary {
+        padding: 10px 25px;
+        font-size: 15px;
+        /* Asegurar que el botón siempre esté abajo */
+        margin-top: 15px;
+        order: 999; /* Utiliza order para posicionar el botón al final */
+    }
+    
+    .contact-info {
+        margin-bottom: 30px;
+    }
+    
+    .contact-list li, .opening-hours li {
+        font-size: 15px;
+        margin-bottom: 12px;
+    }
+    
+    /* Ajustar orden en móviles - formulario primero, info después */
+    .row {
+        display: flex;
+        flex-direction: column-reverse;
+    }
+    
+    .col-lg-5 {
+        margin-top: 30px;
+    }
+    
+    /* Colocar el botón después de todos los campos */
+    #contactForm .row {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    #contactForm .col-lg-12:last-child {
+        order: 999;
+        margin-top: 20px;
+    }
+}
+
+@media (max-width: 575px) {
+    .page-title-area {
+        padding: 10px 0;
+    }
+    
+    .page-title-area li {
+        font-size: 14px;
+    }
+    
+    .section-title h2 {
+        font-size: 22px;
+    }
+    
+    .contact-info h3, .contact-form h3 {
+        font-size: 17px;
+    }
+    
+    .contact-info p, .contact-form p {
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+    
+    .contact-list li, .opening-hours li {
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    .contact-list li i {
+        top: 3px;
+    }
+    
+    .form-group label {
+        font-size: 14px;
+        margin-bottom: 6px;
+    }
+    
+    .form-control {
+        height: 42px;
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+    
+    .btn-primary {
+        padding: 10px 20px;
+        font-size: 14px;
+        margin-top: 20px; /* Aumentar espacio para separar mejor del último campo */
+    }
+    
+    .social li a {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 375px) {
+    .contact-info, .contact-form {
+        padding: 15px 12px;
+    }
+    
+    .section-title h2 {
+        font-size: 20px;
+    }
+    
+    .contact-list li {
+        padding-left: 25px;
+    }
+    
+    .contact-list li i {
+        font-size: 14px;
+    }
+    
+    .btn-primary {
+        padding: 8px 15px;
+        font-size: 13px;
+        margin-top: 25px; /* Más separación en dispositivos muy pequeños */
+    }
+    
+    textarea.form-control {
+        min-height: 120px;
+    }
+    
+    /* Mejora del espacio de toque para móviles pequeños */
+    .social li a {
+        width: 38px;
+        height: 38px;
+        margin-bottom: 10px;
+    }
+    
+    .form-control {
+        font-size: 13px;
+    }
+}
+
+/* Estilos para SweetAlert2 */
 .swal2-popup {
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.swal2-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #333;
+}
+
+.swal2-html-container {
+    font-size: 15px;
+    color: #555;
+}
+
+.swal2-confirm {
+    background-color: #ffa200 !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+    box-shadow: 0 2px 10px rgba(238, 156, 4, 0.3) !important;
+}
+
+/* Ajustes para SweetAlert en dispositivos móviles */
+@media (max-width: 575px) {
+    .swal2-popup {
+        padding: 15px;
+        width: 90% !important;
+    }
+    
+    .swal2-title {
+        font-size: 18px;
+    }
+    
+    .swal2-html-container {
+        font-size: 14px;
+    }
+    
+    .swal2-confirm {
+        font-size: 14px !important;
+        padding: 8px 16px !important;
+    }
 }
 </style>

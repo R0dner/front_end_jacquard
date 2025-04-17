@@ -410,11 +410,88 @@ const pedidoData = {
 
 <style scoped>
 
+/* Estilos base y comunes */
+.form-control {
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    padding: 10px 15px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
 input.form-control[readonly] {
     background-color: #f8f9fa;
     border-color: #e9ecef;
     cursor: not-allowed;
     opacity: 0.8;
+}
+
+/* Estilos de encabezado y navegación */
+.page-title-area {
+    padding: 15px 0;
+    background-color: #f8f9fa;
+    margin-bottom: 20px;
+}
+
+.page-title-area ul {
+    display: flex;
+    flex-wrap: wrap;
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.page-title-area li {
+    margin-right: 15px;
+    position: relative;
+}
+
+.page-title-area li:not(:last-child)::after {
+    content: "/";
+    margin-left: 15px;
+    color: #6c757d;
+}
+
+/* Estilos para checkout y formularios */
+.checkout-area {
+    padding: 30px 0;
+}
+
+.user-actions {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.user-actions i {
+    margin-right: 10px;
+    color: #007bff;
+}
+
+.billing-details, .order-details {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.billing-details .title, .order-details .title, .payment-method .title {
+    position: relative;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
 }
 
 /* Estilos para la sección de pagos */
@@ -431,6 +508,7 @@ input.form-control[readonly] {
     border-left: 3px solid #007bff;
     padding: 10px;
     border-radius: 0 5px 5px 0;
+    margin-bottom: 15px;
 }
 
 .bank-info p {
@@ -443,62 +521,48 @@ input.form-control[readonly] {
     border-radius: 5px;
     display: inline-block;
     border: 1px dashed #ccc;
+    max-width: 100%;
 }
 
-.order-btn {
-    width: 100%;
-    margin-top: 15px;
-    padding: 12px;
+.qr-code img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Estilos para la tabla de pedidos */
+.order-table {
+    margin-bottom: 20px;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+    padding: 12px 15px;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.total-price, .product-subtotal {
     font-weight: bold;
+    font-size: 1.1em;
 }
 
-/* Estilos para la sección de métodos de pago */
-.payment-options p {
-    margin-bottom: 10px;
+/* Estilos para inputs específicos */
+.form-group {
+    margin-bottom: 20px;
 }
 
-.payment-options input[type="radio"] {
-    margin-right: 10px;
-}
-
-.payment-options label {
-    font-weight: 500;
-    cursor: pointer;
-}
-
-/* Estilos para la carga de archivos */
-.custom-file-input:lang(es)~.custom-file-label::after {
-    content: "Buscar";
-}
-
-.custom-file {
-    margin-bottom: 10px;
-}
-
-/* Estilos para desactivar el botón */
-.btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.65;
-}
-
-/* Estilos para los campos de fecha y hora */
 .form-group label {
     font-weight: 500;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     display: block;
 }
 
-.form-control {
-    border-radius: 4px;
-    border: 1px solid #ced4da;
-    padding: 10px 15px;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-.form-control:focus {
-    border-color: #80bdff;
-    outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+.form-text {
+    color: #6c757d;
+    margin-top: 5px;
 }
 
 select.form-control {
@@ -509,6 +573,110 @@ select.form-control {
     background-size: 1em;
 }
 
+/* Estilos para opciones de pago */
+.payment-options {
+    margin-bottom: 20px;
+}
+
+.payment-options p {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.payment-options input[type="radio"] {
+    margin-right: 10px;
+}
+
+.payment-options label {
+    font-weight: 500;
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+/* Estilos para botones y acciones */
+.order-btn {
+    width: 100%;
+    margin-top: 15px;
+    padding: 12px;
+    font-weight: bold;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 5px;
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.fa-spinner {
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Estilos para la carga de archivos */
+.custom-file {
+    position: relative;
+    display: block;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.custom-file-input {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: calc(1.5em + 0.75rem + 2px);
+    margin: 0;
+    opacity: 0;
+}
+
+.custom-file-label {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 1;
+    height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 0.75rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #495057;
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+}
+
+.custom-file-input:lang(es)~.custom-file-label::after {
+    content: "Buscar";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    display: block;
+    height: calc(1.5em + 0.75rem);
+    padding: 0.375rem 0.75rem;
+    line-height: 1.5;
+    color: #fff;
+    background-color: #007bff;
+    border-left: inherit;
+    border-radius: 0 0.25rem 0.25rem 0;
+}
+
+/* Estilos para el resumen de entrega */
 .delivery-summary {
     background-color: #f8f9fa;
     border-radius: 5px;
@@ -520,14 +688,132 @@ select.form-control {
 .delivery-summary h5 {
     color: #28a745;
     margin-bottom: 10px;
+    font-weight: 600;
 }
 
 .delivery-summary p {
     margin-bottom: 5px;
 }
 
-/* Spinner para el botón de carga */
-.fa-spinner {
-    margin-right: 5px;
+/* Media queries para responsividad */
+@media (max-width: 991px) {
+    .billing-details, .order-details {
+        padding: 20px;
+    }
+    
+    .checkout-area {
+        padding: 20px 0;
+    }
+}
+
+@media (max-width: 767px) {
+    .billing-details, .order-details {
+        padding: 15px;
+    }
+    
+    .checkout-area {
+        padding: 15px 0;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .billing-details .title, .order-details .title, .payment-method .title {
+        font-size: 18px;
+        margin-bottom: 15px;
+    }
+    
+    .table th, .table td {
+        padding: 10px;
+        font-size: 14px;
+    }
+    
+    .user-actions {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .user-actions i {
+        margin-bottom: 5px;
+    }
+    
+    .delivery-summary, .payment-details-section {
+        padding: 12px;
+    }
+    
+    .order-btn {
+        padding: 10px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-title-area li {
+        font-size: 14px;
+    }
+    
+    .billing-details .title, .order-details .title, .payment-method .title {
+        font-size: 16px;
+    }
+    
+    .form-group label {
+        font-size: 14px;
+    }
+    
+    .table th, .table td {
+        padding: 8px;
+        font-size: 13px;
+    }
+    
+    .bank-info p, .delivery-summary p {
+        font-size: 13px;
+    }
+    
+    .custom-file-label, .form-control {
+        font-size: 14px;
+    }
+    
+    .payment-options label {
+        font-size: 14px;
+    }
+    
+    /* Mejora la visualización de la tabla en dispositivos muy pequeños */
+    .table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+    }
+    
+    /* Ajustar altura de inputs en dispositivos pequeños */
+    .form-control, .custom-file-label, .custom-file-input {
+        height: calc(1.5em + 0.75rem + 2px);
+    }
+}
+
+/* Ajustes adicionales para iPhone SE y dispositivos muy pequeños */
+@media (max-width: 375px) {
+    .billing-details, .order-details {
+        padding: 12px;
+    }
+    
+    .payment-details-section, .bank-info {
+        padding: 10px;
+    }
+    
+    .form-group label, .table th, .table td, .bank-info p {
+        font-size: 12px;
+    }
+    
+    .order-btn {
+        padding: 8px;
+        font-size: 13px;
+    }
+    
+    /* Ajustes para que los campos de formulario sean más tocables */
+    .form-control, .custom-file-label {
+        height: 40px;
+        font-size: 13px;
+    }
 }
 </style>

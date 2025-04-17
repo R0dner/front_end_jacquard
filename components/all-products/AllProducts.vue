@@ -2,29 +2,33 @@
   <div class="col-lg-8 col-md-12">
     <div class="products-filter-options">
       <div class="row align-items-center">
-        <div class="col d-flex">
+        <div class="col-lg-4 col-md-6 col-12 d-flex">
           <p>Mostrando {{ products.length }} de {{ totalProducts }} resultados</p>
         </div>
-        <div class="col d-flex">
-          <span>Mostrando:</span>
-          <div class="show-products-number">
-            <select v-model="pageSize" @change="fetchProducts">
-              <option value="12">12</option>
-              <option value="24">24</option>
-              <option value="36">36</option>
-              <option value="48">48</option>
-            </select>
+        <div class="col-lg-8 col-md-6 col-12 d-flex flex-wrap filter-controls">
+          <div class="filter-item">
+            <span>Mostrar:</span>
+            <div class="show-products-number">
+              <select v-model="pageSize" @change="fetchProducts">
+                <option value="12">12</option>
+                <option value="24">24</option>
+                <option value="36">36</option>
+                <option value="48">48</option>
+              </select>
+            </div>
           </div>
-          <span>Ordenar:</span>
-          <div class="products-ordering-list">
-            <select v-model="sortOrder" @change="fetchProducts">
-              <option value="createdAt:desc">Más recientes</option>
-              <option value="createdAt:asc">Más antiguos</option>
-              <option value="precio_venta:asc">Precio: Menor a Mayor</option>
-              <option value="precio_venta:desc">Precio: Mayor a Menor</option>
-              <option value="nombre:asc">Nombre: A-Z</option>
-              <option value="nombre:desc">Nombre: Z-A</option>
-            </select>
+          <div class="filter-item">
+            <span>Ordenar:</span>
+            <div class="products-ordering-list">
+              <select v-model="sortOrder" @change="fetchProducts">
+                <option value="createdAt:desc">Más recientes</option>
+                <option value="createdAt:asc">Más antiguos</option>
+                <option value="precio_venta:asc">Precio: Menor a Mayor</option>
+                <option value="precio_venta:desc">Precio: Mayor a Menor</option>
+                <option value="nombre:asc">Nombre: A-Z</option>
+                <option value="nombre:desc">Nombre: Z-A</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -42,7 +46,7 @@
           inventory: product.attributes.inventario?.data?.attributes || null
         }"
         @clicked="toggleQuickView(product)"
-        :className="`col-lg-3 col-md-6 col-sm-6 products-col-item`"
+        :className="`col-lg-3 col-md-6 col-sm-6 col-6 products-col-item`"
       />
     </div>
 
@@ -134,16 +138,13 @@ export default {
     };
   },
   computed: {
-    // Generar un array de páginas para mostrar en la paginación
     paginationPages() {
       const showPages = 5; 
       const pages = [];
       
-      // Calcular rango de páginas a mostrar
       let startPage = Math.max(1, this.currentPage - Math.floor(showPages / 2));
       let endPage = Math.min(this.totalPages, startPage + showPages - 1);
       
-      // Ajustar rango si estamos cerca del final
       if (endPage - startPage + 1 < showPages) {
         startPage = Math.max(1, endPage - showPages + 1);
       }
@@ -157,84 +158,75 @@ export default {
   },
   methods: {
     async fetchProducts() {
-  this.loading = true;
-  try {
-
-    if (this.activeFilters && this.activeFilters.params) {
-      const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-        params: {
-          ...this.activeFilters.params,
-          'pagination[page]': this.currentPage,
-          'pagination[pageSize]': this.pageSize,
-          sort: this.sortOrder 
-        }
-      });
-      
-      this.products = response.data.data || [];
-      this.totalProducts = response.data.meta.pagination.total;
-      this.totalPages = response.data.meta.pagination.pageCount;
-    } else {
-
-      const queryParams = {
-        'pagination[page]': this.currentPage,
-        'pagination[pageSize]': this.pageSize,
-        sort: this.sortOrder,
-        populate: ['imagen_principal', 'marca', 'grupo_de_productos', 'categoria'].join(','),
-      };
-
-      // Agregar filtros si existen
-      if (Object.keys(this.activeFilters).length > 0) {
-        Object.entries(this.activeFilters).forEach(([key, value]) => {
-          if (key === 'precio') {
-            const [min, max] = value.split('-').map(val => parseFloat(val));
-            if (!isNaN(min)) {
-              queryParams['filters[precio_venta][$gte]'] = min;
+      this.loading = true;
+      try {
+        if (this.activeFilters && this.activeFilters.params) {
+          const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+            params: {
+              ...this.activeFilters.params,
+              'pagination[page]': this.currentPage,
+              'pagination[pageSize]': this.pageSize,
+              sort: this.sortOrder 
             }
-            if (!isNaN(max)) {
-              queryParams['filters[precio_venta][$lte]'] = max;
-            }
-          } else if (key === 'categoria') {
-            queryParams['filters[categoria][id]'] = parseInt(value);
-          } else if (key === 'grupo_producto') {
-            queryParams['filters[grupo_de_productos][id]'] = parseInt(value);
-          } else if (key === 'en_oferta' && value === true) {
-            queryParams['filters[en_oferta]'] = true;
-          } else {
-            queryParams[`filters[${key}]`] = value;
+          });
+          
+          this.products = response.data.data || [];
+          this.totalProducts = response.data.meta.pagination.total;
+          this.totalPages = response.data.meta.pagination.pageCount;
+        } else {
+          const queryParams = {
+            'pagination[page]': this.currentPage,
+            'pagination[pageSize]': this.pageSize,
+            sort: this.sortOrder,
+            populate: ['imagen_principal', 'marca', 'grupo_de_productos', 'categoria'].join(','),
+          };
+
+          if (Object.keys(this.activeFilters).length > 0) {
+            Object.entries(this.activeFilters).forEach(([key, value]) => {
+              if (key === 'precio') {
+                const [min, max] = value.split('-').map(val => parseFloat(val));
+                if (!isNaN(min)) {
+                  queryParams['filters[precio_venta][$gte]'] = min;
+                }
+                if (!isNaN(max)) {
+                  queryParams['filters[precio_venta][$lte]'] = max;
+                }
+              } else if (key === 'categoria') {
+                queryParams['filters[categoria][id]'] = parseInt(value);
+              } else if (key === 'grupo_producto') {
+                queryParams['filters[grupo_de_productos][id]'] = parseInt(value);
+              } else if (key === 'en_oferta' && value === true) {
+                queryParams['filters[en_oferta]'] = true;
+              } else {
+                queryParams[`filters[${key}]`] = value;
+              }
+            });
           }
-        });
+
+          const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+            params: queryParams,
+          });
+
+          this.products = response.data.data || [];
+          this.totalProducts = response.data.meta.pagination.total;
+          this.totalPages = response.data.meta.pagination.pageCount;
+        }
+      } catch (error) {
+        console.error('Error al obtener productos:', error.response?.data || error.message);
+      } finally {
+        this.loading = false;
       }
-
-      // Realizar la solicitud a Strapi
-      const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-        params: queryParams,
-      });
-
-      // Procesar la respuesta
-      this.products = response.data.data || [];
-      this.totalProducts = response.data.meta.pagination.total;
-      this.totalPages = response.data.meta.pagination.pageCount;
-    }
-  } catch (error) {
-    console.error('Error al obtener productos:', error.response?.data || error.message);
-  } finally {
-    this.loading = false;
-  }
-},
+    },
     getProductImageUrl(product) {
-      // Verifica si la imagen principal existe y tiene la estructura correcta
       const imagenData = product.attributes?.imagen_principal?.data?.attributes;
 
       if (imagenData?.url) {
-
         if (imagenData.url.startsWith('http')) {
           return imagenData.url;
         }
-        // Si no, construye la URL completa usando la base URL de Strapi
         return `${this.strapiBaseUrl}${imagenData.url}`;
       }
 
-      // Si no hay imagen, devuelve una imagen por defecto
       return '/images/default-product.jpg';
     },
     toggleQuickView(product) {
@@ -245,17 +237,14 @@ export default {
       if (page < 1 || page > this.totalPages) return;
       this.currentPage = page;
       this.fetchProducts();
-      // Scroll hacia arriba para ver los nuevos resultados
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     applyFilters(filters) {
       this.activeFilters = filters;
-      this.currentPage = 1; // Reiniciar a la primera página
+      this.currentPage = 1;
       this.fetchProducts();
     },
-    // Método para extraer el grupo de producto de un producto
     getProductGroup(product) {
-      // Intentar obtener el grupo de producto
       const groupData = product.attributes?.grupo_de_productos?.data;
       if (groupData) {
         return {
@@ -266,57 +255,49 @@ export default {
       return { id: null, nombre: 'Sin tipo' };
     }
   },
-  // Agregar este código al método mounted() de tu componente de galería de productos
-mounted() {
-  // Aplicar filtros iniciales si existen
-  if (Object.keys(this.initialFilters).length > 0) {
-    this.activeFilters = this.initialFilters;
-  }
-  
-  // Verificar si hay parámetros de filtro en la URL
-  const urlParams = this.$route.query;
-if (urlParams) {
-  const filters = {};
-  
-  // Procesar parámetros de filtro desde la URL
-  if (urlParams.categoria) {
-    filters.categoria = urlParams.categoria;
-  }
-  
-  if (urlParams.grupo_producto) {
-    filters.grupo_producto = urlParams.grupo_producto;
-  }
-  
-  // Aplicar los filtros si se encontraron
-  if (Object.keys(filters).length > 0) {
-    this.activeFilters = filters;
-  }
-}
-  
-  // Comienza a cargar los productos inmediatamente
-  this.fetchProducts();
-  
-  // Escuchar eventos de cambio de filtros desde el componente de sidebar
-  this.$root.$on('sidebar-filters-changed', (filters) => {
-    this.applyFilters(filters);
-  });
-  
-  // Evento nuevo - escuchar el evento "filters-changed" que envía el sidebar
-  this.$root.$on('filters-changed', (params) => {
-    this.activeFilters = { params };
-    this.currentPage = 1; // Reiniciar a la primera página
+  mounted() {
+    if (Object.keys(this.initialFilters).length > 0) {
+      this.activeFilters = this.initialFilters;
+    }
+    
+    const urlParams = this.$route.query;
+    if (urlParams) {
+      const filters = {};
+      
+      if (urlParams.categoria) {
+        filters.categoria = urlParams.categoria;
+      }
+      
+      if (urlParams.grupo_producto) {
+        filters.grupo_producto = urlParams.grupo_producto;
+      }
+      
+      if (Object.keys(filters).length > 0) {
+        this.activeFilters = filters;
+      }
+    }
+    
     this.fetchProducts();
-  });
-  
-  // Si el componente padre emite cambios en filtros
-  this.$on('filter-changed', (filters) => {
-    this.applyFilters(filters);
-  });
-}
+    
+    this.$root.$on('sidebar-filters-changed', (filters) => {
+      this.applyFilters(filters);
+    });
+    
+    this.$root.$on('filters-changed', (params) => {
+      this.activeFilters = { params };
+      this.currentPage = 1;
+      this.fetchProducts();
+    });
+    
+    this.$on('filter-changed', (filters) => {
+      this.applyFilters(filters);
+    });
+  }
 };
 </script>
 
 <style scoped>
+/* Estilos base */
 .no-products-found, .loading-products {
   width: 100%;
   padding: 30px;
@@ -333,6 +314,36 @@ if (urlParams) {
 
 .products-filter-options {
   margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 5px;
+}
+
+.filter-controls {
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  margin-right: 15px;
+}
+
+.filter-item span {
+  margin-right: 8px;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.show-products-number select,
+.products-ordering-list select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 .woocommerce-pagination {
@@ -344,10 +355,12 @@ if (urlParams) {
   display: inline-flex;
   padding: 0;
   list-style-type: none;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .woocommerce-pagination li {
-  margin: 0 5px;
+  margin: 5px;
 }
 
 .page-numbers {
@@ -357,6 +370,7 @@ if (urlParams) {
   background-color: #f8f9fa;
   color: #333;
   text-decoration: none;
+  font-size: 14px;
 }
 
 .page-numbers.current {
@@ -369,8 +383,74 @@ if (urlParams) {
   cursor: not-allowed;
 }
 
-/* Mejora para filas de productos */
 .products-collections-listing .products-col-item {
   margin-bottom: 30px;
+}
+
+/* Estilos responsivos - IMPORTANTE: Añadir !important para sobrescribir estilos existentes */
+@media (max-width: 1199px) {
+  .products-col-item {
+    flex: 0 0 33.333% !important;
+    max-width: 33.333% !important;
+  }
+}
+
+@media (max-width: 991px) {
+  .products-filter-options .row {
+    flex-direction: column;
+  }
+  
+  .filter-controls {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  
+  .filter-item {
+    margin-right: 0;
+    margin-bottom: 10px;
+    width: 100%;
+  }
+  
+  .products-col-item {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .products-filter-options p {
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+  
+  .filter-item span {
+    font-size: 13px;
+  }
+  
+  .show-products-number select,
+  .products-ordering-list select {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  
+  .products-col-item {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+  
+  .page-numbers {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 575px) {
+  .woocommerce-pagination ul {
+    flex-wrap: wrap;
+  }
+  
+  .woocommerce-pagination li {
+    margin: 3px;
+  }
 }
 </style>

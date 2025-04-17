@@ -9,22 +9,23 @@
                                 <img src="../assets/img/logo.png" alt="logo" class="navbar-logo">
                             </nuxt-link>
 
-                            <b-navbar-toggle target="navbarSupportedContent"></b-navbar-toggle>
+                            <b-navbar-toggle target="navbarSupportedContent" @click="toggleMobileMenu" ref="navToggle"></b-navbar-toggle>
 
                             <b-collapse class="collapse navbar-collapse" id="navbarSupportedContent" is-nav>
+                                
                                 <ul class="navbar-nav mx-auto">
-                                    <!-- Enlaces del menú -->
-                                    <li class="nav-item">
+                                    <!-- Enlaces del menú con índices para animación -->
+                                    <li class="nav-item" :style="{'--item-index': 0}">
                                         <nuxt-link to="/" class="nav-link" exact @click.native="navigateTo('/')">Inicio</nuxt-link>
                                     </li>
-                                    <li class="nav-item">
+                                    <li class="nav-item" :style="{'--item-index': 1}">
                                         <nuxt-link to="/solicitud" class="nav-link" @click.native="navigateTo('/solicitud')">Tus Pedidos </nuxt-link>
                                     </li>
-                                    <li class="nav-item">
+                                    <li class="nav-item" :style="{'--item-index': 2}">
                                         <nuxt-link to="/products" class="nav-link" @click.native="navigateTo('/products')">Galeria de productos</nuxt-link>
                                     </li>
-                                    <li class="nav-item dropdown">
-                                        <a href="#" class="nav-link dropdown-toggle" @click.prevent="toggleDropdown($event)">
+                                    <li class="nav-item dropdown" :style="{'--item-index': 3}">
+                                        <a href="#" class="nav-link dropdown-toggle" @click.prevent="toggleMobileDropdown($event)">
                                             Conocenos <i class="fas fa-chevron-down"></i>
                                         </a>
                                         <ul class="dropdown-menu">
@@ -32,7 +33,7 @@
                                             <li class="nav-item"><nuxt-link to="/blog-details" class="nav-link" @click.native="navigateTo('/blog-details')">Sobre nosotros</nuxt-link></li>
                                         </ul>
                                     </li>
-                                    <li class="nav-item">
+                                    <li class="nav-item" :style="{'--item-index': 4}">
                                         <nuxt-link to="/contact" class="nav-link" @click.native="navigateTo('/contact')">Contactanos</nuxt-link>
                                     </li>
                                 </ul>
@@ -40,7 +41,7 @@
                                 <div class="others-option">
                                     <!-- Ícono de login con dropdown moderno -->
                                     <div class="option-item dropdown">
-                                        <a href="#" class="auth-link dropdown-toggle" @click.prevent="toggleDropdown($event)">
+                                        <a href="#" class="auth-link dropdown-toggle" @click.prevent="toggleMobileDropdown($event)">
                                             <i class="fas fa-user"></i>
                                             <!-- Solo mostrar información del usuario si está logueado -->
                                             <span v-if="user" class="user-text">
@@ -76,6 +77,31 @@
             </div>
         </div>
 
+        <!-- Barra de navegación inferior para móvil -->
+        <div class="nav-icons-mobile d-lg-none">
+            <div class="option-item">
+                <nuxt-link to="/" class="nav-link">
+                    <i class="fas fa-home"></i>
+                </nuxt-link>
+            </div>
+            <div class="option-item">
+                <nuxt-link to="/products" class="nav-link">
+                    <i class="fas fa-store"></i>
+                </nuxt-link>
+            </div>
+            <div class="option-item">
+                <a @click.prevent="toggle" href="#" class="cart-link">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span class="count">{{cart.length}}</span>
+                </a>
+            </div>
+            <div class="option-item">
+                <a href="#" class="auth-link" @click.prevent="toggleMobileDropdown($event)">
+                    <i class="fas fa-user"></i>
+                </a>
+            </div>
+        </div>
+
         <SidebarPanel></SidebarPanel>
     </div>
 </template>
@@ -92,32 +118,41 @@ export default {
         return {
             isSticky: false,
             activeDropdown: null,
-            user: null // Estado del usuario
+            user: null, 
+            isMobileMenuOpen: false
         };
     },
     created() {
-        // Añadimos un listener global para el evento de login
         this.$nuxt.$on('user-logged-in', this.updateUser);
     },
     mounted() {
         window.addEventListener('scroll', this.handleScroll);
-
-        // Cerrar dropdowns al hacer clic fuera
         document.addEventListener('click', this.closeDropdowns);
-
-        // Recuperar el usuario del localStorage al cargar la página
         this.updateUserFromLocalStorage();
-        
-        // Comprobar periódicamente si hay cambios en localStorage (como respaldo)
+
         this.checkLocalStorageInterval = setInterval(this.checkLocalStorageChanges, 1000);
+        
+        this.$router.afterEach(() => {
+            if (window.innerWidth <= 991) {
+                this.closeAllDropdowns();
+                this.closeMobileMenu();
+            }
+        });
+        
+        document.addEventListener('click', (event) => {
+            if (window.innerWidth <= 991) {
+                if (!event.target.closest('.dropdown') && !event.target.closest('.navbar-toggler')) {
+                    this.closeAllDropdowns();
+                }
+            }
+        });
     },
     beforeDestroy() {
-        // Limpiar event listeners cuando el componente es destruido
+
         document.removeEventListener('click', this.closeDropdowns);
         window.removeEventListener('scroll', this.handleScroll);
         clearInterval(this.checkLocalStorageInterval);
         
-        // Eliminar el listener global
         this.$nuxt.$off('user-logged-in', this.updateUser);
     },
     computed: {
@@ -132,6 +167,15 @@ export default {
         },
         toggle() {
             mutations.toggleNav();
+        },
+        toggleMobileMenu() {
+            this.isMobileMenuOpen = !this.isMobileMenuOpen;
+
+            if (this.isMobileMenuOpen) {
+                document.body.classList.add('menu-open');
+            } else {
+                document.body.classList.remove('menu-open');
+            }
         },
         toggleDropdown(event) {
             const dropdown = event.target.closest('.dropdown');
@@ -148,7 +192,6 @@ export default {
                 this.activeDropdown = dropdown;
             }
             
-            // Girar el icono cuando se abre el dropdown
             const icon = dropdown.querySelector('.fa-chevron-down');
             if (icon) {
                 if (dropdownMenu.classList.contains('show')) {
@@ -157,6 +200,46 @@ export default {
                     icon.classList.remove('rotate-icon');
                 }
             }
+        },
+        toggleMobileDropdown(event) {
+            if (window.innerWidth <= 991) {
+                const dropdown = event.target.closest('.dropdown');
+                if (!dropdown) return;
+                
+                const dropdownMenu = dropdown.querySelector('.dropdown-menu');
+                const isOpen = dropdownMenu.classList.contains('show');
+                
+                // Cerrar todos los dropdowns primero
+                document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                    menu.classList.remove('show');
+                    const toggleButton = menu.previousElementSibling;
+                    if (toggleButton) {
+                        toggleButton.classList.remove('show');
+                        const icon = toggleButton.querySelector('.fa-chevron-down');
+                        if (icon) icon.classList.remove('rotate-icon');
+                    }
+                });
+                if (!isOpen) {
+                    dropdownMenu.classList.add('show');
+                    const icon = dropdown.querySelector('.fa-chevron-down');
+                    if (icon) icon.classList.add('rotate-icon');
+                }
+                
+                event.preventDefault();
+                event.stopPropagation();
+            } else {
+                this.toggleDropdown(event);
+            }
+        },
+        closeAllDropdowns() {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.classList.remove('show');
+                
+                const icon = menu.previousElementSibling?.querySelector('.fa-chevron-down');
+                if (icon) {
+                    icon.classList.remove('rotate-icon');
+                }
+            });
         },
         closeDropdowns(event) {
             if (this.activeDropdown && !this.activeDropdown.contains(event.target)) {
@@ -169,7 +252,35 @@ export default {
                 this.activeDropdown = null;
             }
         },
+        closeMobileMenu() { 
+            if (window.innerWidth <= 991 && this.isMobileMenuOpen) {
+                this.isMobileMenuOpen = false;
+                
+                if (this.$refs.navToggle && this.isMobileMenuOpen) {
+                    this.$refs.navToggle.show = false;
+                }
+
+                if (this.$root && this.$root.$bvEventBus) {
+                    this.$root.$bvEventBus.$emit('bv::toggle::collapse', 'navbarSupportedContent', false);
+                }
+
+                const navbarCollapse = document.getElementById('navbarSupportedContent');
+                if (navbarCollapse) {
+                    navbarCollapse.classList.remove('show');
+                }
+
+                const navbarToggler = document.querySelector('.navbar-toggler, .b-navbar-toggle');
+                if (navbarToggler) {
+                    navbarToggler.classList.add('collapsed');
+                    navbarToggler.setAttribute('aria-expanded', 'false');
+                }
+                
+                this.closeAllDropdowns();
+                document.body.classList.remove('menu-open');
+            }
+        },
         navigateTo(path) {
+            this.closeMobileMenu();
             if (this.$route.path !== path) {
                 this.$router.push(path).catch((error) => {
                     if (error.name !== 'NavigationDuplicated') {
@@ -196,12 +307,10 @@ export default {
                 this.user = null;
             }
         },
-        // Método para verificar cambios en localStorage (como respaldo)
         checkLocalStorageChanges() {
             const currentUserJson = localStorage.getItem('user');
             const currentUser = currentUserJson ? JSON.parse(currentUserJson) : null;
-            
-            // Comparar si el usuario ha cambiado
+
             const currentUserString = JSON.stringify(this.user);
             const newUserString = JSON.stringify(currentUser);
             
@@ -223,13 +332,13 @@ export default {
             // Emitir evento para otros componentes
             this.$nuxt.$emit('user-logged-out');
             
-            this.$router.push('/'); // Redirigir a la página principal
+            this.$router.push('/'); 
             
-            // Cerrar el dropdown después de cerrar sesión
             document.querySelectorAll('.dropdown-menu.show').forEach(el => {
                 el.classList.remove('show');
             });
             this.activeDropdown = null;
+            this.closeMobileMenu();
         }
     }
 };

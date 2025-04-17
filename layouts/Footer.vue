@@ -21,7 +21,7 @@
 						h3 Enlaces Rápidos
 						ul.quick-links
 							li
-								nuxt-link(to='/about') Sobre Nosotros
+								nuxt-link(to='/blog-details') Sobre Nosotros
 							li
 								nuxt-link(to='/products') Prendas
 							li
