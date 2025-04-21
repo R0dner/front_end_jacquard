@@ -47,63 +47,94 @@
                                                 |  {{ formatCurrency(pedido.total) }}
                         .no-orders(v-else)
                             p(v-if="isLoading") Cargando pedidos...
-                            p(v-else) No hay pedidos registrados.
+                            p(v-else) No hay pedidos registrados para este usuario.
     </template>
     
     <script>
-export default {
-    data() {
-        return {
-            pedidos: [],
-            isLoading: true,
-            usuarioLogueado: null
-        }
-    },
-    async mounted() {
-        // Obtener usuario del localStorage
-        if (process.client) { // Solo en el lado del cliente
-            const usuario = localStorage.getItem('usuario');
-            if (usuario) {
-                this.usuarioLogueado = JSON.parse(usuario);
-            }
-        }
-        
-        await this.cargarPedidos();
-    },
-    methods: {
-        async cargarPedidos() {
-            try {
-                this.isLoading = true;
-                
-                let params = {
-                    sort: 'fecha_pedido:desc',
-                    populate: '*'
-                };
-                
-                // Si hay usuario logueado, filtrar por su email
-                if (this.usuarioLogueado?.email) {
-                    params.filters = {
-                        email_cliente: this.usuarioLogueado.email
-                    };
-                }
-                
-                const response = await this.$axios.get('/api/pedidos', { params });
-                
-                if (response.data?.data) {
-                    this.pedidos = response.data.data.map(item => ({
-                        id: item.id,
-                        ...item.attributes
-                    }));
-                } else {
-                    this.pedidos = [];
-                }
-            } catch (error) {
-                console.error('Error al cargar pedidos:', error);
-                this.pedidos = [];
-            } finally {
-                this.isLoading = false;
+    export default {
+        data() {
+            return {
+                pedidos: [],
+                isLoading: true,
+                userEmail: null,
+                usuario: null
             }
         },
+        mounted() {
+            // Verificar usuario logueado primero
+            this.verificarUsuarioLogueado();
+        },
+        methods: {
+            verificarUsuarioLogueado() {
+                if (process.client) { // Solo en el lado del cliente
+                    // Intentar obtener el email directamente (como lo guarda el login)
+                    const userEmail = localStorage.getItem('user_email');
+                    if (userEmail) {
+                        this.userEmail = userEmail;
+                        console.log('Email de usuario encontrado:', this.userEmail);
+                    }
+                    
+                    // También obtener el objeto de usuario completo
+                    const userJSON = localStorage.getItem('user');
+                    if (userJSON) {
+                        try {
+                            this.usuario = JSON.parse(userJSON);
+                            console.log('Usuario logueado:', this.usuario);
+                            
+                            // Si no tenemos email pero tenemos usuario, usar su email
+                            if (!this.userEmail && this.usuario.email) {
+                                this.userEmail = this.usuario.email;
+                            }
+                        } catch (e) {
+                            console.error('Error al parsear usuario de localStorage:', e);
+                        }
+                    }
+                    
+                    // Una vez obtenido el usuario, cargar los pedidos
+                    this.cargarPedidos();
+                }
+            },
+            async cargarPedidos() {
+    try {
+        this.isLoading = true;
+        
+        // Obtener todos los pedidos sin filtros
+        const response = await this.$axios.get('/api/pedidos?populate=*&sort=fecha_pedido:desc');
+        
+        if (response.data?.data) {
+            // Mostrar todos los pedidos para debug
+            const allPedidos = response.data.data.map(item => ({
+                id: item.id,
+                ...item.attributes
+            }));
+            
+            console.log('Todos los pedidos disponibles:', allPedidos);
+            console.log('Campo email que buscamos:', this.userEmail);
+            
+            // También imprime los emails disponibles en los pedidos
+            console.log('Emails en pedidos:', allPedidos.map(p => p.user_email || 'sin email'));
+            
+            // Filtrar por email si está disponible
+            if (this.userEmail) {
+                this.pedidos = allPedidos.filter(pedido => 
+                    pedido.user_email === this.userEmail
+                );
+            } else {
+                this.pedidos = [];
+            }
+            
+            console.log('Pedidos filtrados en cliente:', this.pedidos.length);
+        } else {
+            this.pedidos = [];
+            console.log('No se encontraron pedidos en la respuesta');
+        }
+    } catch (error) {
+        console.error('Error al cargar pedidos:', error);
+        this.pedidos = [];
+    } finally {
+        this.isLoading = false;
+    }
+},
             getProductos(productosJson) {
                 // Parsear los productos si vienen como string JSON
                 if (typeof productosJson === 'string') {

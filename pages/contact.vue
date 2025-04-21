@@ -22,9 +22,8 @@
                             <p>¿Tienes alguna pregunta? Puedes encontrar respuestas en nuestras preguntas frecuentes, pero también puedes contactarnos directamente.</p>
 
                             <ul class="contact-list">
-                                <li><i class="fas fa-map-marker-alt"></i> Ubicación: 2750 Quadra Street Victoria, Canadá</li>
-                                <li><i class="fas fa-phone"></i> Llámanos: <a href="#">(+123) 456-7898</a></li>
-                                <li><i class="far fa-envelope"></i> Escríbenos: <a href="#">support@comero.com</a></li>
+                                <li><i class="fas fa-phone"></i> Llámanos: <a href="#">(+591) 71244124 - (+591) 72503205</a></li>
+                                <li><i class="far fa-envelope"></i> Escríbenos: <a href="#">ntipola@gmail.com</a></li>
                             </ul>
 
                             <h3>Horario de atención:</h3>
