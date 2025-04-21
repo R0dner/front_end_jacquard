@@ -19,7 +19,7 @@
     "firebase": "8.10.1",
     "graphql": "15.8.0",
     "nuxt": "2.15.8",
-    "owl.carousel": "^2.3.4",
+    "owl.carousel": "2.3.4",
     "pug-loader": "2.4.0",
     "sass": "1.83.4",
     "vue-backtotop": "1.6.1",
@@ -28,14 +28,14 @@
     "vueperslides": "2.8.2"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@babel/plugin-proposal-private-property-in-object": "7.21.11",
     "@nuxt/babel-preset-app": "^2.18.1",
     "@nuxt/typescript-build": "2.1.0",
     "eslint-config-prettier": "6.10.0",
     "eslint-plugin-prettier": "3.1.2",
     "prettier": "1.19.1",
-    "pug": "^3.0.3",
-    "pug-plain-loader": "^1.1.0",
+    "pug": "3.0.3",
+    "pug-plain-loader": "1.1.0",
     "sass-loader": "8.0.2",
     "typescript": "4.9.5"
   }

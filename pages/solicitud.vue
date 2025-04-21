@@ -215,76 +215,195 @@
     </script>
     
     <style scoped>
-    .order-list {
-        margin-top: 20px;
-    }
-    
-    .order-item {
-        border: 1px solid #ddd;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-radius: 5px;
-    }
-    
-    .order-header {
+    /* Estilos base mejorados */
+.order-list {
+    margin-top: 20px;
+}
+
+.order-item {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.order-item:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.order-header h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-block;
+    text-align: center;
+}
+
+.status.pendiente {
+    background-color: #3399ff;
+    color: #fff;
+}
+
+.status.en-proceso {
+    background-color: #ffcc00;
+    color: #000;
+}
+
+.status.enviado {
+    background-color: #9966ff;
+    color: #fff;
+}
+
+.status.entregado {
+    background-color: #00cc66;
+    color: #fff;
+}
+
+.status.cancelado {
+    background-color: #ff3333;
+    color: #fff;
+}
+
+.order-details p {
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+.order-details strong {
+    font-weight: 600;
+}
+
+.order-details ul {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 5px;
+}
+
+.order-details ul li {
+    margin: 8px 0;
+    padding: 5px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+}
+
+.no-orders {
+    text-align: center;
+    padding: 30px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    color: #555;
+}
+
+/* Estilos responsivos */
+@media screen and (max-width: 991px) {
+    .order-details .row {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
+        flex-direction: column;
     }
     
-    .order-header h4 {
-        margin: 0;
-    }
-    
-    .status {
-        padding: 5px 10px;
-        border-radius: 3px;
-        font-weight: bold;
-    }
-    
-    .status.pendiente {
-        background-color: #3399ff;
-        color: #fff;
-    }
-    
-    .status.en-proceso {
-        background-color: #ffcc00;
-        color: #000;
-    }
-    
-    .status.enviado {
-        background-color: #9966ff;
-        color: #fff;
-    }
-    
-    .status.entregado {
-        background-color: #00cc66;
-        color: #fff;
-    }
-    
-    .status.cancelado {
-        background-color: #ff3333;
-        color: #fff;
-    }
-    
-    .order-details p {
-        margin: 5px 0;
-    }
-    
-    .order-details ul {
-        list-style-type: none;
+    .order-details .col-lg-6 {
+        width: 100%;
         padding: 0;
     }
     
-    .order-details ul li {
-        margin: 5px 0;
+    .order-details .col-lg-6:first-child {
+        margin-bottom: 15px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .page-title-area .container ul {
+        flex-direction: column;
+        align-items: center;
     }
     
-    .no-orders {
-        text-align: center;
-        padding: 20px;
-        background-color: #f5f5f5;
-        border-radius: 5px;
+    .section-title h2 {
+        font-size: 1.5rem;
     }
+    
+    .order-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .order-header .status {
+        align-self: flex-start;
+    }
+    
+    .order-item {
+        padding: 12px;
+    }
+    
+    h3 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .order-details ul li {
+        font-size: 0.9rem;
+        padding: 8px;
+        line-height: 1.4;
+        word-break: break-word;
+    }
+    
+    .status {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+    }
+    
+    .order-header h4 {
+        font-size: 1.1rem;
+    }
+    
+    .order-details p {
+        font-size: 0.9rem;
+    }
+}
+
+/* Mejoras adicionales para experiencia móvil */
+@media screen and (max-width: 480px) {
+    .ptb-60 {
+        padding-top: 30px;
+        padding-bottom: 30px;
+    }
+    
+    .section-title {
+        margin-bottom: 20px;
+    }
+    
+    .order-list {
+        margin-top: 15px;
+    }
+    
+    .order-item {
+        margin-bottom: 12px;
+    }
+}
     </style>
