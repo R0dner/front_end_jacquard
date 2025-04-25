@@ -10,8 +10,8 @@
             a(href='javascript:void(0)' title='Ver mas' v-b-tooltip.hover @click.prevent='quickView')
               i.far.fa-eye
           li
-            a(href='#' title='Añadir a deseados' v-b-tooltip.hover)
-              i.far.fa-heart
+            a(href='javascript:void(0)' title='Añadir a deseados' v-b-tooltip.hover @click.prevent='toggleWishlist')
+              i.far.fa-heart(:class="{ 'fas text-danger': isInWishlist }")
           li
             a(href='#' title='Add to Compare' v-b-tooltip.hover)
               i.fas.fa-sync
@@ -47,153 +47,203 @@
       :product="quickViewProduct"
       @close="showQuickView = false"
     )
-  </template>
-  
-  <script>
-  import Timer from './Timer';
-  export default {
-      name: 'ProductoUnico',
-      components: {
-          Timer
+</template>
+
+<script>
+import Timer from './Timer';
+export default {
+    name: 'ProductoUnico',
+    components: {
+        Timer
+    },
+    data(){
+          return {
+              api_url: process.env.strapiBaseUri,
+              getExistPId: null,
+              loadingInventory: false,
+              inventoryData: null,
+              showQuickView: false,
+              quickViewProduct: null,
+              isInWishlist: false
+          }
       },
-      data(){
-            return {
-                api_url: process.env.strapiBaseUri,
-                getExistPId: null,
-                loadingInventory: false,
-                inventoryData: null,
-                showQuickView: false,  // Añadida esta propiedad
-                quickViewProduct: null  // Añadida esta propiedad
+    props: ['id','product', 'className'],
+    computed: {
+        cart(){
+            return this.$store.getters.cart
+        },
+        currentStock() {
+            if (this.inventoryData) {
+                return this.inventoryData.stock_actual;
+            }
+            if (this.product.stock) {
+                return this.product.stock;
+            }
+            return 0;
+        }
+    },
+    methods: {
+      quickView(e){
+          this.showQuickView = true;
+          this.quickViewProduct = this.product;
+          this.$emit('clicked');
+      },
+      // Nuevo método para añadir/quitar de la lista de deseados
+      toggleWishlist() {
+          // Recuperar lista actual de deseados
+          let wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+          
+          if (this.isInWishlist) {
+              // Si ya está en la lista, lo quitamos
+              wishlist = wishlist.filter(item => item !== this.id);
+              this.$toast.info("Producto quitado de deseados", {
+                  icon: 'fas fa-heart-broken'
+              });
+          } else {
+              // Si no está en la lista, lo añadimos
+              wishlist.push(this.id);
+              this.$toast.success("Producto añadido a deseados", {
+                  icon: 'fas fa-heart'
+              });
+          }
+          
+          // Guardar lista actualizada
+          localStorage.setItem('wishlist', JSON.stringify(wishlist));
+          
+          // Actualizar estado visual
+          this.isInWishlist = !this.isInWishlist;
+          
+          // Emitir evento global para actualizar otros componentes
+          this.$root.$emit('wishlist-updated', wishlist);
+      },
+      // Verificar si el producto actual está en la lista de deseados
+      checkWishlistStatus() {
+          const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+          this.isInWishlist = wishlist.includes(this.id);
+      },
+        async fetchInventory() {
+            this.loadingInventory = true;
+            try {
+                if (!this.id) {
+                    console.error('Product ID is missing');
+                    return;
+                }
+                
+                const response = await this.$axios.get(`/api/inventarios`, {
+                    params: {
+                        'filters[producto][id][$eq]': this.id,
+                        'populate': '*'
+                    }
+                });
+                
+                if (response.data.data && response.data.data.length > 0) {
+                    this.inventoryData = response.data.data[0].attributes;
+                } else {
+                    console.warn('No inventory data found for this product');
+                    this.inventoryData = { stock_actual: 0 };
+                }
+            } catch (error) {
+                console.error('Error fetching inventory:', error);
+                this.inventoryData = { stock_actual: 0 };
+            } finally {
+                this.loadingInventory = false;
             }
         },
-      props: ['id','product', 'className'],
-      computed: {
-          cart(){
-              return this.$store.getters.cart
-          },
-          currentStock() {
-              if (this.inventoryData) {
-                  return this.inventoryData.stock_actual;
-              }
-              if (this.product.stock) {
-                  return this.product.stock;
-              }
-              return 0;
-          }
-      },
-      methods: {
-        quickView(e){
-            this.showQuickView = true;
-            this.quickViewProduct = this.product;
-            this.$emit('clicked');
-        },
-          async fetchInventory() {
-              this.loadingInventory = true;
-              try {
-                  if (!this.id) {
-                      console.error('Product ID is missing');
-                      return;
-                  }
-                  
-                  const response = await this.$axios.get(`/api/inventarios`, {
-                      params: {
-                          'filters[producto][id][$eq]': this.id,
-                          'populate': '*'
-                      }
-                  });
-                  
-                  if (response.data.data && response.data.data.length > 0) {
-                      this.inventoryData = response.data.data[0].attributes;
-                  } else {
-                      console.warn('No inventory data found for this product');
-                      this.inventoryData = { stock_actual: 0 };
-                  }
-              } catch (error) {
-                  console.error('Error fetching inventory:', error);
-                  this.inventoryData = { stock_actual: 0 };
-              } finally {
-                  this.loadingInventory = false;
-              }
-          },
-          addToCart(item){
-              if (this.currentStock === 0) {
-                  this.$toast.error("Este producto está agotado", {
-                      icon: 'fas fa-times-circle'
-                  });
-                  return;
-              }
-  
-              const product = [{
-                  id: this.id,
-                  name: item.nombre,
-                  price: item.precio_venta,
-                  image: this.api_url + item.imagen_principal.data.attributes.url,
-                  quantity: 1,
-                  maxQuantity: this.currentStock
-              }]
-  
-              if(this.cart.length > 0){
-                  let id = this.id 
-                  this.getExistPId = id
-                  let cartIndex = this.cart.findIndex(cart => {
-                      return cart.id == id
-                  })
-  
-                  if(cartIndex == -1){
-                      this.$store.dispatch('addToCart', product);
-                      this.$toast("Agregado al Carrito", {
-                          icon: 'fas fa-cart-plus'
-                      });
-                  } else {
-                      this.$store.dispatch('updateCart', {
-                          id, unit: 1, cart: this.cart
-                      });
-                      this.$toast.info("Ya fue agregado al carrito, y se incremento la cantidad en uno");
-                  }
-              } else {
-                  this.$store.dispatch('addToCart', product)
-                  this.$toast("Agregado al Carrito",{
-                      icon: 'fas fa-cart-plus'
-                  });
-              }
-          }
-      },
-      created() {
-          if (this.product.inventory) {
-              this.inventoryData = this.product.inventory;
-          } else {
-              this.fetchInventory();
-          }
-      }
-  }
-  </script>
-  
-  <style scoped>
-  .out-of-stock-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background-color: #ff0000;
-    color: white;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: bold;
-    z-index: 10;
-  }
-  
-  .disabled-btn {
-    background-color: #cccccc !important;
-    color: #666666 !important;
-    cursor: not-allowed !important;
-    pointer-events: none !important;
-  }
-  
-  .product-image {
-    position: relative;
-  }
-  
-  .single-product-box:hover {
-    opacity: 0.9;
-  }
-  </style>
+        addToCart(item){
+            if (this.currentStock === 0) {
+                this.$toast.error("Este producto está agotado", {
+                    icon: 'fas fa-times-circle'
+                });
+                return;
+            }
+
+            const product = [{
+                id: this.id,
+                name: item.nombre,
+                price: item.precio_venta,
+                image: this.api_url + item.imagen_principal.data.attributes.url,
+                quantity: 1,
+                maxQuantity: this.currentStock
+            }]
+
+            if(this.cart.length > 0){
+                let id = this.id 
+                this.getExistPId = id
+                let cartIndex = this.cart.findIndex(cart => {
+                    return cart.id == id
+                })
+
+                if(cartIndex == -1){
+                    this.$store.dispatch('addToCart', product);
+                    this.$toast("Agregado al Carrito", {
+                        icon: 'fas fa-cart-plus'
+                    });
+                } else {
+                    this.$store.dispatch('updateCart', {
+                        id, unit: 1, cart: this.cart
+                    });
+                    this.$toast.info("Ya fue agregado al carrito, y se incremento la cantidad en uno");
+                }
+            } else {
+                this.$store.dispatch('addToCart', product)
+                this.$toast("Agregado al Carrito",{
+                    icon: 'fas fa-cart-plus'
+                });
+            }
+        }
+    },
+    created() {
+        if (this.product.inventory) {
+            this.inventoryData = this.product.inventory;
+        } else {
+            this.fetchInventory();
+        }
+        this.checkWishlistStatus(); // Verificar estado de wishlist al crear
+    },
+    mounted() {
+        // Escuchar actualizaciones del wishlist desde otros componentes
+        this.$root.$on('wishlist-updated', () => {
+            this.checkWishlistStatus();
+        });
+    },
+    beforeDestroy() {
+        // Limpieza de eventos
+        this.$root.$off('wishlist-updated');
+    }
+}
+</script>
+
+<style scoped>
+.out-of-stock-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #ff0000;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 10;
+}
+
+.disabled-btn {
+  background-color: #cccccc !important;
+  color: #666666 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+.product-image {
+  position: relative;
+}
+
+.single-product-box:hover {
+  opacity: 0.9;
+}
+
+/* Estilos para iconos de corazón */
+.fa-heart.text-danger {
+  color: #dc3545 !important;
+}
+</style>

@@ -28,10 +28,12 @@
 
                             <h3>Horario de atención:</h3>
                             <ul class="opening-hours">
-                                <li><span>Lunes:</span> 8AM - 6PM</li>
-                                <li><span>Martes:</span> 8AM - 6PM</li>
-                                <li><span>Miércoles:</span> 8AM - 6PM</li>
-                                <li><span>Jueves - Viernes:</span> 8AM - 6PM</li>
+                                <li><span>Lunes:</span> 8:30AM - 5:00PM</li>
+                                <li><span>Martes:</span> 8:30AM - 5:00PM</li>
+                                <li><span>Miércoles:</span> 8:30AM - 5:00PM</li>
+                                <li><span>Jueves:</span> 8:30AM - 5:00PM</li>
+                                <li><span>Viernes:</span> 8:30AM - 5:00PM</li>
+                                <li><span>Sabado:</span>Cerrado</li>
                                 <li><span>Domingo:</span> Cerrado</li>
                             </ul>
 

@@ -1824,26 +1824,59 @@ Modal CSS
 Main Banner Area CSS
 =================================================*/
 .main-banner {
-    height: 90vh; // Cambiado a altura relativa para mejor respuesta
+    height: 90vh;
     position: relative;
     z-index: 1;
-    background: {
-        color: #f1f1f1;
-        size: cover;
-        repeat: no-repeat;
-        position: center center;
-    }
     overflow: hidden;
-    &.item-bg1 {
-        background-image: url(../../img/main-banner1.jpg);
-    }
-    &.item-bg2 {
-        background-image: url(../../img/main-banner2.jpg);
-    }
-    &.item-bg3 {
-        background-image: url(../../img/main-banner3.jpg);
     
+    /* Eliminamos las definiciones de background-image para aplicar la nueva técnica */
+    &.item-bg1, &.item-bg2, &.item-bg3 {
+        position: relative;
+        /* Definimos un color de fondo por si la imagen tarda en cargar */
+        background-color: #f1f1f1;
     }
+    
+    /* Nuevo pseudo-elemento para la imagen de fondo con mejor control responsivo */
+    &.item-bg1::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url(../../img/main-banner1.jpg);
+        background-size: cover;
+        background-repeat: no-repeat;
+        z-index: -1;
+    }
+    
+    &.item-bg2::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url(../../img/main-banner2.jpg);
+        background-size: cover;
+        background-repeat: no-repeat;
+        z-index: -1;
+    }
+    
+    &.item-bg3::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url(../../img/main-banner3.jpg);
+        background-size: cover;
+        background-repeat: no-repeat;
+        z-index: -1;
+    }
+    
+    /* Overlay para mejorar el contraste */
     &::before {
         content: '';
         position: absolute;
@@ -1851,34 +1884,9 @@ Main Banner Area CSS
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 70%, rgba(0,0,0,0) 100%);
-        z-index: 1;
-    }
-    
-    // Efecto de zoom sutil
-    &::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
+        background: linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.2) 100%);
         z-index: 0;
-        animation: zoomEffect 20s infinite alternate;
     }
-    
-    &.item-bg1::after {
-        background-image: url(../../img/main-banner1.jpg);
-    }
-    // Repite para otros fondos si lo deseas
-}
-
-@keyframes zoomEffect {
-    0% { transform: scale(1); }
-    100% { transform: scale(1.1); }
 }
 
 .d-table {
@@ -2009,6 +2017,16 @@ Main Banner Area CSS
 
 // Media queries para responsive
 @media (max-width: 992px) {
+    .main-banner {
+        &::before {
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.5) 100%);
+        }
+        
+        &.item-bg1::after, &.item-bg2::after, &.item-bg3::after {
+            background-position: center center;
+        }
+    }
+    
     .main-banner-content {
         h1 {
             font-size: 3rem;
@@ -2022,7 +2040,15 @@ Main Banner Area CSS
 
 @media (max-width: 768px) {
     .main-banner {
-        height: 80vh;
+        height: 100vh; /* Altura completa en móvil */
+        
+        &::before {
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.5) 100%);
+        }
+        
+        &.item-bg1::after, &.item-bg2::after, &.item-bg3::after {
+            background-position: 65% center; /* Posición ajustada para mostrar el sujeto */
+        }
     }
     
     .main-banner-content {
@@ -2045,6 +2071,34 @@ Main Banner Area CSS
                 right: 0;
                 bottom: 10px;
             }
+        }
+    }
+}
+
+@media (max-width: 576px) {
+    .main-banner {
+        &.item-bg1::after, &.item-bg2::after, &.item-bg3::after {
+            background-position: 70% center; /* Más ajustado para móviles pequeños */
+        }
+    }
+    
+    .main-banner-content {
+        h1 {
+            font-size: 2rem;
+        }
+        
+        span {
+            font-size: 14px;
+            padding: 6px 12px;
+        }
+    }
+}
+
+/* Para dispositivos muy pequeños como iPhone SE */
+@media (max-width: 375px) {
+    .main-banner {
+        &.item-bg1::after, &.item-bg2::after, &.item-bg3::after {
+            background-position: 75% center; /* Ajustado para pantallas muy pequeñas */
         }
     }
 }
