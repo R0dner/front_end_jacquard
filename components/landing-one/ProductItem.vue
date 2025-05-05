@@ -51,9 +51,9 @@
 
                 <div class="product-price">
                     <span class="old-price" v-if="product.en_oferta">
-                        ${{product.precio_oferta}}
+                        Bs.{{product.precio_oferta}}
                     </span>
-                    <span class="new-price">${{product.precio_venta}}</span>
+                    <span class="new-price">Bs.{{product.precio_venta}}</span>
                 </div>
 
                 <div class="rating">

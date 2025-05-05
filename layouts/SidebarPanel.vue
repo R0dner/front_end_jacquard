@@ -7,53 +7,46 @@
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <button type="button" class="close" @click="closeSidebarPanel"><span aria-hidden="true">&times;</span></button>
-
-                        <div 
-                            class="modal-body"
-                            v-if="cart.length > 0"
-                        >
+                        
+                        <div class="modal-body" v-if="cart.length > 0">
                             <h3>Mi Carrito ({{cart.length}})</h3>
-
+                            
                             <div class="product-cart-content">
-
-                                <div 
+                                <div
                                     class="product-cart"
-                                    v-for="cart in cart"
-                                    :key="cart.id"
+                                    v-for="item in cart"
+                                    :key="item.id"
                                 >
                                     <div class="product-image">
-                                        <img :src="cart.image" :alt="cart.name" />
+                                        <img :src="item.image" :alt="item.name" />
                                     </div>
-
+                                    
                                     <div class="product-content">
-                                        <h3><a href="#">{{cart.name}}</a></h3>
-                                        <span>Blue / XS</span>
                                         <div class="product-price">
-                                            <span>{{cart.quantity}}</span>
+                                            <span>{{item.quantity}}</span>
                                             <span>x</span>
-                                            <span class="price">${{cart.price}}</span>
+                                            <span class="price">Bs.{{item.price}}</span>
+                                            <span v-if="item.onSale" class="original-price">Bs.{{item.originalPrice}}</span>
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
-
-                            <div class="product-cart-subtotal">
-                                <span>Subtotal</span>
-
-                                <span class="subtotal">${{cartTotal}}</span>
-                            </div>
-
-                            <div @click="closeSidebarPanel" class="product-cart-btn">
-                                <!--<nuxt-link to="/checkout" class="btn btn-primary">Proceed to Checkout</nuxt-link>-->
-                                <nuxt-link to="/cart" class="btn btn-light">Ver Mi Carrito</nuxt-link>
+                            
+                            <div class="cart-summary">
+                                <div class="product-cart-subtotal">
+                                    <span>Subtotal</span>
+                                    <span class="subtotal">Bs.{{cartTotal}}</span>
+                                </div>
+                                
+                                <div @click="closeSidebarPanel" class="product-cart-btn">
+                                    <nuxt-link to="/cart" class="btn btn-light">Ver Mi Carrito</nuxt-link>
+                                </div>
                             </div>
                         </div>
                         <div class="modal-body" v-else>
                             <h3>Carrito Vacio!</h3>
                             <div @click="closeSidebarPanel" class="product-cart-btn">
                                 <nuxt-link to="/products" class="btn btn-primary">Ver mas Productos</nuxt-link>
-                                <!--<nuxt-link to="/products" class="btn btn-light">Browse Latest!</nuxt-link>-->
                             </div>
                         </div>
                     </div>
@@ -87,4 +80,64 @@ export default {
 
 <style lang="scss" scoped>
 @import "../assets/scss/styles/_transitions.scss";
+
+.original-price {
+  text-decoration: line-through;
+  color: #999;
+  font-size: 0.85em;
+  margin-left: 5px;
+}
+
+.cart-summary {
+  margin-top: 15px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+}
+
+.product-cart-content {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.product-cart-subtotal {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.product-cart-btn {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.product-cart-btn .btn {
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+}
+
+.product-cart {
+  display: flex;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.product-image {
+  width: 60px;
+  height: 60px;
+  overflow: hidden;
+  margin-right: 10px;
+}
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-content {
+  flex: 1;
+}
 </style>

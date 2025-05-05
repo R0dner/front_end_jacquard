@@ -4,13 +4,12 @@
         <div class="d-table">
             <div class="d-table-cell">
                 <div class="container">
-                    <div class="main-banner-content">
+                    <div class="main-banner-content white-color">
                         <span>Nueva colección 2024</span>
-                        <h1>ropa hecha para ti!</h1>
-                        <p>Encuentra los nuevos modelos para hombres, mujeres y niños</p>
-
-                        <nuxt-link to="/products" class="btn btn-primary">Ropa para mujeres</nuxt-link>
-                        <nuxt-link to="/products" class="btn btn-light">Ropa para varones</nuxt-link>
+                        <h1>Estilo que define quién eres</h1>
+                        <p>Descubre las últimas tendencias para todos los estilos y personalidades</p>
+                        
+                        <nuxt-link to="/blog-one" class="btn btn-primary">Ultimas Noticias</nuxt-link>
                     </div>
                 </div>
             </div>
