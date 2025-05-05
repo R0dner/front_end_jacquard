@@ -37,28 +37,6 @@
         </ul>
       </div>
 
-      <!-- Filtro para Productos Deseados con contador -->
-      <div class="filter-section">
-        <h4 class="section-title">
-          Productos Deseados 
-          <span v-if="wishlistCount > 0" class="badge badge-pill badge-primary">{{ wishlistCount }}</span>
-        </h4>
-        <ul class="filter-list">
-          <li>
-            <a href="#" 
-               @click.prevent="applyWishlistFilter()"
-               :class="{'active': isActive('deseados', true)}">
-              <i class="fas fa-heart"></i> Mostrar solo deseados
-            </a>
-          </li>
-          <li v-if="isActive('deseados', true) && wishlistCount === 0">
-            <div class="text-muted small pt-2">
-              No tienes productos en tu lista de deseados.
-            </div>
-          </li>
-        </ul>
-      </div>
-
       <!-- Precio - Versión mejorada -->
       <div class="collapse-widget price-list-widget">
         <h3 v-b-toggle.collapse-5 class="collapse-widget-title">
@@ -175,19 +153,11 @@ export default {
         { value: '1000-999999', label: 'Más de $1000' }
       ],
       productsCache: new Map(),
-      currentRequest: null,
-      wishlistIds: []
+      currentRequest: null
     };
-  },
-  computed: {
-    wishlistCount() {
-      return this.wishlistIds.length;
-    }
   },
   created() {
     this.debouncedNotifyProductsComponent = debounce(this.notifyProductsComponent, 300);
-    // Cargar IDs de productos deseados desde localStorage
-    this.loadWishlistIds();
   },
   mounted() {
     this.loadGruposProductos();
@@ -195,60 +165,11 @@ export default {
     this.loadFiltersFromUrl();
     
     this.$root.$on('update-filters', this.updateFiltersFromExternal);
-    
-    // Escuchar eventos de actualización de wishlist
-    this.$root.$on('wishlist-updated', (ids) => {
-      this.wishlistIds = ids || this.loadWishlistIds();
-    });
-
-    // Escuchar periódicamente cambios en localStorage
-    this.wishlistInterval = setInterval(() => {
-      this.loadWishlistIds();
-    }, 2000);
   },
   beforeDestroy() {
     this.$root.$off('update-filters', this.updateFiltersFromExternal);
-    this.$root.$off('wishlist-updated');
-    
-    // Limpiar intervalo
-    if (this.wishlistInterval) {
-      clearInterval(this.wishlistInterval);
-    }
   },
   methods: {
-    // Cargar IDs de wishlist desde localStorage
-    loadWishlistIds() {
-      try {
-        this.wishlistIds = JSON.parse(localStorage.getItem('wishlist') || '[]');
-        return this.wishlistIds;
-      } catch (e) {
-        console.error('Error loading wishlist:', e);
-        this.wishlistIds = [];
-        return [];
-      }
-    },
-    
-    // Aplicar filtro de wishlist
-    applyWishlistFilter() {
-      // Primero cargar la lista actualizada de deseados
-      this.loadWishlistIds();
-      
-      // Si el filtro ya está activo, lo quitamos
-      if (this.isActive('deseados', true)) {
-        this.removeFilter('deseados', true);
-        return;
-      }
-      
-      // Si no hay productos en la lista de deseados, mostramos aviso
-      if (this.wishlistIds.length === 0) {
-        this.$toast.info('No tienes productos en tu lista de deseados');
-        return;
-      }
-      
-      // Aplicar el filtro
-      this.applyFilter('deseados', true, 'Productos Deseados');
-    },
-    
     async loadGruposProductos() {
       this.loading.gruposProductos = true;
       try {
@@ -302,58 +223,58 @@ export default {
     },
 
     async loadProductosPopulares() {
-      this.loading.productosPopulares = true;
-      try {
-        // Modificar la solicitud para filtrar solo productos en oferta
-        const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-          params: {
-            'sort': 'precio_oferta:asc', // Ordenar por precio de oferta ascendente
-            'pagination[pageSize]': 3,
-            'populate': '*',
-            'filters[en_oferta]': true // Filtrar solo productos en oferta
-          }
-        });
-
-        this.productosPopulares = response.data.data.map(item => {
-          // Manejo flexible de la imagen principal
-          let imagenPrincipal = '../../assets/img/default-product.jpg';
-          if (item.attributes?.imagen_principal?.data?.attributes?.url) {
-            imagenPrincipal = `${this.strapiBaseUrl}${item.attributes.imagen_principal.data.attributes.url}`;
-          } else if (item.attributes?.images?.data?.[0]?.attributes?.url) {
-            imagenPrincipal = `${this.strapiBaseUrl}${item.attributes.images.data[0].attributes.url}`;
-          }
-
-          let grupoProducto = 'Sin tipo';
-          let grupoProductoId = null;
-          
-          if (item.attributes?.grupo_de_productos?.data?.attributes?.nombre) {
-            grupoProducto = item.attributes.grupo_de_productos.data.attributes.nombre;
-            grupoProductoId = item.attributes.grupo_de_productos.data.id;
-          } else if (item.attributes?.product_group?.data?.attributes?.name) {
-            grupoProducto = item.attributes.product_group.data.attributes.name;
-            grupoProductoId = item.attributes.product_group.data.id;
-          }
-          
-          return {
-            id: item.id,
-            nombre: item.attributes?.nombre || item.attributes?.name || `Producto ${item.id}`,
-            grupo_producto: grupoProducto,
-            grupo_producto_id: grupoProductoId,
-            precio_venta: item.attributes?.precio_venta || item.attributes?.price || 0,
-            precio_oferta: item.attributes?.precio_oferta || item.attributes?.sale_price || null,
-            en_oferta: item.attributes?.en_oferta || item.attributes?.on_sale || false,
-            stock: item.attributes?.stock || 0,
-            imagen_principal: imagenPrincipal
-          };
-        });
-      } catch (error) {
-        console.error('Error al cargar productos en oferta:', error);
-        this.$toast.error('Error al cargar productos en oferta');
-        this.productosPopulares = [];
-      } finally {
-        this.loading.productosPopulares = false;
+  this.loading.productosPopulares = true;
+  try {
+    // Modificar la solicitud para filtrar solo productos en oferta
+    const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+      params: {
+        'sort': 'precio_oferta:asc', // Ordenar por precio de oferta ascendente
+        'pagination[pageSize]': 3,
+        'populate': '*',
+        'filters[en_oferta]': true // Filtrar solo productos en oferta
       }
-    },
+    });
+
+    this.productosPopulares = response.data.data.map(item => {
+      // Manejo flexible de la imagen principal
+      let imagenPrincipal = '../../assets/img/default-product.jpg';
+      if (item.attributes?.imagen_principal?.data?.attributes?.url) {
+        imagenPrincipal = `${this.strapiBaseUrl}${item.attributes.imagen_principal.data.attributes.url}`;
+      } else if (item.attributes?.images?.data?.[0]?.attributes?.url) {
+        imagenPrincipal = `${this.strapiBaseUrl}${item.attributes.images.data[0].attributes.url}`;
+      }
+
+      let grupoProducto = 'Sin tipo';
+      let grupoProductoId = null;
+      
+      if (item.attributes?.grupo_de_productos?.data?.attributes?.nombre) {
+        grupoProducto = item.attributes.grupo_de_productos.data.attributes.nombre;
+        grupoProductoId = item.attributes.grupo_de_productos.data.id;
+      } else if (item.attributes?.product_group?.data?.attributes?.name) {
+        grupoProducto = item.attributes.product_group.data.attributes.name;
+        grupoProductoId = item.attributes.product_group.data.id;
+      }
+      
+      return {
+        id: item.id,
+        nombre: item.attributes?.nombre || item.attributes?.name || `Producto ${item.id}`,
+        grupo_producto: grupoProducto,
+        grupo_producto_id: grupoProductoId,
+        precio_venta: item.attributes?.precio_venta || item.attributes?.price || 0,
+        precio_oferta: item.attributes?.precio_oferta || item.attributes?.sale_price || null,
+        en_oferta: item.attributes?.en_oferta || item.attributes?.on_sale || false,
+        stock: item.attributes?.stock || 0,
+        imagen_principal: imagenPrincipal
+      };
+    });
+  } catch (error) {
+    console.error('Error al cargar productos en oferta:', error);
+    this.$toast.error('Error al cargar productos en oferta');
+    this.productosPopulares = [];
+  } finally {
+    this.loading.productosPopulares = false;
+  }
+},
 
     applyFilter(type, value, customLabel = null) {
       const existingIndex = this.activeFilters.findIndex(
@@ -572,17 +493,6 @@ export default {
           // Filtrado por ofertas
           params['filters[en_oferta]'] = true;
         }
-        else if (filter.type === 'deseados' && filter.value === true) {
-          // Filtrado por productos en lista de deseados
-          // Verificamos que haya IDs en la lista
-          if (this.wishlistIds && this.wishlistIds.length > 0) {
-            params['filters[id][$in]'] = this.wishlistIds.join(',');
-          } else {
-            // Si no hay productos deseados pero se aplicó el filtro
-            // establecemos un ID imposible para que no retorne resultados
-            params['filters[id][$in]'] = '-1';
-          }
-        }
       });
       
       return params;
@@ -671,10 +581,7 @@ export default {
 /* Estilos generales para todas las secciones de filtro */
 .filter-section {
   margin-bottom: 25px;
-  padding: 15px;
-  background-color: #f9f9f9;
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  padding-bottom: 15px;
   border-bottom: 1px solid #eee;
 }
 
@@ -683,15 +590,15 @@ export default {
   font-weight: 600;
   margin-bottom: 15px;
   color: #333;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
-/* Estilos para listas de filtros */
+.loading-indicator {
+  color: #6c757d;
+  font-size: 14px;
+  padding: 5px 0;
+}
+
+/* Estilos para listas de filtros (compartidos por todos los tipos de filtro) */
 .filter-list,
 .price-list-row {
   padding: 0;
@@ -701,7 +608,7 @@ export default {
 
 .filter-list li,
 .price-list-row li {
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 
 .filter-list li a,
@@ -719,7 +626,6 @@ export default {
 .price-list-row li a:hover {
   background-color: #f5f5f5;
   color: #007bff;
-  padding-left: 5px;
 }
 
 .filter-list li a.active,
@@ -729,30 +635,13 @@ export default {
   font-weight: 500;
 }
 
-.filter-list li a.active i.fa-heart {
-  color: #dc3545;
-}
-
-/* Estilos para indicadores de carga */
-.loading-indicator {
-  color: #6c757d;
-  font-size: 14px;
-  padding: 10px 0;
-  text-align: center;
-  font-style: italic;
-}
-
-/* Estilos para el rango de precios */
+/* Estilos específicos para el rango de precios */
 .price-range-wrap input {
   width: 100%;
   max-width: 120px;
 }
 
-.price-range-wrap {
-  margin-bottom: 15px;
-}
-
-/* Estilos para botones de acción */
+/* Estilos para el botón de eliminar filtros */
 .delete-selected-filters a {
   color: #dc3545;
   text-decoration: none;
@@ -762,6 +651,20 @@ export default {
   text-decoration: underline;
 }
 
+/* Estilos para elementos de carga */
+.spinner-border {
+  width: 1rem;
+  height: 1rem;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* Estilos para los inputs de precio */
+.input-group-text {
+  background-color: #f8f9fa;
+}
+
+/* Estilos para los botones de aplicar/limpiar */
 .btn-outline-secondary {
   border-color: #6c757d;
   color: #6c757d;
@@ -772,7 +675,7 @@ export default {
   color: white;
 }
 
-/* Estilos para productos en el aside */
+/* Estilos para productos individuales en el aside */
 .aside-single-products {
   margin-bottom: 15px;
   padding-bottom: 15px;
@@ -793,46 +696,5 @@ export default {
   text-decoration: line-through;
   color: #999;
   margin-left: 8px;
-}
-
-/* Elementos varios */
-.spinner-border {
-  width: 1rem;
-  height: 1rem;
-  vertical-align: middle;
-  margin-right: 5px;
-}
-
-.input-group-text {
-  background-color: #f8f9fa;
-}
-
-.badge-primary {
-  background-color: #007bff;
-  margin-left: 5px;
-  font-size: 12px;
-}
-
-.text-muted.small {
-  font-size: 13px;
-  color: #777 !important;
-}
-
-.wishlist-count-badge {
-  display: inline-block;
-  background-color: #dc3545;
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  text-align: center;
-  line-height: 20px;
-  font-size: 12px;
-  margin-left: 5px;
-}
-
-.filter-list li a.active .wishlist-count-badge {
-  background-color: white;
-  color: #dc3545;
 }
 </style>
