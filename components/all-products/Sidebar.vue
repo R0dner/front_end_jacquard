@@ -201,7 +201,7 @@
                         <div class="product-price">
                             <span class="new-price">$191.00</span>
                             <span class="old-price">$291.00</span>
-                        </div>
+                        </div>git merge cambios
                     </div>
                 </div>
             </div>
