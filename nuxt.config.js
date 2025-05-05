@@ -1,7 +1,7 @@
 export default {
-  mode: "universal",
 
-  target: "server",
+  target: "static", 
+  ssr: false,       
 
   head: {
     htmlAttrs: { lang: "en" },
@@ -39,9 +39,7 @@ export default {
     { src: "~/plugins/vueperslides", ssr: false },
   ],
 
-  buildModules: [
-    "@nuxt/typescript-build"
-  ],
+  buildModules: ["@nuxt/typescript-build"],
 
   modules: [
     "bootstrap-vue/nuxt",
