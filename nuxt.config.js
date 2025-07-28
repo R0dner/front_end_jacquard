@@ -50,7 +50,7 @@ export default {
   axios: {
     baseURL: process.env.STRAPI_URL || "https://delicate-attraction-2c7f961647.strapiapp.com",
   },
-
+//prueba de cambio//
   apollo: {
     clientConfigs: {
       default: {
