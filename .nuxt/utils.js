@@ -200,7 +200,7 @@ export async function setContext (app, context) {
       payload: context.payload,
       error: context.error,
       base: app.router.options.base,
-      env: {"strapiBaseUri":"http://127.0.0.1:1337"}
+      env: {"strapiBaseUri":"https://delicate-attraction-2c7f961647.strapiapp.com"}
     }
     // Only set once
 

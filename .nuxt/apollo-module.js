@@ -27,7 +27,7 @@ export default (ctx, inject) => {
       let defaultClientConfig
 
         defaultClientConfig = {
-  "httpEndpoint": "http://127.0.0.1:1337/graphql"
+  "httpEndpoint": "https://delicate-attraction-2c7f961647.strapiapp.com/graphql"
 }
 
       const defaultValidateToken = () => true

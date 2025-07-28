@@ -285,8 +285,8 @@ export default {
         
         // Si tenemos una URL válida, construimos la URL completa con el dominio de Strapi
         if (url) {
-          // Asegurarnos que usamos la URL base correcta de Strapi (http://localhost:1337)
-          return `http://localhost:1337${url}`;
+          // Asegurarnos que usamos la URL base correcta de Strapi (http://localhost:133)
+          return `https://delicate-attraction-2c7f961647.strapiapp.com${url}`;
         }
       } catch (e) {
         console.error("Error procesando URL de media:", e, media);

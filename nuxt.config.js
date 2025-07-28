@@ -21,7 +21,7 @@ export default {
   loading: { color: "#fff" },
 
   env: {
-    strapiBaseUri: process.env.API_URL || "http://127.0.0.1:1337",
+    strapiBaseUri: process.env.API_URL || "https://delicate-attraction-2c7f961647.strapiapp.com",
   },
 
   css: [
@@ -48,13 +48,13 @@ export default {
   ],
 
   axios: {
-    baseURL: process.env.STRAPI_URL || "http://127.0.0.1:1337",
+    baseURL: process.env.STRAPI_URL || "https://delicate-attraction-2c7f961647.strapiapp.com",
   },
 
   apollo: {
     clientConfigs: {
       default: {
-        httpEndpoint: process.env.BACKEND_URL || "http://127.0.0.1:1337/graphql",
+        httpEndpoint: process.env.BACKEND_URL || "https://delicate-attraction-2c7f961647.strapiapp.com",
       },
     },
   },

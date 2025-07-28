@@ -347,7 +347,7 @@ export default {
                 const formData = new FormData();
                 formData.append('files', this.receiptFile);
                 const uploadResponse = await this.$axios.$post(
-                    'http://127.0.0.1:1337/api/upload',
+                    'https://delicate-attraction-2c7f961647.strapiapp.com/api/upload',
                     formData
                 );
 
@@ -391,7 +391,7 @@ const pedidoData = {
 };
 
                 // 5. Enviar pedido
-                await this.$axios.$post('http://127.0.0.1:1337/api/pedidos', pedidoData);
+                await this.$axios.$post('https://delicate-attraction-2c7f961647.strapiapp.com/api/pedidos', pedidoData);
 
                 this.$toast.success(`Pedido #${this.referenceNumber} registrado`);
                 this.$store.dispatch('cartEmpty');

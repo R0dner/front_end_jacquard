@@ -19,19 +19,19 @@
                     <!-- Mostrar imagen si es una imagen -->
                     <img
                       v-if="novedad.archivo?.tipo === 'imagen'"
-                      :src="`http://localhost:1337${novedad.archivo.url}`"
+                      :src="`https://delicate-attraction-2c7f961647.strapiapp.com${novedad.archivo.url}`"
                       :alt="novedad.titulo"
                     />
                     <!-- Mostrar video si es un video -->
                     <video
                       v-else-if="novedad.archivo?.tipo === 'video'"
                       controls
-                      :src="`http://localhost:1337${novedad.archivo.url}`"
+                      :src="`https://delicate-attraction-2c7f961647.strapiapp.com${novedad.archivo.url}`"
                       :alt="novedad.titulo"
                     ></video>
                     <!-- Mostrar enlace si es un documento -->
                     <div v-else-if="novedad.archivo?.tipo === 'documento'" class="documento">
-                      <a :href="`http://localhost:1337${novedad.archivo.url}`" target="_blank" rel="noopener noreferrer">
+                      <a :href="`https://delicate-attraction-2c7f961647.strapiapp.com${novedad.archivo.url}`" target="_blank" rel="noopener noreferrer">
                         Descargar documento
                       </a>
                     </div>
