@@ -59,7 +59,7 @@ components: {
 data() {
   return {
     productos: {},
-    api_url: process.env.strapiBaseUri,
+    api_url: process.env.strapiBaseUrl,
     selectedProduct: null
   }
 },
