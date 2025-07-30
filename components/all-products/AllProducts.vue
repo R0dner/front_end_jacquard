@@ -166,7 +166,9 @@ export default {
               ...this.activeFilters.params,
               'pagination[page]': this.currentPage,
               'pagination[pageSize]': this.pageSize,
-              sort: this.sortOrder 
+              sort: this.sortOrder,
+              // ✅ IMPORTANTE: Asegurar que las imágenes se incluyan
+              populate: ['imagen_principal', 'images', 'image', 'marca', 'grupo_de_productos', 'categoria'].join(',')
             }
           });
           
@@ -178,7 +180,8 @@ export default {
             'pagination[page]': this.currentPage,
             'pagination[pageSize]': this.pageSize,
             sort: this.sortOrder,
-            populate: ['imagen_principal', 'marca', 'grupo_de_productos', 'categoria'].join(','),
+            // ✅ IMPORTANTE: Incluir múltiples opciones de imagen
+            populate: ['imagen_principal', 'images', 'image', 'marca', 'grupo_de_productos', 'categoria'].join(','),
           };
 
           if (Object.keys(this.activeFilters).length > 0) {
@@ -219,8 +222,27 @@ export default {
     },
     
     // ✅ MÉTODO CORREGIDO
+// ✅ MÉTODO CORREGIDO - Reemplaza el método getProductImageUrl en tu componente principal
     getProductImageUrl(product) {
-      const imagenData = product.attributes?.imagen_principal?.data?.attributes;
+      // Intentar múltiples rutas para obtener la imagen
+      let imagenData = null;
+      
+      // Opción 1: imagen_principal desde attributes
+      if (product.attributes?.imagen_principal?.data?.attributes) {
+        imagenData = product.attributes.imagen_principal.data.attributes;
+      }
+      // Opción 2: imagen_principal directamente desde product
+      else if (product.imagen_principal?.data?.attributes) {
+        imagenData = product.imagen_principal.data.attributes;
+      }
+      // Opción 3: images array (primer elemento)
+      else if (product.attributes?.images?.data?.[0]?.attributes) {
+        imagenData = product.attributes.images.data[0].attributes;
+      }
+      // Opción 4: image (singular)
+      else if (product.attributes?.image?.data?.attributes) {
+        imagenData = product.attributes.image.data.attributes;
+      }
 
       if (imagenData?.url) {
         // Verificar si la URL ya es completa
@@ -231,6 +253,7 @@ export default {
         return `${this.strapiBaseUrl}${imagenData.url}`;
       }
 
+      // Imagen por defecto si no se encuentra ninguna
       return '/images/default-product.jpg';
     },
     
