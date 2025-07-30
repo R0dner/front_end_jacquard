@@ -19,19 +19,19 @@
                     <!-- Mostrar imagen si es una imagen -->
                     <img
                       v-if="novedad.archivo?.tipo === 'imagen'"
-                      :src="`https://delicate-attraction-2c7f961647.strapiapp.com${novedad.archivo.url}`"
+                      :src="getStrapiMedia(novedad.archivo.url)"
                       :alt="novedad.titulo"
                     />
                     <!-- Mostrar video si es un video -->
                     <video
                       v-else-if="novedad.archivo?.tipo === 'video'"
                       controls
-                      :src="`https://delicate-attraction-2c7f961647.strapiapp.com${novedad.archivo.url}`"
+                      :src="getStrapiMedia(novedad.archivo.url)"
                       :alt="novedad.titulo"
                     ></video>
                     <!-- Mostrar enlace si es un documento -->
                     <div v-else-if="novedad.archivo?.tipo === 'documento'" class="documento">
-                      <a :href="`https://delicate-attraction-2c7f961647.strapiapp.com${novedad.archivo.url}`" target="_blank" rel="noopener noreferrer">
+                      <a :href="getStrapiMedia(novedad.archivo.url)" target="_blank" rel="noopener noreferrer">
                         Descargar documento
                       </a>
                     </div>
@@ -102,6 +102,21 @@
       }
     },
     methods: {
+      // ✅ MÉTODO AÑADIDO para manejar URLs de Strapi correctamente
+      getStrapiMedia(url) {
+        // Valor por defecto si no hay URL
+        if (!url) return '/images/default.jpg';
+        
+        // ✅ CORRECCIÓN: Verificar si la URL ya es completa
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          // La URL ya es completa, la devolvemos tal como está
+          return url;
+        } else {
+          // La URL es relativa, le agregamos el dominio base
+          return `https://delicate-attraction-2c7f961647.strapiapp.com${url}`;
+        }
+      },
+      
       formatDate(dateString) {
         const date = new Date(dateString);
         return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
