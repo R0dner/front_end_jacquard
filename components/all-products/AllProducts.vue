@@ -34,12 +34,6 @@
       </div>
     </div>
 
-    <!-- ✅ DEBUG: Mostrar información del primer producto -->
-    <div v-if="products.length > 0 && showDebug" class="debug-info" style="background: #f0f0f0; padding: 10px; margin: 10px 0; font-size: 12px;">
-      <strong>DEBUG - Primer producto:</strong>
-      <pre>{{ JSON.stringify(products[0], null, 2) }}</pre>
-    </div>
-
     <!-- Listado de productos en filas de 4 -->
     <div id="products-filter" class="products-collections-listing row">
       <ProductoItem
@@ -140,8 +134,7 @@ export default {
       selectedProduct: null,
       strapiBaseUrl: process.env.VUE_APP_STRAPI_URL || 'https://delicate-attraction-2c7f961647.strapiapp.com',
       activeFilters: {},
-      loading: false,
-      showDebug: false // ✅ Cambiar a true para ver debug
+      loading: false
     };
   },
   computed: {
@@ -167,114 +160,80 @@ export default {
     async fetchProducts() {
       this.loading = true;
       try {
-        // ✅ CORREGIDO: Mejorar la construcción de parámetros
-        let queryParams = {
-          'pagination[page]': this.currentPage,
-          'pagination[pageSize]': this.pageSize,
-          sort: this.sortOrder,
-          // ✅ IMPORTANTE: Asegurarse de poblar la imagen_principal
-          populate: 'imagen_principal,marca,grupo_de_productos,categoria,inventario'
-        };
-
-        // ✅ MEJORADO: Manejo de filtros más claro
         if (this.activeFilters && this.activeFilters.params) {
-          // Si hay filtros de búsqueda específicos
-          queryParams = {
-            ...this.activeFilters.params,
+          const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+            params: {
+              ...this.activeFilters.params,
+              'pagination[page]': this.currentPage,
+              'pagination[pageSize]': this.pageSize,
+              sort: this.sortOrder 
+            }
+          });
+          
+          this.products = response.data.data || [];
+          this.totalProducts = response.data.meta.pagination.total;
+          this.totalPages = response.data.meta.pagination.pageCount;
+        } else {
+          const queryParams = {
             'pagination[page]': this.currentPage,
             'pagination[pageSize]': this.pageSize,
             sort: this.sortOrder,
-            populate: 'imagen_principal,marca,grupo_de_productos,categoria,inventario'
+            populate: ['imagen_principal', 'marca', 'grupo_de_productos', 'categoria'].join(','),
           };
-        } else if (Object.keys(this.activeFilters).length > 0) {
-          // Aplicar filtros normales
-          Object.entries(this.activeFilters).forEach(([key, value]) => {
-            if (key === 'precio') {
-              const [min, max] = value.split('-').map(val => parseFloat(val));
-              if (!isNaN(min)) {
-                queryParams['filters[precio_venta][$gte]'] = min;
+
+          if (Object.keys(this.activeFilters).length > 0) {
+            Object.entries(this.activeFilters).forEach(([key, value]) => {
+              if (key === 'precio') {
+                const [min, max] = value.split('-').map(val => parseFloat(val));
+                if (!isNaN(min)) {
+                  queryParams['filters[precio_venta][$gte]'] = min;
+                }
+                if (!isNaN(max)) {
+                  queryParams['filters[precio_venta][$lte]'] = max;
+                }
+              } else if (key === 'categoria') {
+                queryParams['filters[categoria][id]'] = parseInt(value);
+              } else if (key === 'grupo_producto') {
+                queryParams['filters[grupo_de_productos][id]'] = parseInt(value);
+              } else if (key === 'en_oferta' && value === true) {
+                queryParams['filters[en_oferta]'] = true;
+              } else {
+                queryParams[`filters[${key}]`] = value;
               }
-              if (!isNaN(max)) {
-                queryParams['filters[precio_venta][$lte]'] = max;
-              }
-            } else if (key === 'categoria') {
-              queryParams['filters[categoria][id]'] = parseInt(value);
-            } else if (key === 'grupo_producto') {
-              queryParams['filters[grupo_de_productos][id]'] = parseInt(value);
-            } else if (key === 'en_oferta' && value === true) {
-              queryParams['filters[en_oferta]'] = true;
-            } else {
-              queryParams[`filters[${key}]`] = value;
-            }
+            });
+          }
+
+          const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+            params: queryParams,
           });
+
+          this.products = response.data.data || [];
+          this.totalProducts = response.data.meta.pagination.total;
+          this.totalPages = response.data.meta.pagination.pageCount;
         }
-
-        console.log('🔍 Parámetros de consulta:', queryParams);
-
-        const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-          params: queryParams,
-        });
-
-        console.log('📦 Respuesta de productos:', response.data);
-
-        this.products = response.data.data || [];
-        this.totalProducts = response.data.meta.pagination.total;
-        this.totalPages = response.data.meta.pagination.pageCount;
-
-        // ✅ DEBUG: Mostrar información de imágenes
-        if (this.products.length > 0) {
-          console.log('🖼️ Primera imagen del producto:', this.products[0].attributes?.imagen_principal);
-        }
-
       } catch (error) {
-        console.error('❌ Error al obtener productos:', error.response?.data || error.message);
+        console.error('Error al obtener productos:', error.response?.data || error.message);
       } finally {
         this.loading = false;
       }
     },
-
-    // ✅ MÉTODO MEJORADO para obtener URL de imagen
+    
+    // ✅ MÉTODO CORREGIDO
     getProductImageUrl(product) {
-      console.log('🔍 Analizando producto para imagen:', product.attributes?.nombre);
-      console.log('🖼️ Datos de imagen_principal:', product.attributes?.imagen_principal);
+      const imagenData = product.attributes?.imagen_principal?.data?.attributes;
 
-      // Verificar diferentes estructuras posibles
-      let imagenData = null;
-
-      // Estructura 1: imagen_principal.data.attributes
-      if (product.attributes?.imagen_principal?.data?.attributes) {
-        imagenData = product.attributes.imagen_principal.data.attributes;
-        console.log('✅ Estructura 1 encontrada:', imagenData);
-      }
-      // Estructura 2: imagen_principal.data (array)
-      else if (Array.isArray(product.attributes?.imagen_principal?.data) && product.attributes.imagen_principal.data.length > 0) {
-        imagenData = product.attributes.imagen_principal.data[0].attributes;
-        console.log('✅ Estructura 2 (array) encontrada:', imagenData);
-      }
-      // Estructura 3: imagen_principal directamente
-      else if (product.attributes?.imagen_principal?.url) {
-        imagenData = product.attributes.imagen_principal;
-        console.log('✅ Estructura 3 (directa) encontrada:', imagenData);
-      }
-
-      // Procesar URL de imagen
-      if (imagenData && imagenData.url) {
-        let imageUrl;
-        
+      if (imagenData?.url) {
+        // Verificar si la URL ya es completa
         if (imagenData.url.startsWith('http://') || imagenData.url.startsWith('https://')) {
-          imageUrl = imagenData.url;
-        } else {
-          imageUrl = `${this.strapiBaseUrl}${imagenData.url}`;
+          return imagenData.url;
         }
-        
-        console.log('🎯 URL final de imagen:', imageUrl);
-        return imageUrl;
+        // Si es relativa, agregar el dominio base
+        return `${this.strapiBaseUrl}${imagenData.url}`;
       }
 
-      console.log('⚠️ No se encontró imagen, usando imagen por defecto');
       return '/images/default-product.jpg';
     },
-
+    
     toggleQuickView(product) {
       this.selectedProduct = product;
       mutations.toggleQuickView();
