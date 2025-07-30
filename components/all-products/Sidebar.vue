@@ -224,58 +224,72 @@ export default {
     },
 
     async loadProductosPopulares() {
-  this.loading.productosPopulares = true;
-  try {
-    // Modificar la solicitud para filtrar solo productos en oferta
-    const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-      params: {
-        'sort': 'precio_oferta:asc', // Ordenar por precio de oferta ascendente
-        'pagination[pageSize]': 3,
-        'populate': '*',
-        'filters[en_oferta]': true // Filtrar solo productos en oferta
-      }
-    });
+      this.loading.productosPopulares = true;
+      try {
+        // Modificar la solicitud para filtrar solo productos en oferta
+        const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+          params: {
+            'sort': 'precio_oferta:asc', // Ordenar por precio de oferta ascendente
+            'pagination[pageSize]': 3,
+            'populate': '*',
+            'filters[en_oferta]': true // Filtrar solo productos en oferta
+          }
+        });
 
-    this.productosPopulares = response.data.data.map(item => {
-      // Manejo flexible de la imagen principal
-      let imagenPrincipal = '../../assets/img/default-product.jpg';
-      if (item.attributes?.imagen_principal?.data?.attributes?.url) {
-        imagenPrincipal = `${this.strapiBaseUrl}${item.attributes.imagen_principal.data.attributes.url}`;
-      } else if (item.attributes?.images?.data?.[0]?.attributes?.url) {
-        imagenPrincipal = `${this.strapiBaseUrl}${item.attributes.images.data[0].attributes.url}`;
-      }
+        this.productosPopulares = response.data.data.map(item => {
+          // ✅ CORRECCIÓN: Manejo flexible de la imagen principal
+          let imagenPrincipal = '../../assets/img/default-product.jpg';
+          
+          // Intentar obtener la URL de la imagen
+          let imageUrl = null;
+          if (item.attributes?.imagen_principal?.data?.attributes?.url) {
+            imageUrl = item.attributes.imagen_principal.data.attributes.url;
+          } else if (item.attributes?.images?.data?.[0]?.attributes?.url) {
+            imageUrl = item.attributes.images.data[0].attributes.url;
+          }
+          
+          // Si encontramos una URL, verificar si es completa o relativa
+          if (imageUrl) {
+            if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+              // La URL ya es completa
+              imagenPrincipal = imageUrl;
+            } else {
+              // La URL es relativa, agregar el dominio base
+              imagenPrincipal = `${this.strapiBaseUrl}${imageUrl}`;
+            }
+          }
 
-      let grupoProducto = 'Sin tipo';
-      let grupoProductoId = null;
-      
-      if (item.attributes?.grupo_de_productos?.data?.attributes?.nombre) {
-        grupoProducto = item.attributes.grupo_de_productos.data.attributes.nombre;
-        grupoProductoId = item.attributes.grupo_de_productos.data.id;
-      } else if (item.attributes?.product_group?.data?.attributes?.name) {
-        grupoProducto = item.attributes.product_group.data.attributes.name;
-        grupoProductoId = item.attributes.product_group.data.id;
+          let grupoProducto = 'Sin tipo';
+          let grupoProductoId = null;
+          
+          if (item.attributes?.grupo_de_productos?.data?.attributes?.nombre) {
+            grupoProducto = item.attributes.grupo_de_productos.data.attributes.nombre;
+            grupoProductoId = item.attributes.grupo_de_productos.data.id;
+          } else if (item.attributes?.product_group?.data?.attributes?.name) {
+            grupoProducto = item.attributes.product_group.data.attributes.name;
+            grupoProductoId = item.attributes.product_group.data.id;
+          }
+          
+          return {
+            id: item.id,
+            nombre: item.attributes?.nombre || item.attributes?.name || `Producto ${item.id}`,
+            grupo_producto: grupoProducto,
+            grupo_producto_id: grupoProductoId,
+            precio_venta: item.attributes?.precio_venta || item.attributes?.price || 0,
+            precio_oferta: item.attributes?.precio_oferta || item.attributes?.sale_price || null,
+            en_oferta: item.attributes?.en_oferta || item.attributes?.on_sale || false,
+            stock: item.attributes?.stock || 0,
+            imagen_principal: imagenPrincipal
+          };
+        });
+      } catch (error) {
+        console.error('Error al cargar productos en oferta:', error);
+        this.$toast.error('Error al cargar productos en oferta');
+        this.productosPopulares = [];
+      } finally {
+        this.loading.productosPopulares = false;
       }
-      
-      return {
-        id: item.id,
-        nombre: item.attributes?.nombre || item.attributes?.name || `Producto ${item.id}`,
-        grupo_producto: grupoProducto,
-        grupo_producto_id: grupoProductoId,
-        precio_venta: item.attributes?.precio_venta || item.attributes?.price || 0,
-        precio_oferta: item.attributes?.precio_oferta || item.attributes?.sale_price || null,
-        en_oferta: item.attributes?.en_oferta || item.attributes?.on_sale || false,
-        stock: item.attributes?.stock || 0,
-        imagen_principal: imagenPrincipal
-      };
-    });
-  } catch (error) {
-    console.error('Error al cargar productos en oferta:', error);
-    this.$toast.error('Error al cargar productos en oferta');
-    this.productosPopulares = [];
-  } finally {
-    this.loading.productosPopulares = false;
-  }
-},
+    },
 
     applyFilter(type, value, customLabel = null) {
       const existingIndex = this.activeFilters.findIndex(
