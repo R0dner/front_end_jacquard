@@ -260,7 +260,7 @@ export default {
   },
   
   methods: {
-    // Método actualizado para obtener la URL completa de la imagen o video
+    // ✅ MÉTODO CORREGIDO para obtener la URL completa de la imagen o video
     getStrapiMedia(media) {
       // Valor por defecto si no hay media
       if (!media) return '/images/default.jpg';
@@ -283,10 +283,16 @@ export default {
           url = media.url;
         }
         
-        // Si tenemos una URL válida, construimos la URL completa con el dominio de Strapi
+        // Si tenemos una URL válida
         if (url) {
-          // Asegurarnos que usamos la URL base correcta de Strapi (http://localhost:133)
-          return `https://delicate-attraction-2c7f961647.strapiapp.com${url}`;
+          // ✅ CORRECCIÓN: Verificar si la URL ya es completa
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            // La URL ya es completa, la devolvemos tal como está
+            return url;
+          } else {
+            // La URL es relativa, le agregamos el dominio base
+            return `https://delicate-attraction-2c7f961647.strapiapp.com${url}`;
+          }
         }
       } catch (e) {
         console.error("Error procesando URL de media:", e, media);
@@ -483,6 +489,24 @@ export default {
     object-fit: cover;
 }
 
+.carousel-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.gallery-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.thumb-video {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+}
+
 .carousel-caption {
     position: absolute;
     bottom: 0;
@@ -628,6 +652,7 @@ export default {
 
 .video-thumb {
     position: relative;
+    cursor: pointer;
 }
 
 .play-icon {
