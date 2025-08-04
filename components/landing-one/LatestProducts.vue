@@ -22,8 +22,13 @@
                   ></ProductoItem>
               </div>
               
+              <!-- Loading state -->
+              <div v-if="loading" class="text-center">
+                  <p>Cargando productos...</p>
+              </div>
+              
               <!-- Enlace para ver más productos -->
-              <div class="text-center mt-4 mb-4">
+              <div class="text-center mt-4 mb-4" v-if="!loading && limitedProducts.length > 0">
                   <nuxt-link to="/products" class="btn btn-primary">Ver más productos</nuxt-link>
               </div>
           </div>
@@ -48,7 +53,8 @@
 import QuckView from '../modals/QuckView';
 import { mutations } from '../../utils/sidebar-util';
 import ProductoItem from './ProductoItem';
-import productosQuery from '@/apollo/queries/productos/ultimos_productos.gql'
+// ✅ COMENTADO temporalmente el GraphQL
+// import productosQuery from '@/apollo/queries/productos/ultimos_productos.gql'
 
 export default {
 name: "UltimosProductos",
@@ -58,9 +64,10 @@ components: {
 },
 data() {
   return {
-    productos: {},
-    api_url: process.env.strapiBaseUrl,
-    selectedProduct: null
+    productos: { data: [] }, // ✅ Inicializar con estructura correcta
+    api_url: process.env.strapiBaseUri,
+    selectedProduct: null,
+    loading: false // ✅ Agregar estado de loading
   }
 },
 methods: {
@@ -69,7 +76,6 @@ methods: {
     mutations.toggleQuickView();
   },
   
-  // ✅ MÉTODO CORREGIDO Y MEJORADO
   getProductImageUrl(product) {
     let imagenData = null;
     
@@ -90,7 +96,7 @@ methods: {
     if (imagenData?.url) {
       let cleanUrl = imagenData.url.trim();
       
-      // ✅ DETECTAR Y CORREGIR URLs MALFORMADAS
+      // Detectar y corregir URLs malformadas
       if (cleanUrl.includes('strapiapp.comhttps')) {
         const mediaUrlMatch = cleanUrl.match(/https:\/\/[^\/]*\.media\.strapiapp\.com\/.*$/);
         if (mediaUrlMatch) {
@@ -117,6 +123,38 @@ methods: {
 
     console.log('UltimosProductos - No image found, using default');
     return '/images/default-product.jpg';
+  },
+
+  // ✅ NUEVO MÉTODO: Obtener productos via REST API
+  async fetchProductos() {
+    this.loading = true;
+    try {
+      const response = await this.$axios.get('/api/productos', {
+        params: {
+          'sort': 'createdAt:desc',
+          'pagination[limit]': 12,
+          'populate': [
+            'imagen_principal', 
+            'multimedia', 
+            'talla', 
+            'grupo_de_productos',
+            'images',
+            'image'
+          ].join(',')
+        }
+      });
+      
+      this.productos = {
+        data: response.data.data || []
+      };
+      
+      console.log('Productos cargados:', this.productos.data.length);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      this.productos = { data: [] };
+    } finally {
+      this.loading = false;
+    }
   }
 },
 computed: {
@@ -125,11 +163,16 @@ computed: {
     return this.productos.data.slice(0, 4);
   }
 },
-apollo: {
-  productos: {
-    prefetch: true,
-    query: productosQuery
-  }
+// ✅ COMENTADO temporalmente el Apollo
+// apollo: {
+//   productos: {
+//     prefetch: true,
+//     query: productosQuery
+//   }
+// }
+async mounted() {
+  // ✅ Usar REST API en lugar de GraphQL
+  await this.fetchProductos();
 }
 }
 </script>
