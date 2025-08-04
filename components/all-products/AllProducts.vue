@@ -221,8 +221,6 @@ export default {
       }
     },
     
-    // ✅ MÉTODO CORREGIDO
-// ✅ MÉTODO CORREGIDO - Reemplaza el método getProductImageUrl en tu componente principal
     getProductImageUrl(product) {
       // Intentar múltiples rutas para obtener la imagen
       let imagenData = null;
@@ -245,9 +243,9 @@ export default {
       }
 
       if (imagenData?.url) {
-        // Verificar si la URL ya es completa
+        // ✅ CORRECCIÓN: Verificar correctamente si la URL ya es completa
         if (imagenData.url.startsWith('http://') || imagenData.url.startsWith('https://')) {
-          return imagenData.url;
+          return imagenData.url; // Ya es una URL completa, devolverla tal como está
         }
         // Si es relativa, agregar el dominio base
         return `${this.strapiBaseUrl}${imagenData.url}`;
