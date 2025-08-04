@@ -27,6 +27,11 @@
                   <p>Cargando productos...</p>
               </div>
               
+              <!-- Error state -->
+              <div v-if="error && !loading" class="text-center">
+                  <p class="text-danger">Error al cargar productos. Intentando método alternativo...</p>
+              </div>
+              
               <!-- Enlace para ver más productos -->
               <div class="text-center mt-4 mb-4" v-if="!loading && limitedProducts.length > 0">
                   <nuxt-link to="/products" class="btn btn-primary">Ver más productos</nuxt-link>
@@ -53,8 +58,7 @@
 import QuckView from '../modals/QuckView';
 import { mutations } from '../../utils/sidebar-util';
 import ProductoItem from './ProductoItem';
-// ✅ COMENTADO temporalmente el GraphQL
-// import productosQuery from '@/apollo/queries/productos/ultimos_productos.gql'
+import productosQuery from '@/apollo/queries/productos/ultimos_productos.gql'
 
 export default {
 name: "UltimosProductos",
@@ -64,10 +68,12 @@ components: {
 },
 data() {
   return {
-    productos: { data: [] }, // ✅ Inicializar con estructura correcta
+    productos: { data: [] },
     api_url: process.env.strapiBaseUri,
     selectedProduct: null,
-    loading: false // ✅ Agregar estado de loading
+    loading: false,
+    error: false,
+    useGraphQL: true // ✅ Controlar qué método usar
   }
 },
 methods: {
@@ -125,8 +131,9 @@ methods: {
     return '/images/default-product.jpg';
   },
 
-  // ✅ NUEVO MÉTODO: Obtener productos via REST API
-  async fetchProductos() {
+  // ✅ MÉTODO FALLBACK: REST API
+  async fetchProductosREST() {
+    console.log('UltimosProductos - Usando REST API como fallback');
     this.loading = true;
     try {
       const response = await this.$axios.get('/api/productos', {
@@ -148,9 +155,11 @@ methods: {
         data: response.data.data || []
       };
       
-      console.log('Productos cargados:', this.productos.data.length);
+      console.log('UltimosProductos - Productos cargados via REST:', this.productos.data.length);
+      this.error = false;
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('UltimosProductos - Error en REST API:', error);
+      this.error = true;
       this.productos = { data: [] };
     } finally {
       this.loading = false;
@@ -163,16 +172,41 @@ computed: {
     return this.productos.data.slice(0, 4);
   }
 },
-// ✅ COMENTADO temporalmente el Apollo
-// apollo: {
-//   productos: {
-//     prefetch: true,
-//     query: productosQuery
-//   }
-// }
+apollo: {
+  productos: {
+    prefetch: true,
+    query: productosQuery,
+    // ✅ MANEJO DE ERRORES EN APOLLO
+    error(error) {
+      console.error('UltimosProductos - Error en GraphQL:', error);
+      this.error = true;
+      this.useGraphQL = false;
+      // Intentar con REST API como fallback
+      this.$nextTick(() => {
+        this.fetchProductosREST();
+      });
+    },
+    // ✅ RESULTADO EXITOSO
+    result(result) {
+      if (result.data && result.data.productos) {
+        console.log('UltimosProductos - Productos cargados via GraphQL:', result.data.productos.data.length);
+        this.error = false;
+      }
+    }
+  }
+},
 async mounted() {
-  // ✅ Usar REST API en lugar de GraphQL
-  await this.fetchProductos();
+  // ✅ SI HAY ERROR EN APOLLO, INTENTAR REST
+  this.$nextTick(() => {
+    if (this.error || !this.productos.data || this.productos.data.length === 0) {
+      setTimeout(() => {
+        if (!this.productos.data || this.productos.data.length === 0) {
+          console.log('UltimosProductos - GraphQL no funcionó, usando REST como fallback');
+          this.fetchProductosREST();
+        }
+      }, 2000); // Esperar 2 segundos antes del fallback
+    }
+  });
 }
 }
 </script>
@@ -190,5 +224,11 @@ async mounted() {
 .btn-primary:hover {
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para estados de error */
+.text-danger {
+  color: #dc3545;
+  font-weight: 500;
 }
 </style>
