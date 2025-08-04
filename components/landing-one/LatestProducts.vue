@@ -69,16 +69,53 @@ methods: {
     mutations.toggleQuickView();
   },
   
+  // ✅ MÉTODO CORREGIDO Y MEJORADO
   getProductImageUrl(product) {
-    const imagenData = product.attributes?.imagen_principal?.data?.attributes;
-
-    if (imagenData?.url) {
-      if (imagenData.url.startsWith('http')) {
-        return imagenData.url;
-      }
-      return `${this.api_url}${imagenData.url}`;
+    let imagenData = null;
+    
+    // Buscar la imagen en diferentes ubicaciones
+    if (product.attributes?.imagen_principal?.data?.attributes) {
+      imagenData = product.attributes.imagen_principal.data.attributes;
+    }
+    else if (product.imagen_principal?.data?.attributes) {
+      imagenData = product.imagen_principal.data.attributes;
+    }
+    else if (product.attributes?.images?.data?.[0]?.attributes) {
+      imagenData = product.attributes.images.data[0].attributes;
+    }
+    else if (product.attributes?.image?.data?.attributes) {
+      imagenData = product.attributes.image.data.attributes;
     }
 
+    if (imagenData?.url) {
+      let cleanUrl = imagenData.url.trim();
+      
+      // ✅ DETECTAR Y CORREGIR URLs MALFORMADAS
+      if (cleanUrl.includes('strapiapp.comhttps')) {
+        const mediaUrlMatch = cleanUrl.match(/https:\/\/[^\/]*\.media\.strapiapp\.com\/.*$/);
+        if (mediaUrlMatch) {
+          console.log(`UltimosProductos - Fixed malformed URL: ${mediaUrlMatch[0]}`);
+          return mediaUrlMatch[0];
+        }
+      }
+      
+      // Si ya es una URL completa, devolverla tal como está
+      if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+        console.log(`UltimosProductos - Using complete URL: ${cleanUrl}`);
+        return cleanUrl;
+      }
+      
+      // Si es relativa, agregar el dominio base
+      const baseUrl = this.api_url?.endsWith('/') 
+        ? this.api_url.slice(0, -1) 
+        : this.api_url;
+      
+      const finalUrl = `${baseUrl}${cleanUrl.startsWith('/') ? cleanUrl : '/' + cleanUrl}`;
+      console.log(`UltimosProductos - Constructed URL: ${finalUrl}`);
+      return finalUrl;
+    }
+
+    console.log('UltimosProductos - No image found, using default');
     return '/images/default-product.jpg';
   }
 },
