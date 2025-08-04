@@ -4,10 +4,13 @@
         <div class="single-product-box">
             <div class="product-image">
                 <nuxt-link :to="`/products-details/${id}`">
-                    <!--<img :src="product.image" :alt="product.nombre">-->
-                    <!--api_url + product.imagen_principal.data.attributes.url-->
-                    <!--<img :src="api_url + product.imagen_principal.data.attributes.url" height="400">-->
-                    <!--<img :src="product.imageHover" :alt="product.nombre">-->
+                    <!-- ✅ IMAGEN ACTIVA - Usar la imageUrl que ya viene procesada -->
+                    <img 
+                        :src="product.imageUrl" 
+                        :alt="product.nombre"
+                        @error="handleImageError"
+                        style="width: 100%; height: 300px; object-fit: cover;"
+                    >
                 </nuxt-link>
 
                 <ul>
@@ -104,6 +107,12 @@ export default {
         }
     },
     methods: {
+        // ✅ MÉTODO PARA MANEJAR ERRORES DE IMAGEN
+        handleImageError(event) {
+            console.log('Error loading image:', event.target.src);
+            // Imagen por defecto en caso de error
+            event.target.src = '/images/default-product.jpg';
+        },
         quickView(e){
             this.$emit('clicked')
         },
