@@ -221,36 +221,57 @@ export default {
       }
     },
     
+    // ✅ MÉTODO ALTERNATIVO CON DEBUGGING
     getProductImageUrl(product) {
       // Intentar múltiples rutas para obtener la imagen
       let imagenData = null;
+      let source = '';
       
       // Opción 1: imagen_principal desde attributes
       if (product.attributes?.imagen_principal?.data?.attributes) {
         imagenData = product.attributes.imagen_principal.data.attributes;
+        source = 'imagen_principal from attributes';
       }
       // Opción 2: imagen_principal directamente desde product
       else if (product.imagen_principal?.data?.attributes) {
         imagenData = product.imagen_principal.data.attributes;
+        source = 'imagen_principal direct';
       }
       // Opción 3: images array (primer elemento)
       else if (product.attributes?.images?.data?.[0]?.attributes) {
         imagenData = product.attributes.images.data[0].attributes;
+        source = 'images array';
       }
       // Opción 4: image (singular)
       else if (product.attributes?.image?.data?.attributes) {
         imagenData = product.attributes.image.data.attributes;
+        source = 'image singular';
       }
 
       if (imagenData?.url) {
-        // ✅ CORRECCIÓN: Verificar correctamente si la URL ya es completa
-        if (imagenData.url.startsWith('http://') || imagenData.url.startsWith('https://')) {
-          return imagenData.url; // Ya es una URL completa, devolverla tal como está
+        // Debug logging (puedes removerlo después)
+        console.log(`Image source: ${source}, URL: ${imagenData.url}`);
+        
+        // Limpiar la URL en caso de que tenga espacios o caracteres extraños
+        let cleanUrl = imagenData.url.trim();
+        
+        // Verificar si la URL ya es completa
+        if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+          console.log(`Complete URL: ${cleanUrl}`);
+          return cleanUrl;
         }
-        // Si es relativa, agregar el dominio base
-        return `${this.strapiBaseUrl}${imagenData.url}`;
+        
+        // Si es relativa, agregar el dominio base (asegurar que no termine en /)
+        const baseUrl = this.strapiBaseUrl.endsWith('/') 
+          ? this.strapiBaseUrl.slice(0, -1) 
+          : this.strapiBaseUrl;
+        
+        const finalUrl = `${baseUrl}${cleanUrl.startsWith('/') ? cleanUrl : '/' + cleanUrl}`;
+        console.log(`Final URL: ${finalUrl}`);
+        return finalUrl;
       }
 
+      console.log('No image found, using default');
       // Imagen por defecto si no se encuentra ninguna
       return '/images/default-product.jpg';
     },
