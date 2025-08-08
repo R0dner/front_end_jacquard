@@ -1,5 +1,5 @@
 query Categorias {
-  Categorias {
+  categorias {
     data {
       id
       attributes {
