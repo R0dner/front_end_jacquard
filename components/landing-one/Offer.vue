@@ -15,14 +15,21 @@
       .row(v-if="categoria && categoria.data && categoria.data.length > 0 && !loading")
         .col-lg-4.col-md-6(v-for="category in categoria.data" :key="category.id")
           .offer-box
-            // ✅ Protege contra imágenes nulas usando método helper
+            // ✅ Protege contra imágenes nulas usando método helper mejorado
             img(
               v-if="getCategoryImageUrl(category)"
               :src="getCategoryImageUrl(category)"
               height="400"
               :alt="category.attributes.nombre"
               @error="handleImageError"
+              @load="handleImageLoad"
             )
+            // ✅ Imagen por defecto si no hay imagen
+            .default-image(
+              v-else
+              :style="{ height: '400px', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }"
+            )
+              p No imagen disponible
             .category
               h4 {{ category.attributes.nombre }}
             .box-inner
@@ -52,31 +59,46 @@ export default {
     return {
       categoria: { data: [] },
       api_url: process.env.strapiBaseUri,
-      loading: true, // ✅ Iniciar en loading
+      loading: true,
       error: false,
       useGraphQL: true,
-      restAttempted: false // ✅ Evitar múltiples intentos REST
+      restAttempted: false
     }
   },
   methods: {
     getCategoryImageUrl(category) {
+      console.log('AreaOfertas - Procesando imagen para categoría:', category.attributes.nombre);
+      console.log('AreaOfertas - Datos completos de categoría:', JSON.stringify(category, null, 2));
+      
       let imagenData = null;
       
-      // Buscar la imagen en diferentes ubicaciones posibles
+      // ✅ BÚSQUEDA EXHAUSTIVA DE IMÁGENES EN DIFERENTES UBICACIONES
       if (category.attributes?.imagen?.data?.attributes) {
         imagenData = category.attributes.imagen.data.attributes;
+        console.log('AreaOfertas - Imagen encontrada en category.attributes.imagen.data.attributes');
+      }
+      else if (category.attributes?.imagen?.data?.[0]?.attributes) {
+        imagenData = category.attributes.imagen.data[0].attributes;
+        console.log('AreaOfertas - Imagen encontrada en category.attributes.imagen.data[0].attributes');
       }
       else if (category.imagen?.data?.attributes) {
         imagenData = category.imagen.data.attributes;
+        console.log('AreaOfertas - Imagen encontrada en category.imagen.data.attributes');
       }
       else if (category.attributes?.image?.data?.attributes) {
         imagenData = category.attributes.image.data.attributes;
+        console.log('AreaOfertas - Imagen encontrada en category.attributes.image.data.attributes');
+      }
+      else if (category.attributes?.images?.data?.[0]?.attributes) {
+        imagenData = category.attributes.images.data[0].attributes;
+        console.log('AreaOfertas - Imagen encontrada en category.attributes.images.data[0].attributes');
       }
 
       if (imagenData?.url) {
         let cleanUrl = imagenData.url.trim();
+        console.log('AreaOfertas - URL original:', cleanUrl);
         
-        // Detectar y corregir URLs malformadas
+        // ✅ DETECTAR Y CORREGIR URLs MALFORMADAS (mismo patrón que productos)
         if (cleanUrl.includes('strapiapp.comhttps')) {
           const mediaUrlMatch = cleanUrl.match(/https:\/\/[^\/]*\.media\.strapiapp\.com\/.*$/);
           if (mediaUrlMatch) {
@@ -85,13 +107,13 @@ export default {
           }
         }
         
-        // Si ya es una URL completa, devolverla tal como está
+        // ✅ SI YA ES UNA URL COMPLETA, DEVOLVERLA TAL COMO ESTÁ
         if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
           console.log(`AreaOfertas - Using complete URL: ${cleanUrl}`);
           return cleanUrl;
         }
         
-        // Si es relativa, agregar el dominio base
+        // ✅ SI ES RELATIVA, AGREGAR EL DOMINIO BASE
         const baseUrl = this.api_url?.endsWith('/') 
           ? this.api_url.slice(0, -1) 
           : this.api_url;
@@ -101,16 +123,26 @@ export default {
         return finalUrl;
       }
 
-      console.log('AreaOfertas - No image found for category');
+      console.log('AreaOfertas - No image found for category:', category.attributes.nombre);
       return null;
     },
 
     handleImageError(event) {
-      console.log('AreaOfertas - Error loading image:', event.target.src);
+      console.error('AreaOfertas - Error loading image:', event.target.src);
+      // ✅ En lugar de ocultar, mostrar imagen por defecto
       event.target.style.display = 'none';
+      // Mostrar el div de imagen por defecto
+      const defaultDiv = event.target.parentNode.querySelector('.default-image');
+      if (defaultDiv) {
+        defaultDiv.style.display = 'flex';
+      }
     },
 
-    // ✅ MÉTODO FALLBACK: REST API - RUTA CORREGIDA
+    handleImageLoad(event) {
+      console.log('AreaOfertas - Image loaded successfully:', event.target.src);
+    },
+
+    // ✅ MÉTODO FALLBACK: REST API MEJORADO
     async fetchCategoriasREST() {
       if (this.restAttempted) {
         console.log('AreaOfertas - REST ya fue intentado, evitando duplicados');
@@ -122,43 +154,67 @@ export default {
       this.loading = true;
       
       try {
-        // ✅ DIFERENTES RUTAS POSIBLES EN STRAPI
-        const possibleRoutes = [
-          '/api/categorias',
-          '/categorias',
-          '/api/categoria',
-          '/categoria'
+        // ✅ DIFERENTES RUTAS Y CONFIGURACIONES POSIBLES
+        const possibleConfigs = [
+          {
+            route: '/api/categorias',
+            params: {
+              'populate': 'deep'
+            }
+          },
+          {
+            route: '/api/categorias',
+            params: {
+              'populate': ['imagen', 'grupos_de_productos', 'image', 'images'].join(',')
+            }
+          },
+          {
+            route: '/categorias',
+            params: {
+              'populate': '*'
+            }
+          },
+          {
+            route: '/api/categoria',
+            params: {
+              'populate': 'deep'
+            }
+          }
         ];
         
         let response = null;
-        let successRoute = null;
+        let successConfig = null;
         
-        for (const route of possibleRoutes) {
+        for (const config of possibleConfigs) {
           try {
-            console.log(`AreaOfertas - Intentando ruta: ${route}`);
-            response = await this.$axios.get(route, {
-              params: {
-                populate: 'deep' // ✅ Usar populate deep para obtener todo
-              }
+            console.log(`AreaOfertas - Intentando: ${config.route} con params:`, config.params);
+            response = await this.$axios.get(config.route, {
+              params: config.params
             });
-            successRoute = route;
-            console.log(`AreaOfertas - Éxito con ruta: ${route}`);
+            successConfig = config;
+            console.log(`AreaOfertas - Éxito con: ${config.route}`);
             break;
           } catch (routeError) {
-            console.log(`AreaOfertas - Falló ruta ${route}:`, routeError.response?.status);
+            console.log(`AreaOfertas - Falló ${config.route}:`, routeError.response?.status);
             continue;
           }
         }
         
         if (!response) {
-          throw new Error('Ninguna ruta REST funcionó');
+          throw new Error('Ninguna configuración REST funcionó');
         }
         
+        // ✅ PROCESAR LA RESPUESTA
+        let categoriesData = response.data.data || response.data || [];
+        
+        // ✅ LOGGING DETALLADO PARA DEBUG
+        console.log('AreaOfertas - Respuesta REST completa:', JSON.stringify(response.data, null, 2));
+        console.log('AreaOfertas - Categorías procesadas:', categoriesData.length);
+        
         this.categoria = {
-          data: response.data.data || response.data || []
+          data: categoriesData
         };
         
-        console.log('AreaOfertas - Categorías cargadas via REST:', this.categoria.data.length);
         this.error = false;
         
       } catch (error) {
@@ -173,7 +229,7 @@ export default {
       }
     },
 
-    // ✅ DATOS DE PRUEBA COMO FALLBACK FINAL
+    // ✅ DATOS DE PRUEBA MEJORADOS
     loadTestData() {
       console.log('AreaOfertas - Cargando datos de prueba');
       this.categoria = {
@@ -192,7 +248,7 @@ export default {
               imagen: {
                 data: {
                   attributes: {
-                    url: 'https://via.placeholder.com/400x400/007bff/ffffff?text=Ropa+Casual'
+                    url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop'
                   }
                 }
               }
@@ -212,7 +268,27 @@ export default {
               imagen: {
                 data: {
                   attributes: {
-                    url: 'https://via.placeholder.com/400x400/28a745/ffffff?text=Ropa+Formal'
+                    url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop'
+                  }
+                }
+              }
+            }
+          },
+          {
+            id: 3,
+            attributes: {
+              nombre: 'Accesorios',
+              descripcion: 'Complementa tu look con nuestros accesorios',
+              grupos_de_productos: {
+                data: [
+                  { id: 5, attributes: { nombre: 'Bolsos' } },
+                  { id: 6, attributes: { nombre: 'Relojes' } }
+                ]
+              },
+              imagen: {
+                data: {
+                  attributes: {
+                    url: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop'
                   }
                 }
               }
@@ -228,7 +304,7 @@ export default {
     categoria: {
       prefetch: true,
       query: categoriasQuery,
-      loadingKey: 'loading', // ✅ Vincular loading con Apollo
+      loadingKey: 'loading',
       
       // ✅ MANEJO DE ERRORES EN APOLLO
       error(error) {
@@ -242,15 +318,22 @@ export default {
         });
       },
       
-      // ✅ RESULTADO EXITOSO
+      // ✅ RESULTADO EXITOSO CON LOGGING DETALLADO
       result(result) {
-        console.log('AreaOfertas - Resultado GraphQL:', result);
+        console.log('AreaOfertas - Resultado GraphQL completo:', JSON.stringify(result, null, 2));
         if (result.data && result.data.categorias && result.data.categorias.data) {
           console.log('AreaOfertas - Categorías cargadas via GraphQL:', result.data.categorias.data.length);
+          
+          // ✅ LOGGING DE CADA CATEGORÍA PARA DEBUG
+          result.data.categorias.data.forEach((cat, index) => {
+            console.log(`AreaOfertas - Categoría ${index + 1}:`, cat.attributes.nombre);
+            console.log(`AreaOfertas - Imagen data:`, JSON.stringify(cat.attributes.imagen, null, 2));
+          });
+          
           this.error = false;
           this.loading = false;
         } else {
-          console.log('AreaOfertas - GraphQL no retornó datos, usando REST');
+          console.log('AreaOfertas - GraphQL no retornó datos esperados, usando REST');
           this.error = true;
           this.fetchCategoriasREST();
         }
@@ -265,7 +348,7 @@ export default {
         console.log('AreaOfertas - GraphQL timeout, usando REST como fallback');
         this.fetchCategoriasREST();
       }
-    }, 5000); // 5 segundos timeout
+    }, 5000);
     
     // ✅ VERIFICACIÓN ADICIONAL
     this.$nextTick(() => {
@@ -278,6 +361,10 @@ export default {
         }
       }, 3000);
     });
+
+    // ✅ DEBUG DE VARIABLES DE ENTORNO
+    console.log('AreaOfertas - API URL configurada:', this.api_url);
+    console.log('AreaOfertas - Variables de entorno disponibles:', process.env);
   }
 }
 </script>
@@ -301,6 +388,21 @@ export default {
   opacity: 0.9;
 }
 
+/* ✅ Estilo para imagen por defecto */
+.default-image {
+  width: 100%;
+  border-radius: 8px;
+  background-color: #f8f9fa !important;
+  border: 2px dashed #dee2e6;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.default-image p {
+  margin: 0;
+  font-size: 14px;
+}
+
 /* Loading state styling */
 .offer-area .text-center p {
   font-size: 16px;
@@ -312,6 +414,7 @@ export default {
   min-height: 450px;
   display: flex;
   flex-direction: column;
+  margin-bottom: 30px;
 }
 
 .box-inner {
@@ -319,5 +422,40 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ✅ Mejorar la categoría header */
+.category h4 {
+  font-weight: 600;
+  margin: 10px 0;
+  color: #333;
+}
+
+.inner-content h3 {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.inner-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.inner-content ul li {
+  margin-bottom: 8px;
+}
+
+.inner-content ul li a {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.inner-content ul li a:hover {
+  color: #0056b3;
+  text-decoration: underline;
 }
 </style>
