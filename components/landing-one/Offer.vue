@@ -90,11 +90,23 @@ export default {
       console.log('AreaOfertas - Usando REST API como fallback');
       this.loading = true;
       try {
-        const response = await this.$axios.get('/api/categorias', {
-          params: {
-            'populate': ['imagen', 'grupos_de_productos'].join(',')
-          }
-        });
+        // PRIMERO intenta con /categorias (sin /api/)
+        let response;
+        try {
+          response = await this.$axios.get('/categorias', {
+            params: {
+              'populate': ['imagen', 'grupos_de_productos'].join(',')
+            }
+          });
+        } catch (firstError) {
+          // SI falla, intenta con /api/categorias
+          console.log('AreaOfertas - Intentando con /api/ prefix');
+          response = await this.$axios.get('/api/categorias', {
+            params: {
+              'populate': ['imagen', 'grupos_de_productos'].join(',')
+            }
+          });
+        }
         
         this.categoria = {
           data: response.data.data || []
@@ -106,9 +118,45 @@ export default {
         console.error('AreaOfertas - Error en REST API:', error);
         this.error = true;
         this.categoria = { data: [] };
+        
+        // ✅ CARGAR DATOS DE PRUEBA COMO ÚLTIMO RECURSO
+        this.loadFallbackData();
       } finally {
         this.loading = false;
       }
+    },
+
+    // ✅ DATOS DE FALLBACK PARA EVITAR PANTALLAS VACÍAS
+    loadFallbackData() {
+      console.log('AreaOfertas - Cargando datos de fallback');
+      this.categoria = {
+        data: [
+          {
+            id: 1,
+            attributes: {
+              nombre: "Categoría Ejemplo",
+              descripcion: "Descripción de ejemplo",
+              imagen: {
+                data: {
+                  attributes: {
+                    url: "/images/default-category.jpg"
+                  }
+                }
+              },
+              grupos_de_productos: {
+                data: [
+                  {
+                    id: 1,
+                    attributes: {
+                      nombre: "Grupo Ejemplo"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      };
     }
   },
   apollo: {
@@ -135,17 +183,23 @@ export default {
     }
   },
   async mounted() {
-    // ✅ SI HAY ERROR EN APOLLO, INTENTAR REST
-    this.$nextTick(() => {
-      if (this.error || !this.categoria.data || this.categoria.data.length === 0) {
-        setTimeout(() => {
-          if (!this.categoria.data || this.categoria.data.length === 0) {
-            console.log('AreaOfertas - GraphQL no funcionó, usando REST como fallback');
-            this.fetchCategoriasREST();
-          }
-        }, 2000);
-      }
-    });
+    // ✅ EN PRODUCCIÓN, USAR DIRECTAMENTE REST API
+    if (process.env.NODE_ENV === 'production') {
+      console.log('AreaOfertas - Modo producción, usando REST API directamente');
+      this.fetchCategoriasREST();
+    } else {
+      // ✅ EN DESARROLLO, INTENTAR GraphQL PRIMERO
+      this.$nextTick(() => {
+        if (this.error || !this.categoria.data || this.categoria.data.length === 0) {
+          setTimeout(() => {
+            if (!this.categoria.data || this.categoria.data.length === 0) {
+              console.log('AreaOfertas - GraphQL no funcionó, usando REST como fallback');
+              this.fetchCategoriasREST();
+            }
+          }, 2000);
+        }
+      });
+    }
   }
 }
 </script>
