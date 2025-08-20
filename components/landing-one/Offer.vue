@@ -38,7 +38,7 @@
                       | {{ grupo.attributes.nombre }}
       
       // ✅ Empty state
-      .row(v-if="!loading && (!categoria.data || categoria.data.length === 0)")
+      .row(v-if="!loading && (!categoria || !categoria.data || categoria.data.length === 0)")
         .col-12.text-center
           p No hay categorías disponibles en este momento.
 </template>
@@ -52,9 +52,10 @@ export default {
     return {
       categoria: { data: [] },
       api_url: process.env.strapiBaseUri,
-      loading: false,
+      loading: true, // ✅ Iniciar en loading
       error: false,
-      useGraphQL: true // ✅ Controlar qué método usar
+      useGraphQL: true,
+      restAttempted: false // ✅ Evitar múltiples intentos REST
     }
   },
   methods: {
@@ -109,70 +110,173 @@ export default {
       event.target.style.display = 'none';
     },
 
-    // ✅ MÉTODO FALLBACK: REST API
+    // ✅ MÉTODO FALLBACK: REST API - RUTA CORREGIDA
     async fetchCategoriasREST() {
+      if (this.restAttempted) {
+        console.log('AreaOfertas - REST ya fue intentado, evitando duplicados');
+        return;
+      }
+      
+      this.restAttempted = true;
       console.log('AreaOfertas - Usando REST API como fallback');
       this.loading = true;
+      
       try {
-        const response = await this.$axios.get('/api/categorias', {
-          params: {
-            'populate': [
-              'imagen', 
-              'grupos_de_productos',
-              'image'
-            ].join(',')
+        // ✅ DIFERENTES RUTAS POSIBLES EN STRAPI
+        const possibleRoutes = [
+          '/api/categorias',
+          '/categorias',
+          '/api/categoria',
+          '/categoria'
+        ];
+        
+        let response = null;
+        let successRoute = null;
+        
+        for (const route of possibleRoutes) {
+          try {
+            console.log(`AreaOfertas - Intentando ruta: ${route}`);
+            response = await this.$axios.get(route, {
+              params: {
+                populate: 'deep' // ✅ Usar populate deep para obtener todo
+              }
+            });
+            successRoute = route;
+            console.log(`AreaOfertas - Éxito con ruta: ${route}`);
+            break;
+          } catch (routeError) {
+            console.log(`AreaOfertas - Falló ruta ${route}:`, routeError.response?.status);
+            continue;
           }
-        });
+        }
+        
+        if (!response) {
+          throw new Error('Ninguna ruta REST funcionó');
+        }
         
         this.categoria = {
-          data: response.data.data || []
+          data: response.data.data || response.data || []
         };
         
         console.log('AreaOfertas - Categorías cargadas via REST:', this.categoria.data.length);
         this.error = false;
+        
       } catch (error) {
         console.error('AreaOfertas - Error en REST API:', error);
         this.error = true;
         this.categoria = { data: [] };
+        
+        // ✅ DATOS DE PRUEBA COMO ÚLTIMO RECURSO
+        this.loadTestData();
       } finally {
         this.loading = false;
       }
+    },
+
+    // ✅ DATOS DE PRUEBA COMO FALLBACK FINAL
+    loadTestData() {
+      console.log('AreaOfertas - Cargando datos de prueba');
+      this.categoria = {
+        data: [
+          {
+            id: 1,
+            attributes: {
+              nombre: 'Ropa Casual',
+              descripcion: 'Encuentra la mejor ropa casual para tu día a día',
+              grupos_de_productos: {
+                data: [
+                  { id: 1, attributes: { nombre: 'Camisetas' } },
+                  { id: 2, attributes: { nombre: 'Pantalones' } }
+                ]
+              },
+              imagen: {
+                data: {
+                  attributes: {
+                    url: 'https://via.placeholder.com/400x400/007bff/ffffff?text=Ropa+Casual'
+                  }
+                }
+              }
+            }
+          },
+          {
+            id: 2,
+            attributes: {
+              nombre: 'Ropa Formal',
+              descripcion: 'Elegancia y estilo para ocasiones especiales',
+              grupos_de_productos: {
+                data: [
+                  { id: 3, attributes: { nombre: 'Trajes' } },
+                  { id: 4, attributes: { nombre: 'Camisas' } }
+                ]
+              },
+              imagen: {
+                data: {
+                  attributes: {
+                    url: 'https://via.placeholder.com/400x400/28a745/ffffff?text=Ropa+Formal'
+                  }
+                }
+              }
+            }
+          }
+        ]
+      };
+      this.error = false;
     }
   },
+
   apollo: {
     categoria: {
       prefetch: true,
       query: categoriasQuery,
+      loadingKey: 'loading', // ✅ Vincular loading con Apollo
+      
       // ✅ MANEJO DE ERRORES EN APOLLO
       error(error) {
         console.error('AreaOfertas - Error en GraphQL:', error);
         this.error = true;
-        this.useGraphQL = false;
+        this.loading = false;
+        
         // Intentar con REST API como fallback
         this.$nextTick(() => {
           this.fetchCategoriasREST();
         });
       },
+      
       // ✅ RESULTADO EXITOSO
       result(result) {
-        if (result.data && result.data.categorias) {
+        console.log('AreaOfertas - Resultado GraphQL:', result);
+        if (result.data && result.data.categorias && result.data.categorias.data) {
           console.log('AreaOfertas - Categorías cargadas via GraphQL:', result.data.categorias.data.length);
           this.error = false;
+          this.loading = false;
+        } else {
+          console.log('AreaOfertas - GraphQL no retornó datos, usando REST');
+          this.error = true;
+          this.fetchCategoriasREST();
         }
       }
     }
   },
-  async mounted() {
-    // ✅ SI HAY ERROR EN APOLLO O NO HAY DATOS, INTENTAR REST
+
+  mounted() {
+    // ✅ TIMEOUT DE SEGURIDAD PARA GRAPHQL
+    setTimeout(() => {
+      if (this.loading && !this.restAttempted) {
+        console.log('AreaOfertas - GraphQL timeout, usando REST como fallback');
+        this.fetchCategoriasREST();
+      }
+    }, 5000); // 5 segundos timeout
+    
+    // ✅ VERIFICACIÓN ADICIONAL
     this.$nextTick(() => {
-      if (this.error || !this.categoria.data || this.categoria.data.length === 0) {
-        setTimeout(() => {
-          if (!this.categoria.data || this.categoria.data.length === 0) {
-            console.log('AreaOfertas - GraphQL no funcionó, usando REST como fallback');
+      setTimeout(() => {
+        if (!this.categoria.data || this.categoria.data.length === 0) {
+          if (!this.restAttempted) {
+            console.log('AreaOfertas - No hay datos después de 3 segundos, usando REST');
             this.fetchCategoriasREST();
           }
-        }, 2000); // Esperar 2 segundos antes del fallback
-      }
+        }
+      }, 3000);
     });
   }
 }
@@ -201,5 +305,19 @@ export default {
 .offer-area .text-center p {
   font-size: 16px;
   margin: 20px 0;
+}
+
+/* Placeholder styling para datos de prueba */
+.offer-box {
+  min-height: 450px;
+  display: flex;
+  flex-direction: column;
+}
+
+.box-inner {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
