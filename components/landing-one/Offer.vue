@@ -87,14 +87,12 @@ export default {
     
     getImageUrl(url) {
       if (!url) return '';
-      
-      // Si ya es una URL completa, devolverla tal como está
+
       if (url.startsWith('http')) {
         console.log('AreaOfertas - Using complete URL:', url);
         return url;
       }
-      
-      // Si es una URL relativa, agregar el dominio base
+
       const fullUrl = `${this.api_url}${url}`;
       console.log('AreaOfertas - Using relative URL, converted to:', fullUrl);
       return fullUrl;
@@ -102,7 +100,7 @@ export default {
   },
   
   created() {
-    // Si no se están usando Apollo queries (por error), cargar via REST
+
     if (!this.useGraphQL) {
       this.fetchCategoriasREST();
     }

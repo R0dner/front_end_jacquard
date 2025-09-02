@@ -1,13 +1,11 @@
 import Vue from 'vue'
 import { isSamePath as _isSamePath, joinURL, normalizeURL, withQuery, withoutTrailingSlash } from 'ufo'
 
-// window.{{globals.loadedCallback}} hook
-// Useful for jsdom testing or plugins (https://github.com/tmpvar/jsdom#dealing-with-asynchronous-script-loading)
 if (process.client) {
   window.onNuxtReadyCbs = []
   window.onNuxtReady = (cb) => {
     window.onNuxtReadyCbs.push(cb)
-  }
+  } 
 }
 
 export function createGetCounter (counterObject, defaultKey = '') {

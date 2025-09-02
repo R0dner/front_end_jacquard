@@ -25,7 +25,6 @@
         <h4 class="section-title">Tipos de Producto</h4>
         <div class="loading-indicator" v-if="loading.gruposProductos">
           <span>Cargando tipos de producto...</span>
->>>>>>> cambios
         </div>
         <ul class="filter-list" v-else>
           <li v-for="grupo in gruposProductos" :key="'grupo-'+grupo.id">
@@ -99,15 +98,15 @@
           </div>
         </div>
         <div v-else-if="productosPopulares.length > 0">
-          <div v-for="(producto, index) in productosPopulares" :key="index" class="aside-single-products">
+          <div v-for="(producto, index) in productosPopulares" :key="index" class="aside-single-products" @click="openQuickView(producto)">
             <div class="products-image">
-              <a href="#" @click.prevent="navigateToProduct(producto.id)">
+              <a href="#">
                 <img :src="producto.imagen_principal" :alt="producto.nombre">
               </a>
             </div>
 
             <div class="products-content">
-              <h3><a href="#" @click.prevent="navigateToProduct(producto.id)">{{ producto.nombre }}</a></h3>
+              <h3><a href="#">{{ producto.nombre }}</a></h3>
               <div class="product-price">
                 <span v-if="producto.en_oferta" class="old-price">Bs.{{ producto.precio_venta }}</span>
                 <span v-if="producto.en_oferta" class="new-price">Bs.{{ producto.precio_oferta }}</span>
@@ -127,6 +126,7 @@
 <script>
 import axios from 'axios';
 import { debounce } from 'lodash';
+import { mutations } from '../../utils/sidebar-util';
 
 export default {
   data() {
@@ -171,6 +171,24 @@ export default {
     this.$root.$off('update-filters', this.updateFiltersFromExternal);
   },
   methods: {
+    openQuickView(producto) {
+      // Preparar el objeto producto para el quickview
+      const quickViewProduct = {
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio_venta,
+        precioOferta: producto.precio_oferta,
+        enOferta: producto.en_oferta,
+        stock: producto.stock,
+        imageUrl: producto.imagen_principal,
+        marca: producto.marca,
+        grupo_de_productos: producto.grupo_de_productos
+      };
+      
+      // Abrir el quickview usando el store
+      mutations.openQuickView(quickViewProduct);
+    },
+
     async loadGruposProductos() {
       this.loading.gruposProductos = true;
       try {
@@ -229,18 +247,16 @@ export default {
         // Modificar la solicitud para filtrar solo productos en oferta
         const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
           params: {
-            'sort': 'precio_oferta:asc', // Ordenar por precio de oferta ascendente
+            'sort': 'precio_oferta:asc',
             'pagination[pageSize]': 3,
             'populate': '*',
-            'filters[en_oferta]': true // Filtrar solo productos en oferta
+            'filters[en_oferta]': true
           }
         });
 
         this.productosPopulares = response.data.data.map(item => {
-          // ✅ CORRECCIÓN: Manejo flexible de la imagen principal
           let imagenPrincipal = '../../assets/img/default-product.jpg';
           
-          // Intentar obtener la URL de la imagen
           let imageUrl = null;
           if (item.attributes?.imagen_principal?.data?.attributes?.url) {
             imageUrl = item.attributes.imagen_principal.data.attributes.url;
@@ -248,13 +264,10 @@ export default {
             imageUrl = item.attributes.images.data[0].attributes.url;
           }
           
-          // Si encontramos una URL, verificar si es completa o relativa
           if (imageUrl) {
             if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-              // La URL ya es completa
               imagenPrincipal = imageUrl;
             } else {
-              // La URL es relativa, agregar el dominio base
               imagenPrincipal = `${this.strapiBaseUrl}${imageUrl}`;
             }
           }
@@ -279,7 +292,9 @@ export default {
             precio_oferta: item.attributes?.precio_oferta || item.attributes?.sale_price || null,
             en_oferta: item.attributes?.en_oferta || item.attributes?.on_sale || false,
             stock: item.attributes?.stock || 0,
-            imagen_principal: imagenPrincipal
+            imagen_principal: imagenPrincipal,
+            marca: item.attributes?.marca?.data || null,
+            grupo_de_productos: item.attributes?.grupo_de_productos?.data || null
           };
         });
       } catch (error) {
@@ -301,7 +316,6 @@ export default {
         return;
       }
 
-      // Si es un filtro exclusivo (sólo puede haber uno), eliminamos el anterior
       if (['precio', 'grupo_producto'].includes(type)) {
         const typeIndex = this.activeFilters.findIndex(filter => filter.type === type);
         if (typeIndex !== -1) {
@@ -326,12 +340,10 @@ export default {
       this.updateUrlWithFilters();
       this.debouncedNotifyProductsComponent();
       
-      // También emitir evento 'sidebar-filters-changed' para mejor compatibilidad
       this.$root.$emit('sidebar-filters-changed', this.buildFiltersObject());
     },
 
     buildFiltersObject() {
-      // Construir un objeto de filtros compatible con el primer componente
       const filtersObj = {};
       this.activeFilters.forEach(filter => {
         filtersObj[filter.type] = filter.value;
@@ -341,7 +353,6 @@ export default {
 
     applyPriceFilter() {
       if (this.priceRange.min !== null && this.priceRange.max !== null) {
-        // Validar que el mínimo no sea mayor que el máximo
         if (parseFloat(this.priceRange.min) > parseFloat(this.priceRange.max)) {
           this.$toast.warning('El precio mínimo no puede ser mayor que el máximo');
           return;
@@ -362,14 +373,12 @@ export default {
     },
 
     removeFilter(type, value) {
-      // Si es el filtro de precio, también limpiamos los inputs
       if (type === 'precio') {
         this.priceRange.min = null;
         this.priceRange.max = null;
       }
       
       if (value === undefined) {
-        // Eliminar todos los filtros de este tipo
         const indices = [];
         this.activeFilters.forEach((filter, index) => {
           if (filter.type === type) {
@@ -377,12 +386,10 @@ export default {
           }
         });
         
-        // Eliminar desde el final para no afectar los índices
         for (let i = indices.length - 1; i >= 0; i--) {
           this.activeFilters.splice(indices[i], 1);
         }
       } else {
-        // Eliminar un filtro específico
         const index = this.activeFilters.findIndex(
           filter => filter.type === type && filter.value === value
         );
@@ -394,7 +401,6 @@ export default {
       this.updateUrlWithFilters();
       this.debouncedNotifyProductsComponent();
       
-      // También emitir evento 'sidebar-filters-changed' para mejor compatibilidad
       this.$root.$emit('sidebar-filters-changed', this.buildFiltersObject());
     },
 
@@ -405,7 +411,6 @@ export default {
       this.updateUrlWithFilters();
       this.debouncedNotifyProductsComponent();
       
-      // También emitir evento 'sidebar-filters-changed' para mejor compatibilidad
       this.$root.$emit('sidebar-filters-changed', {});
     },
 
@@ -426,14 +431,12 @@ export default {
         query[filter.type].push(filter.value);
       });
 
-      // Convertir arrays a strings separados por comas
       Object.keys(query).forEach(key => {
         if (Array.isArray(query[key])) {
           query[key] = query[key].join(',');
         }
       });
 
-      // Verificar si los parámetros son diferentes antes de actualizar
       if (JSON.stringify(this.$route.query) !== JSON.stringify(query)) {
         this.$router.replace({ query });
       }
@@ -448,11 +451,9 @@ export default {
         values.forEach(value => {
           let processedValue = value;
           
-          // Procesar valores especiales
           if (value === 'true') processedValue = true;
           if (value === 'false') processedValue = false;
           
-          // Convertir a número si es un ID (excepto rangos de precio)
           if (!isNaN(value) && type !== 'precio') {
             processedValue = parseInt(value);
           }
@@ -475,7 +476,6 @@ export default {
     },
 
     buildStrapiFilters() {
-      // En lugar de usar la sintaxis de filtros avanzada, creamos parámetros simples
       let params = {
         'sort': 'createdAt:desc',
         'pagination[page]': 1,
@@ -483,15 +483,12 @@ export default {
         'populate': '*'
       };
       
-      // Asegurarse de añadir las relaciones necesarias al populate
       params.populate = ['imagen_principal', 'marca', 'grupo_de_productos'].join(',');
       
-      // Recorrer los filtros activos
       this.activeFilters.forEach(filter => {
         if (filter.type === 'precio') {
           const [min, max] = filter.value.split('-').map(val => parseFloat(val));
           
-          // Usar nombres de campos simples
           if (!isNaN(min)) {
             params['filters[precio_venta][$gte]'] = min;
           }
@@ -501,11 +498,9 @@ export default {
           }
         } 
         else if (filter.type === 'grupo_producto') {
-          // Filtrado por grupo de producto
           params['filters[grupo_de_productos][id]'] = parseInt(filter.value);
         }
         else if (filter.type === 'en_oferta' && filter.value === true) {
-          // Filtrado por ofertas
           params['filters[en_oferta]'] = true;
         }
       });
@@ -513,26 +508,18 @@ export default {
       return params;
     },
 
-    navigateToProduct(productId) {
-      this.$router.push(`/producto/${productId}`);
-    },
-
     async notifyProductsComponent() {
-      // Cancelar solicitudes anteriores
       if (this.currentRequest) {
         this.currentRequest.cancel();
       }
       
-      // Construir parámetros de consulta
       const queryParams = this.buildStrapiFilters();
       console.log("Parámetros a enviar:", queryParams);
       
       const cacheKey = JSON.stringify(queryParams);
       
-      // Emit the parameters to the products component
       this.$root.$emit('filters-changed', queryParams);
       
-      // Usar caché si disponible
       if (this.productsCache.has(cacheKey)) {
         return;
       }
@@ -545,7 +532,6 @@ export default {
       this.loading.applying = true;
       
       try {
-        // Enfoque muy simple: pasar los parámetros directamente a axios
         const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
           params: queryParams,
           cancelToken: source.token
@@ -556,7 +542,6 @@ export default {
         if (!axios.isCancel(error)) {
           console.error('Error al filtrar productos:', error);
           
-          // Intentar mostrar más detalles del error
           if (error.response) {
             console.log('Respuesta del servidor:', error.response.status, error.response.data);
           }
@@ -564,7 +549,6 @@ export default {
           this.$root.$emit('filters-error', error.message);
           this.$toast.error('Error al aplicar filtros: ' + (error.response ? error.response.status : error.message));
           
-          // Si hay un error, intentar cargar todos los productos sin filtros
           try {
             const fallbackResponse = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
               params: {
@@ -613,7 +597,7 @@ export default {
   padding: 5px 0;
 }
 
-/* Estilos para listas de filtros (compartidos por todos los tipos de filtro) */
+/* Estilos para listas de filtros */
 .filter-list,
 .price-list-row {
   padding: 0;
@@ -695,6 +679,13 @@ export default {
   margin-bottom: 15px;
   padding-bottom: 15px;
   border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.aside-single-products:hover {
+  background-color: #f8f9fa;
+  transform: translateX(5px);
 }
 
 .products-image img {
@@ -711,5 +702,17 @@ export default {
   text-decoration: line-through;
   color: #999;
   margin-left: 8px;
+}
+
+/* Hacer que los enlaces dentro de los productos sean clicables pero no subrayados */
+.products-image a, 
+.products-content h3 a {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.products-content h3 a:hover {
+  color: #007bff;
 }
 </style>
