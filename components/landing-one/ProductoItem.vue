@@ -2,7 +2,8 @@
   div(:class='className')
     .single-product-box
       .product-image
-        nuxt-link(:to='`/products-details/${id}`')
+        //- ✅ CAMBIO PRINCIPAL: Cambiar nuxt-link por div clickeable para QuickView
+        div.product-clickable(@click.prevent='quickView')
           //- ✅ CORREGIDO: Usar método para procesar la URL
           img(:src='getProductImageUrl(product)' @error='handleImageError')
         .out-of-stock-badge(v-if='currentStock === 0') Agotado
@@ -13,10 +14,15 @@
           li
             a(href='#' title='Añadir a deseados' v-b-tooltip.hover)
               i.far.fa-heart
+          //- ✅ NUEVO: Botón para ir a detalles completos
+          li
+            nuxt-link(:to='`/products-details/${id}`' title='Ver detalles completos' v-b-tooltip.hover)
+              i.fas.fa-info-circle
         timer(v-if='product.timePeriod' v-bind:datetime='product.dateTime')
       .product-content
         h3
-          nuxt-link(:to='`/products-details/${id}`') {{product.nombre}}
+          //- ✅ CAMBIO: Hacer que el nombre abra QuickView en lugar de navegar
+          span.product-name(@click.prevent='quickView') {{product.nombre}}
           .product-price
             span.old-price(v-if='product.en_oferta')
               | Bs.{{product.precio_venta}}
@@ -39,16 +45,15 @@
           @click='addToCart(product)'
           :class='{ "disabled-btn": currentStock === 0 }'
         ) {{ currentStock === 0 ? 'Agotado' : 'Agregar al Carrito' }}
-    
-    QuickView(
-      v-if="showQuickView"
-      :product="quickViewProduct"
-      @close="showQuickView = false"
-    )
+        
+        //- ✅ NUEVO: Botón pequeño para ir a detalles completos
+        .view-details-link
+          nuxt-link(:to='`/products-details/${id}`' class='details-link') Ver detalles completos
 </template>
 
 <script>
 import Timer from './Timer';
+
 export default {
     name: 'ProductoUnico',
     components: {
@@ -59,9 +64,7 @@ export default {
               api_url: process.env.strapiBaseUri,
               getExistPId: null,
               loadingInventory: false,
-              inventoryData: null,
-              showQuickView: false,
-              quickViewProduct: null
+              inventoryData: null
           }
       },
     props: ['id','product', 'className'],
@@ -133,11 +136,31 @@ export default {
         event.target.src = '/images/default-product.jpg';
       },
 
+      // ✅ MÉTODO MODIFICADO: QuickView mejorado
       quickView(e){
-          this.showQuickView = true;
-          this.quickViewProduct = this.product;
-          this.$emit('clicked');
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Preparar datos del producto para QuickView
+          const productForQuickView = {
+            id: this.id,
+            nombre: this.product.nombre,
+            precio: this.product.precio_venta,
+            precioOferta: this.product.precio_oferta,
+            enOferta: this.product.en_oferta,
+            imageUrl: this.getProductImageUrl(this.product),
+            marca: this.product.marca,
+            grupo_de_productos: this.product.grupo_de_productos,
+            stock: this.currentStock,
+            // Agregar otros campos que necesite tu QuickView
+            colores: this.product.colores,
+            categoria: this.product.categoria
+          };
+          
+          // Emitir evento al componente padre
+          this.$emit('clicked', productForQuickView);
       },
+
         async fetchInventory() {
             this.loadingInventory = true;
             try {
@@ -166,6 +189,7 @@ export default {
                 this.loadingInventory = false;
             }
         },
+
         addToCart(item){
             if (this.currentStock === 0) {
                 this.$toast.error("Este producto está agotado", {
@@ -247,5 +271,55 @@ export default {
 
 .single-product-box:hover {
   opacity: 0.9;
+}
+
+/* ✅ NUEVOS ESTILOS */
+.product-clickable {
+  cursor: pointer;
+  display: block;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.product-clickable:hover {
+  transform: scale(1.02);
+}
+
+.product-name {
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.product-name:hover {
+  color: #4a89dc;
+}
+
+.view-details-link {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.details-link {
+  font-size: 12px;
+  color: #6c757d;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.details-link:hover {
+  color: #4a89dc;
+  text-decoration: underline;
+}
+
+/* Mejorar el icono de información */
+.product-image ul li:last-child a {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.product-image ul li:last-child a:hover {
+  background-color: #138496;
 }
 </style>
