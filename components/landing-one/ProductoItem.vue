@@ -273,7 +273,7 @@ export default {
   opacity: 0.9;
 }
 
-/* ✅ NUEVOS ESTILOS */
+/* ✅ ESTILOS PARA ELEMENTOS CLICKEABLES */
 .product-clickable {
   cursor: pointer;
   display: block;
@@ -294,32 +294,5 @@ export default {
 
 .product-name:hover {
   color: #4a89dc;
-}
-
-.view-details-link {
-  margin-top: 8px;
-  text-align: center;
-}
-
-.details-link {
-  font-size: 12px;
-  color: #6c757d;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.details-link:hover {
-  color: #4a89dc;
-  text-decoration: underline;
-}
-
-/* Mejorar el icono de información */
-.product-image ul li:last-child a {
-  background-color: #17a2b8;
-  color: white;
-}
-
-.product-image ul li:last-child a:hover {
-  background-color: #138496;
 }
 </style>
