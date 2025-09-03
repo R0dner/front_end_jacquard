@@ -162,13 +162,13 @@ export default {
         max: null
       },
       priceRanges: [
-        { value: '0-100', label: 'Menos de $100' },
-        { value: '100-200', label: '$100 - $200' },
-        { value: '200-300', label: '$200 - $300' },
-        { value: '300-400', label: '$300 - $400' },
-        { value: '400-500', label: '$400 - $500' },
-        { value: '500-1000', label: '$500 - $1000' },
-        { value: '1000-999999', label: 'Más de $1000' }
+        { value: '0-100', label: 'Menos de Bs.100' },
+        { value: '100-200', label: 'Bs.100 - Bs.200' },
+        { value: '200-300', label: 'Bs.200 - Bs.300' },
+        { value: '300-400', label: 'Bs.300 - Bs.400' },
+        { value: '400-500', label: 'Bs.400 - Bs.500' },
+        { value: '500-1000', label: 'Bs.500 - Bs.1000' },
+        { value: '1000-999999', label: 'Más de Bs.1000' }
       ],
       productsCache: new Map(),
       currentRequest: null,
