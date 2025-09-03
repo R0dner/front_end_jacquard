@@ -83,7 +83,6 @@
                                             {{ currentStock > 0 ? 'Añadir a Carrito' : 'Agotado' }}
                                         </button>
                                     </div>
-                                    <a href="#" class="view-full-info">Ver Informacion Completa</a>
                                 </div>
                             </div>
                         </div>
