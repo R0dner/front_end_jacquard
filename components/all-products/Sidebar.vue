@@ -22,14 +22,17 @@
       </div>
       
       <!-- Nuevo Filtro: Productos Deseados -->
-      <div class="filter-section" v-if="wishlist.length > 0">
+      <div class="filter-section">
         <h4 class="section-title">Productos Deseados</h4>
-        <ul class="filter-list">
+        <div v-if="wishlist.length === 0" class="no-wishlist-items">
+          <p>No tienes productos en tu lista de deseos.</p>
+        </div>
+        <ul class="filter-list" v-else>
           <li>
             <a href="#" 
                @click.prevent="applyFilter('deseados', true)"
                :class="{'active': isActive('deseados', true)}">
-              <i class="fas fa-heart mr-1 text-danger"></i> Ver mis favoritos
+              <i class="fas fa-heart mr-1 text-danger"></i> Ver mis favoritos ({{ wishlist.length }})
             </a>
           </li>
         </ul>
@@ -190,15 +193,54 @@ export default {
     this.$root.$on('update-filters', this.updateFiltersFromExternal);
     // Escuchar cambios en la lista de deseados
     this.$root.$on('wishlist-updated', this.loadWishlist);
+    
+    // Inicializar Vuex store si no existe
+    this.initializeWishlistStore();
   },
   beforeDestroy() {
     this.$root.$off('update-filters', this.updateFiltersFromExternal);
     this.$root.$off('wishlist-updated', this.loadWishlist);
   },
   methods: {
+    // Inicializar el store de Vuex para la lista de deseos si no existe
+    initializeWishlistStore() {
+      if (!this.$store.state.wishlist) {
+        this.$store.registerModule('wishlist', {
+          state: {
+            items: JSON.parse(localStorage.getItem('wishlist') || '[]')
+          },
+          mutations: {
+            addToWishlist(state, product) {
+              const existingIndex = state.items.findIndex(item => item.id === product.id);
+              if (existingIndex === -1) {
+                state.items.push(product);
+                localStorage.setItem('wishlist', JSON.stringify(state.items));
+              }
+            },
+            removeFromWishlist(state, productId) {
+              state.items = state.items.filter(item => item.id !== productId);
+              localStorage.setItem('wishlist', JSON.stringify(state.items));
+            },
+            clearWishlist(state) {
+              state.items = [];
+              localStorage.setItem('wishlist', '[]');
+            }
+          },
+          getters: {
+            wishlist: state => state.items,
+            wishlistCount: state => state.items.length,
+            isInWishlist: state => productId => {
+              return state.items.some(item => item.id === productId);
+            }
+          }
+        });
+      }
+    },
+    
     // Cargar la lista de productos deseados
     loadWishlist() {
       this.wishlist = this.$store.getters.wishlist || [];
+      console.log("Wishlist cargada:", this.wishlist);
     },
     
     openQuickView(producto) {
@@ -753,5 +795,13 @@ export default {
 
 .products-content h3 a:hover {
   color: #007bff;
+}
+
+/* Estilos para la sección de lista de deseos vacía */
+.no-wishlist-items {
+  color: #6c757d;
+  font-size: 14px;
+  padding: 10px 0;
+  text-align: center;
 }
 </style>
