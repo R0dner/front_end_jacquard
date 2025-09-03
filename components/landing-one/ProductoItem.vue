@@ -12,12 +12,8 @@
             a(href='javascript:void(0)' title='Ver mas' v-b-tooltip.hover @click.prevent='quickView')
               i.far.fa-eye
           li
-            a(href='#' title='Añadir a deseados' v-b-tooltip.hover)
-              i.far.fa-heart
-          //- ✅ NUEVO: Botón para ir a detalles completos
-          li
-            nuxt-link(:to='`/products-details/${id}`' title='Ver detalles completos' v-b-tooltip.hover)
-              i.fas.fa-info-circle
+            a(href='javascript:void(0)' title='Añadir a deseados' v-b-tooltip.hover @click.prevent='addToWishlist')
+              i.far.fa-heart(:class='{ "fas fa-heart": isInWishlist, "text-danger": isInWishlist }')
         timer(v-if='product.timePeriod' v-bind:datetime='product.dateTime')
       .product-content
         h3
@@ -45,10 +41,6 @@
           @click='addToCart(product)'
           :class='{ "disabled-btn": currentStock === 0 }'
         ) {{ currentStock === 0 ? 'Agotado' : 'Agregar al Carrito' }}
-        
-        //- ✅ NUEVO: Botón pequeño para ir a detalles completos
-        .view-details-link
-          nuxt-link(:to='`/products-details/${id}`' class='details-link') Ver detalles completos
 </template>
 
 <script>
@@ -71,6 +63,12 @@ export default {
     computed: {
         cart(){
             return this.$store.getters.cart
+        },
+        wishlist(){
+            return this.$store.getters.wishlist || []
+        },
+        isInWishlist() {
+            return this.wishlist.some(item => item.id === this.id)
         },
         currentStock() {
             if (this.inventoryData) {
@@ -134,6 +132,34 @@ export default {
       handleImageError(event) {
         console.log('ProductoUnico - Error loading image:', event.target.src);
         event.target.src = '/images/default-product.jpg';
+      },
+
+      // ✅ MÉTODO NUEVO: Añadir/quitar de la lista de deseados
+      addToWishlist() {
+        const wishlistItem = {
+          id: this.id,
+          name: this.product.nombre,
+          price: this.product.en_oferta ? this.product.precio_oferta : this.product.precio_venta,
+          originalPrice: this.product.precio_venta,
+          onSale: this.product.en_oferta,
+          image: this.getProductImageUrl(this.product),
+          marca: this.product.marca,
+          stock: this.currentStock
+        };
+
+        if (this.isInWishlist) {
+          // Si ya está en la lista, lo quitamos
+          this.$store.dispatch('removeFromWishlist', this.id);
+          this.$toast.info("Removido de la lista de deseados", {
+            icon: 'fas fa-heart-broken'
+          });
+        } else {
+          // Si no está en la lista, lo agregamos
+          this.$store.dispatch('addToWishlist', wishlistItem);
+          this.$toast.success("Agregado a la lista de deseados", {
+            icon: 'fas fa-heart'
+          });
+        }
       },
 
       // ✅ MÉTODO MODIFICADO: QuickView mejorado
@@ -294,5 +320,18 @@ export default {
 
 .product-name:hover {
   color: #4a89dc;
+}
+
+/* ✅ ESTILOS PARA EL CORAZÓN DE WISHLIST */
+.fa-heart.text-danger {
+  color: #dc3545 !important;
+}
+
+.fa-heart {
+  transition: all 0.3s ease;
+}
+
+.fa-heart:hover {
+  transform: scale(1.1);
 }
 </style>
