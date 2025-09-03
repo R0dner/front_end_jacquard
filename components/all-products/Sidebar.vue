@@ -20,6 +20,59 @@
           </div>
         </b-collapse>
       </div>
+
+      <!-- ✅ NUEVO: Filtro de productos deseados -->
+      <div class="filter-section wishlist-filter">
+        <h4 class="section-title">
+          <i class="fas fa-heart text-danger"></i>
+          Mis Productos Deseados
+          <span class="wishlist-count" v-if="wishlistCount > 0">({{ wishlistCount }})</span>
+        </h4>
+        <div class="wishlist-filter-actions">
+          <button 
+            class="btn btn-sm wishlist-toggle-btn"
+            :class="{ 'btn-danger': isWishlistFilterActive, 'btn-outline-secondary': !isWishlistFilterActive }"
+            @click="toggleWishlistFilter"
+            :disabled="wishlistCount === 0"
+          >
+            <i class="fas fa-heart" v-if="isWishlistFilterActive"></i>
+            <i class="far fa-heart" v-else></i>
+            {{ isWishlistFilterActive ? 'Mostrar todos' : 'Solo deseados' }}
+          </button>
+          
+          <div class="wishlist-info" v-if="wishlistCount === 0">
+            <small class="text-muted">
+              <i class="fas fa-info-circle"></i>
+              No tienes productos en tu lista de deseados
+            </small>
+          </div>
+        </div>
+
+        <!-- Mostrar productos de la wishlist como vista previa -->
+        <div class="wishlist-preview" v-if="wishlistProducts.length > 0">
+          <h5 class="preview-title">Vista previa de deseados:</h5>
+          <div class="wishlist-items">
+            <div 
+              v-for="product in wishlistProducts.slice(0, 3)" 
+              :key="`wishlist-${product.id}`"
+              class="wishlist-item-mini"
+              @click="openQuickView(product)"
+            >
+              <img :src="product.image" :alt="product.name" class="wishlist-item-image">
+              <div class="wishlist-item-info">
+                <span class="wishlist-item-name">{{ product.name }}</span>
+                <span class="wishlist-item-price">
+                  <span v-if="product.onSale" class="old-price">Bs.{{ product.originalPrice }}</span>
+                  <span class="new-price">Bs.{{ product.price }}</span>
+                </span>
+              </div>
+            </div>
+            <div v-if="wishlistProducts.length > 3" class="more-wishlist-items">
+              <small class="text-muted">+ {{ wishlistProducts.length - 3 }} productos más</small>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <div class="filter-section">
         <h4 class="section-title">Tipos de Producto</h4>
@@ -157,6 +210,21 @@ export default {
       currentRequest: null
     };
   },
+  computed: {
+    // ✅ NUEVO: Computed properties para la wishlist
+    wishlistProducts() {
+      return this.$store.getters.wishlist || [];
+    },
+    wishlistCount() {
+      return this.wishlistProducts.length;
+    },
+    isWishlistFilterActive() {
+      return this.isActive('solo_deseados', true);
+    },
+    wishlistProductIds() {
+      return this.wishlistProducts.map(product => product.id);
+    }
+  },
   created() {
     this.debouncedNotifyProductsComponent = debounce(this.notifyProductsComponent, 300);
   },
@@ -166,21 +234,50 @@ export default {
     this.loadFiltersFromUrl();
     
     this.$root.$on('update-filters', this.updateFiltersFromExternal);
+    // ✅ NUEVO: Escuchar cambios en la wishlist
+    this.$root.$on('wishlist-updated', this.handleWishlistUpdate);
   },
   beforeDestroy() {
     this.$root.$off('update-filters', this.updateFiltersFromExternal);
+    this.$root.$off('wishlist-updated', this.handleWishlistUpdate);
   },
   methods: {
+    // ✅ NUEVO: Métodos para manejar el filtro de wishlist
+    toggleWishlistFilter() {
+      if (this.wishlistCount === 0) {
+        this.$toast.warning('No tienes productos en tu lista de deseados');
+        return;
+      }
+
+      if (this.isWishlistFilterActive) {
+        this.removeFilter('solo_deseados', true);
+      } else {
+        this.applyFilter('solo_deseados', true, 'Solo productos deseados');
+      }
+    },
+
+    handleWishlistUpdate() {
+      // Si el filtro de wishlist está activo y no hay productos, desactivarlo
+      if (this.isWishlistFilterActive && this.wishlistCount === 0) {
+        this.removeFilter('solo_deseados', true);
+        this.$toast.info('Filtro de deseados desactivado - lista vacía');
+      }
+      // Si el filtro está activo, actualizar los productos mostrados
+      else if (this.isWishlistFilterActive) {
+        this.debouncedNotifyProductsComponent();
+      }
+    },
+
     openQuickView(producto) {
       // Preparar el objeto producto para el quickview
       const quickViewProduct = {
         id: producto.id,
-        nombre: producto.nombre,
-        precio: producto.precio_venta,
-        precioOferta: producto.precio_oferta,
-        enOferta: producto.en_oferta,
+        nombre: producto.nombre || producto.name,
+        precio: producto.precio_venta || producto.originalPrice || producto.price,
+        precioOferta: producto.precio_oferta || producto.price,
+        enOferta: producto.en_oferta || producto.onSale,
         stock: producto.stock,
-        imageUrl: producto.imagen_principal,
+        imageUrl: producto.imagen_principal || producto.image,
         marca: producto.marca,
         grupo_de_productos: producto.grupo_de_productos
       };
@@ -316,7 +413,7 @@ export default {
         return;
       }
 
-      if (['precio', 'grupo_producto'].includes(type)) {
+      if (['precio', 'grupo_producto', 'solo_deseados'].includes(type)) {
         const typeIndex = this.activeFilters.findIndex(filter => filter.type === type);
         if (typeIndex !== -1) {
           this.activeFilters.splice(typeIndex, 1);
@@ -330,6 +427,8 @@ export default {
           if (grupo) label = grupo.nombre;
         } else if (type === 'en_oferta' && value === true) {
           label = 'Ofertas';
+        } else if (type === 'solo_deseados' && value === true) {
+          label = 'Solo productos deseados';
         } else if (type === 'precio') {
           const range = this.priceRanges.find(r => r.value === value);
           if (range) label = range.label;
@@ -503,6 +602,16 @@ export default {
         else if (filter.type === 'en_oferta' && filter.value === true) {
           params['filters[en_oferta]'] = true;
         }
+        // ✅ NUEVO: Manejar filtro de solo deseados
+        else if (filter.type === 'solo_deseados' && filter.value === true) {
+          // En lugar de filtrar por API, usaremos los IDs de la wishlist
+          if (this.wishlistProductIds.length > 0) {
+            params['filters[id][$in]'] = this.wishlistProductIds.join(',');
+          } else {
+            // Si no hay productos en wishlist, filtrar por ID imposible
+            params['filters[id][$in]'] = '-1';
+          }
+        }
       });
       
       return params;
@@ -595,6 +704,135 @@ export default {
   color: #6c757d;
   font-size: 14px;
   padding: 5px 0;
+}
+
+/* ✅ NUEVOS ESTILOS: Filtro de wishlist */
+.wishlist-filter {
+  background: linear-gradient(135deg, #fff5f5 0%, #fef2f2 100%);
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.wishlist-filter .section-title {
+  margin-bottom: 10px;
+  color: #e53e3e;
+}
+
+.wishlist-count {
+  background: #e53e3e;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.wishlist-filter-actions {
+  margin-bottom: 15px;
+}
+
+.wishlist-toggle-btn {
+  width: 100%;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+}
+
+.wishlist-toggle-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wishlist-info {
+  text-align: center;
+  padding: 10px;
+  background: #f7fafc;
+  border-radius: 4px;
+  border: 1px dashed #cbd5e0;
+}
+
+.wishlist-preview {
+  border-top: 1px solid #fed7d7;
+  padding-top: 15px;
+}
+
+.preview-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #718096;
+  margin-bottom: 10px;
+}
+
+.wishlist-items {
+  space-y: 8px;
+}
+
+.wishlist-item-mini {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+}
+
+.wishlist-item-mini:hover {
+  background: #f8f9fa;
+  transform: translateX(3px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.wishlist-item-image {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 10px;
+}
+
+.wishlist-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.wishlist-item-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2d3748;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.wishlist-item-price {
+  display: block;
+  font-size: 12px;
+}
+
+.wishlist-item-price .new-price {
+  color: #e53e3e;
+  font-weight: 600;
+}
+
+.wishlist-item-price .old-price {
+  color: #a0aec0;
+  text-decoration: line-through;
+  margin-right: 5px;
+  font-size: 11px;
+}
+
+.more-wishlist-items {
+  text-align: center;
+  padding: 8px;
+  background: #f7fafc;
+  border-radius: 4px;
+  margin-top: 5px;
 }
 
 /* Estilos para listas de filtros */
@@ -715,4 +953,3 @@ export default {
 .products-content h3 a:hover {
   color: #007bff;
 }
-</style>
