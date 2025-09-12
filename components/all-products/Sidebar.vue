@@ -344,15 +344,19 @@ export default {
             }
           }
 
+          // CAMBIO: Manejar múltiples grupos de productos
           let grupoProducto = 'Sin tipo';
           let grupoProductoId = null;
           
-          if (item.attributes?.grupo_de_productos?.data?.attributes?.nombre) {
+          // Para la nueva relación many-to-many
+          if (item.attributes?.grupos_de_productos?.data?.length > 0) {
+            grupoProducto = item.attributes.grupos_de_productos.data[0].attributes.nombre;
+            grupoProductoId = item.attributes.grupos_de_productos.data[0].id;
+          }
+          // Fallback para la estructura anterior si existe
+          else if (item.attributes?.grupo_de_productos?.data?.attributes?.nombre) {
             grupoProducto = item.attributes.grupo_de_productos.data.attributes.nombre;
             grupoProductoId = item.attributes.grupo_de_productos.data.id;
-          } else if (item.attributes?.product_group?.data?.attributes?.name) {
-            grupoProducto = item.attributes.product_group.data.attributes.name;
-            grupoProductoId = item.attributes.product_group.data.id;
           }
           
           return {
@@ -366,7 +370,7 @@ export default {
             stock: item.attributes?.stock || 0,
             imagen_principal: imagenPrincipal,
             marca: item.attributes?.marca?.data || null,
-            grupo_de_productos: item.attributes?.grupo_de_productos?.data || null
+            grupos_de_productos: item.attributes?.grupos_de_productos?.data || [] // NUEVO: Array de grupos
           };
         });
       } catch (error) {
@@ -557,7 +561,8 @@ export default {
         'populate': '*'
       };
       
-      params.populate = ['imagen_principal', 'marca', 'grupo_de_productos'].join(',');
+      // Actualizar el populate para la nueva relación many-to-many
+      params.populate = ['imagen_principal', 'marca', 'grupos_de_productos'].join(',');
       
       this.activeFilters.forEach(filter => {
         if (filter.type === 'precio') {
@@ -571,8 +576,9 @@ export default {
             params['filters[precio_venta][$lte]'] = max;
           }
         } 
+        // CAMBIO PRINCIPAL: Nueva sintaxis para la relación many-to-many
         else if (filter.type === 'grupo_producto') {
-          params['filters[grupo_de_productos][id]'] = parseInt(filter.value);
+          params['filters[grupos_de_productos][id][$in]'] = [parseInt(filter.value)];
         }
         else if (filter.type === 'en_oferta' && filter.value === true) {
           params['filters[en_oferta]'] = true;
