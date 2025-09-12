@@ -169,12 +169,13 @@
                                                 </td>
                                             </tr>
                                             <tr>
+                                                <!-- Modificación: Cambiado "Envio" por "Monto a coordinar" -->
                                                 <td class="order-shipping">
-                                                    <span>Envio</span>
+                                                    <span>Monto a coordinar</span>
                                                 </td>
 
                                                 <td class="shipping-price">
-                                                    <span>Bs. 0</span>
+                                                    <span>A coordinar</span>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -183,7 +184,8 @@
                                                 </td>
 
                                                 <td class="product-subtotal">
-                                                    <span class="subtotal-amount">${{parseFloat(cartTotal + 10).toFixed(2)}}</span>
+                                                    <!-- Modificación: Eliminado el cargo de envío del total -->
+                                                    <span class="subtotal-amount">Bs.{{parseFloat(cartTotal).toFixed(2)}}</span>
                                                 </td>
                                             </tr>
                                         </tbody>

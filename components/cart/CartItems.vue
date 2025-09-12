@@ -117,8 +117,9 @@
 
                                         <ul>
                                             <li>Subtotal <span>Bs. {{cartTotal}}</span></li>
-                                            <li>Envio <span>Bs. 10.00</span></li>
-                                            <li class="total-row">Total <span><b>Bs. {{parseFloat(cartTotal + 10).toFixed(2)}}</b></span></li>
+                                            <!-- Modificación: Cambiado "Envio" por "Monto a coordinar" y eliminado el monto fijo -->
+                                            <li>Monto a coordinar <span>A coordinar</span></li>
+                                            <li class="total-row">Total <span><b>Bs. {{parseFloat(cartTotal).toFixed(2)}}</b></span></li>
                                         </ul>
                                         <nuxt-link to="/checkout" class="btn btn-primary checkout-btn">Realizar Pedido</nuxt-link>
                                     </div>

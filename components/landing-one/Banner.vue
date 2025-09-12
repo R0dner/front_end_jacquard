@@ -9,7 +9,7 @@
                         <h1>Estilo que define quién eres</h1>
                         <p>Descubre las últimas tendencias para todos los estilos y personalidades</p>
                         
-                        <nuxt-link to="/blog-one" class="btn btn-primary">Ultimas Noticias</nuxt-link>
+                        <nuxt-link to="/blog-one" class="btn btn-primary">PRODUCTOS DESTACADOS</nuxt-link>
                     </div>
                 </div>
             </div>
