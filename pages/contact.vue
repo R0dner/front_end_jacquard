@@ -120,8 +120,7 @@ export default {
             // Crear el mensaje para WhatsApp
             const whatsappMessage = `Hola, mi nombre es *${fullName}*, Mi mensaje es para saber sobre su apartado de: *${messageType}* y por este método brevemente le describo mi requerimiento: ${description}`;
 
-            // Número de WhatsApp (reemplaza con el número deseado)
-            const phoneNumber = '74277508';
+            const phoneNumber = '71244124';
 
             // Crear el enlace de WhatsApp
             const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(whatsappMessage)}`;
