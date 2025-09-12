@@ -1,5 +1,5 @@
 <template>
-  <div class="col-lg-8 col-md-12">
+  <div class="col-lg-8 col-md-12 order-lg-2 order-1">
     <div class="products-filter-options">
       <div class="row align-items-center">
         <div class="col-lg-4 col-md-6 col-12 d-flex">
@@ -167,7 +167,6 @@ export default {
               'pagination[page]': this.currentPage,
               'pagination[pageSize]': this.pageSize,
               sort: this.sortOrder,
-              // ✅ IMPORTANTE: Asegurar que las imágenes se incluyan
               populate: ['imagen_principal', 'images', 'image', 'marca', 'grupo_de_productos', 'categoria'].join(',')
             }
           });
@@ -180,7 +179,6 @@ export default {
             'pagination[page]': this.currentPage,
             'pagination[pageSize]': this.pageSize,
             sort: this.sortOrder,
-            // ✅ IMPORTANTE: Incluir múltiples opciones de imagen
             populate: ['imagen_principal', 'images', 'image', 'marca', 'grupo_de_productos', 'categoria'].join(','),
           };
 
@@ -221,11 +219,9 @@ export default {
       }
     },
     
-    // ✅ MÉTODO FINAL - Reemplaza tu getProductImageUrl actual
     getProductImageUrl(product) {
       let imagenData = null;
       
-      // Buscar la imagen en diferentes ubicaciones
       if (product.attributes?.imagen_principal?.data?.attributes) {
         imagenData = product.attributes.imagen_principal.data.attributes;
       }
@@ -242,7 +238,6 @@ export default {
       if (imagenData?.url) {
         let cleanUrl = imagenData.url.trim();
         
-        // ✅ DETECTAR Y CORREGIR URLs MALFORMADAS
         if (cleanUrl.includes('strapiapp.comhttps')) {
           const mediaUrlMatch = cleanUrl.match(/https:\/\/[^\/]*\.media\.strapiapp\.com\/.*$/);
           if (mediaUrlMatch) {
@@ -251,13 +246,11 @@ export default {
           }
         }
         
-        // Si ya es una URL completa, devolverla tal como está
         if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
           console.log(`Using complete URL: ${cleanUrl}`);
           return cleanUrl;
         }
         
-        // Si es relativa, agregar el dominio base
         const baseUrl = this.strapiBaseUrl.endsWith('/') 
           ? this.strapiBaseUrl.slice(0, -1) 
           : this.strapiBaseUrl;
@@ -429,7 +422,7 @@ export default {
   margin-bottom: 30px;
 }
 
-/* Estilos responsivos - IMPORTANTE: Añadir !important para sobrescribir estilos existentes */
+/* Estilos responsivos mejorados para el orden correcto */
 @media (max-width: 1199px) {
   .products-col-item {
     flex: 0 0 33.333% !important;
@@ -438,6 +431,11 @@ export default {
 }
 
 @media (max-width: 991px) {
+  /* Asegurar que los productos aparezcan primero en móvil */
+  .products-filter-options {
+    margin-bottom: 25px;
+  }
+  
   .products-filter-options .row {
     flex-direction: column;
   }
@@ -445,6 +443,7 @@ export default {
   .filter-controls {
     flex-direction: column !important;
     align-items: flex-start !important;
+    margin-top: 15px;
   }
   
   .filter-item {
@@ -457,9 +456,27 @@ export default {
     flex: 0 0 50% !important;
     max-width: 50% !important;
   }
+  
+  /* Mensaje informativo para usuarios */
+  .products-filter-options::after {
+    content: "Los filtros están disponibles al final de la página";
+    display: block;
+    font-size: 12px;
+    color: #6c757d;
+    text-align: center;
+    margin-top: 10px;
+    padding: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+  }
 }
 
 @media (max-width: 767px) {
+  .products-filter-options {
+    padding: 12px;
+    margin-bottom: 20px;
+  }
+  
   .products-filter-options p {
     font-size: 14px;
     margin-bottom: 15px;
@@ -484,6 +501,11 @@ export default {
     padding: 6px 12px;
     font-size: 13px;
   }
+  
+  /* Ocultar el mensaje en pantallas muy pequeñas */
+  .products-filter-options::after {
+    display: none;
+  }
 }
 
 @media (max-width: 575px) {
@@ -493,6 +515,10 @@ export default {
   
   .woocommerce-pagination li {
     margin: 3px;
+  }
+  
+  .products-filter-options {
+    padding: 10px;
   }
 }
 </style>
