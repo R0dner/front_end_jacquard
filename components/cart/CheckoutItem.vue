@@ -171,7 +171,7 @@
                                             <tr>
                                                 <!-- Modificación: Cambiado "Envio" por "Monto a coordinar" -->
                                                 <td class="order-shipping">
-                                                    <span>Monto a coordinar</span>
+                                                    <span>Envio</span>
                                                 </td>
 
                                                 <td class="shipping-price">
