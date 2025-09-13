@@ -856,9 +856,10 @@ export default {
 /* Filtros activos - eliminar fondo rosa */
 .selected-filters-wrap-list ul {
   padding: 0;
-  background: rgba(49, 130, 206, 0.15); /* Azul suave */
+  background: rgba(98, 106, 113, 0.15); /* Azul suave */
   border-radius: 8px;
-  margin: 0;
+  margin-top: 10px;
+  margin-left: 10px;
   border: 1px solid rgba(49, 130, 206, 0.3);
 }
 
