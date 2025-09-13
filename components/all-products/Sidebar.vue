@@ -908,7 +908,7 @@ export default {
 }
 
 .delete-selected-filters a {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(0, 3, 33, 0.2);
   color: #988888;
   padding: 12px 24px;
   border-radius: 8px;
@@ -918,11 +918,11 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(6, 3, 79, 0.3);
 }
 
 .delete-selected-filters a:hover {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(87, 84, 103, 0.3);
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(67, 65, 97, 0.4);
 }
@@ -1005,7 +1005,7 @@ export default {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(49, 130, 206, 0.4);
+  box-shadow: 0 8px 25px rgba(15, 15, 16, 0.4);
 }
 
 .btn-outline-secondary {
