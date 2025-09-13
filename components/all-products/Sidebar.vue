@@ -800,6 +800,7 @@ export default {
 
 /* Widget colapsable mejorado */
 .collapse-widget {
+  margin-top: 10px; /* CAMBIO AGREGADO AQUÍ */
   margin-bottom: 24px;
   background: var(--sidebar-card-bg);
   border-radius: var(--sidebar-radius);
