@@ -949,11 +949,6 @@ export default {
   color: var(--sidebar-text-muted);
 }
 
-/* Específico para el título de la sección de precios en colapso */
-.collapse-widget .price-range-wrap .form-control::placeholder {
-  color: #999999;
-}
-
 .input-group-text {
   background: var(--sidebar-accent);
   color: white;
@@ -1006,7 +1001,7 @@ export default {
 }
 
 .aside-products-widget:hover {
-  box-shadow: var(--sidebar-accent-shadow);
+  box-shadow: 0 8px 25px -8px rgba(229, 62, 62, 0.3);
   border-color: var(--sidebar-accent);
 }
 
