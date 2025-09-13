@@ -653,11 +653,11 @@ export default {
 :root {
   --sidebar-bg: #1a1a1a;
   --sidebar-card-bg: #2d3748;
-  --sidebar-text: #e2e8f0;
+  --sidebar-text: #0b0b0b;
   --sidebar-text-muted: #a0aec0;
-  --sidebar-accent: #3182ce; /* Azul profesional */
-  --sidebar-accent-hover: #2c5aa0;
-  --sidebar-accent-light: #4299e1;
+  --sidebar-accent: #95adc5; /* Azul profesional */
+  --sidebar-accent-hover: #b9c1ce;
+  --sidebar-accent-light: #9fbcd3;
   --sidebar-border: #4a5568;
   --sidebar-hover-bg: #374151;
   --sidebar-selected-bg: #2a4365; /* Fondo para elementos seleccionados */
@@ -784,7 +784,7 @@ export default {
 .filter-list li.selected a,
 .price-list-row li.selected a {
   background: linear-gradient(135deg, var(--sidebar-accent), var(--sidebar-accent-hover));
-  color: white !important; /* Forzar color blanco para máximo contraste */
+  color: rgb(134, 4, 4) !important; /* Forzar color blanco para máximo contraste */
   font-weight: 700;
   box-shadow: var(--sidebar-accent-shadow);
   border-color: var(--sidebar-accent-light);
@@ -1000,7 +1000,7 @@ export default {
 
 .btn-primary {
   background: linear-gradient(135deg, var(--sidebar-accent), var(--sidebar-accent-hover));
-  color: white;
+  color: rgb(17, 17, 17);
   box-shadow: var(--sidebar-accent-shadow);
 }
 
