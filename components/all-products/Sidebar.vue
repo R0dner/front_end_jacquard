@@ -1006,7 +1006,7 @@ export default {
 }
 
 .aside-products-widget:hover {
-  box-shadow: 0 8px 25px -8px rgba(229, 62, 62, 0.3);
+  box-shadow: var(--sidebar-accent-shadow);
   border-color: var(--sidebar-accent);
 }
 
