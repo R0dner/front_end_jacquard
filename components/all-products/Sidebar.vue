@@ -649,21 +649,24 @@ export default {
 </script>
 
 <style scoped>
-/* Variables CSS para consistencia */
+/* Variables CSS para consistencia - Tema profesional */
 :root {
   --sidebar-bg: #1a1a1a;
   --sidebar-card-bg: #2d3748;
   --sidebar-text: #e2e8f0;
   --sidebar-text-muted: #a0aec0;
-  --sidebar-accent: #e53e3e;
-  --sidebar-accent-hover: #c53030;
+  --sidebar-accent: #3182ce; /* Azul profesional */
+  --sidebar-accent-hover: #2c5aa0;
+  --sidebar-accent-light: #4299e1;
   --sidebar-border: #4a5568;
   --sidebar-hover-bg: #374151;
+  --sidebar-selected-bg: #2a4365; /* Fondo para elementos seleccionados */
   --sidebar-radius: 12px;
   --sidebar-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --sidebar-accent-shadow: 0 4px 15px rgba(49, 130, 206, 0.3);
 }
 
-/* Contenedor principal del sidebar - coincide con el tema dark de la página */
+/* Contenedor principal del sidebar */
 .sidebar-container {
   background: var(--sidebar-bg);
   border-radius: var(--sidebar-radius);
@@ -688,7 +691,7 @@ export default {
 }
 
 .filter-section:hover {
-  box-shadow: 0 8px 25px -8px rgba(229, 62, 62, 0.3);
+  box-shadow: var(--sidebar-accent-shadow);
   border-color: var(--sidebar-accent);
 }
 
@@ -721,7 +724,7 @@ export default {
   font-style: italic;
 }
 
-/* Listas de filtros con estilo moderno */
+/* Listas de filtros con mejor contraste */
 .filter-list,
 .price-list-row {
   padding: 0;
@@ -738,15 +741,15 @@ export default {
 .price-list-row li a {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 14px 16px; /* Más padding para mejor área de click */
   border-radius: 8px;
   color: var(--sidebar-text);
   text-decoration: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 14px;
   font-weight: 500;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   overflow: hidden;
 }
@@ -757,7 +760,7 @@ export default {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
+  width: 4px;
   background: var(--sidebar-accent);
   transform: scaleY(0);
   transition: transform 0.3s ease;
@@ -768,28 +771,34 @@ export default {
   background: var(--sidebar-hover-bg);
   color: var(--sidebar-text);
   transform: translateX(4px);
-  border-color: var(--sidebar-accent);
+  border-color: var(--sidebar-accent-light);
 }
 
 .filter-list li a:hover::before {
   transform: scaleY(1);
 }
 
+/* Estados activos con mejor contraste */
 .filter-list li a.active,
-.price-list-row li.active a {
+.price-list-row li.active a,
+.filter-list li.selected a,
+.price-list-row li.selected a {
   background: linear-gradient(135deg, var(--sidebar-accent), var(--sidebar-accent-hover));
-  color: white;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
-  border-color: var(--sidebar-accent);
+  color: white !important; /* Forzar color blanco para máximo contraste */
+  font-weight: 700;
+  box-shadow: var(--sidebar-accent-shadow);
+  border-color: var(--sidebar-accent-light);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.filter-list li a.active::before {
+.filter-list li a.active::before,
+.filter-list li.selected a::before {
   transform: scaleY(1);
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.4);
+  width: 4px;
 }
 
-/* Widget colapsable con estilo mejorado */
+/* Widget colapsable mejorado */
 .collapse-widget {
   margin-bottom: 24px;
   background: var(--sidebar-card-bg);
@@ -800,7 +809,7 @@ export default {
 }
 
 .collapse-widget:hover {
-  box-shadow: 0 8px 25px -8px rgba(229, 62, 62, 0.3);
+  box-shadow: var(--sidebar-accent-shadow);
   border-color: var(--sidebar-accent);
 }
 
@@ -823,7 +832,7 @@ export default {
 
 .collapse-widget-title:hover {
   background: linear-gradient(135deg, #374151, var(--sidebar-hover-bg));
-  color: var(--sidebar-accent) !important;
+  color: var(--sidebar-accent-light) !important;
 }
 
 .collapse-widget-title i {
@@ -843,13 +852,13 @@ export default {
   background: var(--sidebar-card-bg);
 }
 
-/* Filtros activos */
+/* Filtros activos - eliminar fondo rosa */
 .selected-filters-wrap-list ul {
   padding: 0;
-  background: rgba(229, 62, 62, 0.1);
+  background: rgba(49, 130, 206, 0.15); /* Azul suave */
   border-radius: 8px;
   margin: 0;
-  border: 1px solid rgba(229, 62, 62, 0.2);
+  border: 1px solid rgba(49, 130, 206, 0.3);
 }
 
 .selected-filters-wrap-list li {
@@ -867,16 +876,17 @@ export default {
 
 .selected-filters-wrap-list li a {
   background: var(--sidebar-accent);
-  color: white;
-  padding: 8px 16px;
+  color: white !important;
+  padding: 10px 16px; /* Más padding para mejor legibilidad */
   border-radius: 20px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   transition: all 0.3s ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .selected-filters-wrap-list li a:hover {
@@ -887,7 +897,8 @@ export default {
 .selected-filters-wrap-list li a::after {
   content: '×';
   font-weight: 700;
-  font-size: 16px;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .delete-selected-filters {
@@ -898,9 +909,9 @@ export default {
 }
 
 .delete-selected-filters a {
-  background: rgba(220, 53, 69, 0.2);
+  background: rgba(239, 68, 68, 0.2);
   color: #ff6b6b;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
   text-decoration: none;
@@ -908,20 +919,24 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(220, 53, 69, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .delete-selected-filters a:hover {
-  background: rgba(220, 53, 69, 0.3);
+  background: rgba(239, 68, 68, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
 }
 
-/* Inputs de precio mejorados */
+/* Inputs de precio con mejor contraste */
 .price-range-wrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px; /* Más espacio entre elementos */
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  border: 1px solid var(--sidebar-border);
 }
 
 .price-range-wrap .input-group {
@@ -929,66 +944,81 @@ export default {
 }
 
 .price-range-wrap .form-control {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--sidebar-border);
-  color: var(--sidebar-text);
-  padding: 12px 16px;
-  font-size: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid var(--sidebar-border);
+  color: var(--sidebar-text) !important;
+  padding: 14px 16px;
+  font-size: 15px;
+  font-weight: 500;
   border-radius: 8px;
   transition: all 0.3s ease;
 }
 
 .price-range-wrap .form-control:focus {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: var(--sidebar-accent);
-  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
-  color: var(--sidebar-text);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: var(--sidebar-accent) !important;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+  color: var(--sidebar-text) !important;
+  outline: none;
 }
 
 .price-range-wrap .form-control::placeholder {
-  color: var(--sidebar-text-muted);
+  color: var(--sidebar-text-muted) !important;
+  font-weight: 400;
 }
 
 .input-group-text {
   background: var(--sidebar-accent);
   color: white;
-  border: 1px solid var(--sidebar-accent);
+  border: 2px solid var(--sidebar-accent);
   font-weight: 600;
+  font-size: 14px;
+  padding: 12px 16px;
+}
+
+/* Etiquetas de precio */
+.price-range-wrap label {
+  color: var(--sidebar-text) !important;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Botones mejorados */
 .btn {
-  padding: 12px 24px;
-  font-weight: 600;
+  padding: 14px 28px;
+  font-weight: 700;
   border-radius: 8px;
   font-size: 14px;
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  border: none;
 }
 
 .btn-primary {
   background: linear-gradient(135deg, var(--sidebar-accent), var(--sidebar-accent-hover));
-  border: none;
   color: white;
-  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+  box-shadow: var(--sidebar-accent-shadow);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(229, 62, 62, 0.4);
+  box-shadow: 0 8px 25px rgba(49, 130, 206, 0.4);
 }
 
 .btn-outline-secondary {
-  border: 1px solid var(--sidebar-border);
-  color: var(--sidebar-text-muted);
+  border: 2px solid var(--sidebar-border);
+  color: var(--sidebar-text);
   background: transparent;
 }
 
 .btn-outline-secondary:hover {
   background: var(--sidebar-hover-bg);
-  border-color: var(--sidebar-text-muted);
-  color: var(--sidebar-text);
+  border-color: var(--sidebar-accent);
+  color: var(--sidebar-accent-light);
 }
 
 /* Productos del aside mejorados */
@@ -1001,7 +1031,7 @@ export default {
 }
 
 .aside-products-widget:hover {
-  box-shadow: 0 8px 25px -8px rgba(229, 62, 62, 0.3);
+  box-shadow: var(--sidebar-accent-shadow);
   border-color: var(--sidebar-accent);
 }
 
@@ -1066,7 +1096,7 @@ export default {
 }
 
 .products-content h3 a:hover {
-  color: var(--sidebar-accent);
+  color: var(--sidebar-accent-light);
 }
 
 .product-price {
@@ -1077,7 +1107,7 @@ export default {
 
 .product-price .new-price {
   font-weight: 700;
-  color: var(--sidebar-accent);
+  color: var(--sidebar-accent-light);
   font-size: 15px;
 }
 
@@ -1111,6 +1141,25 @@ export default {
   color: var(--sidebar-accent);
 }
 
+/* Rangos sugeridos con mejor estilo */
+h3, h4, h5 {
+  color: var(--sidebar-text) !important;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+/* Estilos específicos para elementos de precio */
+.price-filter-section {
+  background: var(--sidebar-selected-bg);
+  border: 1px solid var(--sidebar-accent);
+}
+
+.price-filter-section .section-title {
+  color: var(--sidebar-text) !important;
+  font-size: 16px;
+  font-weight: 700;
+}
+
 /* Mejoras de accesibilidad */
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -1125,8 +1174,18 @@ export default {
 .price-list-row li a:focus,
 .btn:focus,
 .form-control:focus {
-  outline: 2px solid var(--sidebar-accent);
+  outline: 3px solid var(--sidebar-accent);
   outline-offset: 2px;
 }
 
+/* Asegurar contraste en texto seleccionado */
+::selection {
+  background: var(--sidebar-accent);
+  color: white;
+}
+
+::-moz-selection {
+  background: var(--sidebar-accent);
+  color: white;
+}
 </style>
