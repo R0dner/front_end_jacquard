@@ -949,6 +949,11 @@ export default {
   color: var(--sidebar-text-muted);
 }
 
+/* Específico para el título de la sección de precios en colapso */
+.collapse-widget .price-range-wrap .form-control::placeholder {
+  color: #999999;
+}
+
 .input-group-text {
   background: var(--sidebar-accent);
   color: white;
