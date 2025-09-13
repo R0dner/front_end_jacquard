@@ -682,6 +682,7 @@ export default {
 
 /* Estilos para secciones de filtro */
 .filter-section {
+  margin-top: 24px; /* Margen superior mejorado */
   margin-bottom: 24px;
   padding: 20px;
   background: var(--sidebar-card-bg);
@@ -690,9 +691,39 @@ export default {
   transition: all 0.3s ease;
 }
 
+/* Primera sección de filtro */
+.filter-section:first-of-type {
+  margin-top: 16px;
+}
+
 .filter-section:hover {
   box-shadow: var(--sidebar-accent-shadow);
   border-color: var(--sidebar-accent);
+}
+
+/* Espaciado específico para la sección de productos deseados */
+.filter-section:has(.no-wishlist-items),
+.filter-section:has(.fa-heart) {
+  margin-top: 32px !important; /* Más espacio superior para la sección de wishlist */
+  border: 2px solid rgba(129, 147, 164, 0.3); /* Borde más visible */
+  background: linear-gradient(145deg, var(--sidebar-card-bg), rgba(129, 147, 164, 0.1));
+}
+
+/* Clase específica para productos deseados (alternativa) */
+.productos-deseados-section {
+  margin-top: 40px !important;
+  position: relative;
+}
+
+.productos-deseados-section::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--sidebar-accent), transparent);
+  opacity: 0.3;
 }
 
 .section-title {
@@ -778,6 +809,20 @@ export default {
   transform: scaleY(1);
 }
 
+/* Estilo especial para el enlace de favoritos */
+.filter-list li a:has(.fa-heart) {
+  background: linear-gradient(135deg, rgba(129, 147, 164, 0.15), rgba(129, 147, 164, 0.05));
+  border: 2px solid rgba(129, 147, 164, 0.3);
+  font-weight: 600;
+  padding: 16px 18px; /* Más padding para destacar */
+}
+
+.filter-list li a:has(.fa-heart):hover {
+  background: linear-gradient(135deg, rgba(129, 147, 164, 0.25), rgba(129, 147, 164, 0.1));
+  border-color: var(--sidebar-accent);
+  transform: translateX(6px);
+}
+
 /* Estados activos con mejor contraste */
 .filter-list li a.active,
 .price-list-row li.active a,
@@ -800,7 +845,7 @@ export default {
 
 /* Widget colapsable mejorado */
 .collapse-widget {
-  margin-top: 10px; /* CAMBIO AGREGADO AQUÍ */
+  margin-top: 24px; /* Margen superior consistente */
   margin-bottom: 24px;
   background: var(--sidebar-card-bg);
   border-radius: var(--sidebar-radius);
@@ -1118,15 +1163,25 @@ export default {
   font-size: 13px;
 }
 
-/* Lista de deseos vacía */
+/* Lista de deseos vacía mejorada */
 .no-wishlist-items {
   background: rgba(255, 255, 255, 0.05);
-  padding: 20px;
+  padding: 24px 20px; /* Más padding vertical */
   border-radius: 8px;
   border: 2px dashed var(--sidebar-border);
   text-align: center;
   color: var(--sidebar-text-muted);
   font-style: italic;
+  margin-top: 8px; /* Pequeño margen del título */
+}
+
+/* Separador visual entre secciones */
+.filter-section + .filter-section::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sidebar-border), transparent);
+  margin: -24px 0 24px 0; /* Posicionar entre secciones */
 }
 
 /* Indicadores de carga */
