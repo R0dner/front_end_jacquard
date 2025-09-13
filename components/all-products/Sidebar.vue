@@ -660,10 +660,10 @@ export default {
   --sidebar-accent-light: #9fbcd3;
   --sidebar-border: #4a5568;
   --sidebar-hover-bg: #374151;
-  --sidebar-selected-bg: #2a4365; /* Fondo para elementos seleccionados */
+  --sidebar-selected-bg: #5a6576; /* Fondo para elementos seleccionados */
   --sidebar-radius: 12px;
   --sidebar-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --sidebar-accent-shadow: 0 4px 15px rgba(49, 130, 206, 0.3);
+  --sidebar-accent-shadow: 0 4px 15px rgba(129, 147, 164, 0.3);
 }
 
 /* Contenedor principal del sidebar */
@@ -876,7 +876,7 @@ export default {
 
 .selected-filters-wrap-list li a {
   background: var(--sidebar-accent);
-  color: rgb(100, 3, 3) !important;
+  color: rgb(9, 2, 76) !important;
   padding: 10px 16px; /* Más padding para mejor legibilidad */
   border-radius: 20px;
   font-size: 13px;
@@ -895,7 +895,6 @@ export default {
 }
 
 .selected-filters-wrap-list li a::after {
-  content: '×';
   font-weight: 700;
   font-size: 18px;
   color: rgba(255, 255, 255, 0.9);
@@ -925,7 +924,7 @@ export default {
 .delete-selected-filters a:hover {
   background: rgba(239, 68, 68, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 4px 15px rgba(67, 65, 97, 0.4);
 }
 
 /* Inputs de precio con mejor contraste */
@@ -957,7 +956,7 @@ export default {
 .price-range-wrap .form-control:focus {
   background: rgba(255, 255, 255, 0.18);
   border-color: var(--sidebar-accent) !important;
-  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+  box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.15);
   color: var(--sidebar-text) !important;
   outline: none;
 }
