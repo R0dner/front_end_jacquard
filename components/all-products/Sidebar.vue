@@ -677,7 +677,7 @@ export default {
 }
 
 .woocommerce-sidebar-area {
-  padding: 24px;
+  padding: 20px;
 }
 
 /* Estilos para secciones de filtro */
