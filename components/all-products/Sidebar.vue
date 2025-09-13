@@ -784,7 +784,7 @@ export default {
 .filter-list li.selected a,
 .price-list-row li.selected a {
   background: linear-gradient(135deg, var(--sidebar-accent), var(--sidebar-accent-hover));
-  color: rgb(134, 4, 4) !important; /* Forzar color blanco para máximo contraste */
+  color: rgb(9, 1, 64) !important; /* Forzar color blanco para máximo contraste */
   font-weight: 700;
   box-shadow: var(--sidebar-accent-shadow);
   border-color: var(--sidebar-accent-light);
@@ -876,7 +876,7 @@ export default {
 
 .selected-filters-wrap-list li a {
   background: var(--sidebar-accent);
-  color: white !important;
+  color: rgb(100, 3, 3) !important;
   padding: 10px 16px; /* Más padding para mejor legibilidad */
   border-radius: 20px;
   font-size: 13px;
@@ -910,7 +910,7 @@ export default {
 
 .delete-selected-filters a {
   background: rgba(239, 68, 68, 0.2);
-  color: #ff6b6b;
+  color: #988888;
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
