@@ -146,11 +146,13 @@ export default {
                     this.inventoryData = response.data.data[0].attributes;
                 } else {
                     console.warn('No inventory data found for this product');
-                    this.inventoryData = { stock_actual: 0 };
+                    // Cambio aqui: usar stock_total en lugar de stock_actual
+                    this.inventoryData = { stock_total: 0 };
                 }
             } catch (error) {
                 console.error('Error fetching inventory:', error);
-                this.inventoryData = { stock_actual: 0 };
+                // Cambio aqui: usar stock_total en lugar de stock_actual
+                this.inventoryData = { stock_total: 0 };
             } finally {
                 this.loadingInventory = false;
             }
@@ -254,7 +256,8 @@ export default {
         },
         currentStock() {
             if (this.inventoryData) {
-                return this.inventoryData.stock_actual;
+                // CAMBIO PRINCIPAL: usar stock_total en lugar de stock_actual
+                return this.inventoryData.stock_total || 0;
             }
             if (this.product.stock) {
                 return this.product.stock;
