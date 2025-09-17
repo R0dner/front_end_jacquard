@@ -4,7 +4,7 @@ div(:class='className')
     .product-image
       div.product-clickable(@click.prevent='quickView')
         img(:src='getProductImageUrl(product)' @error='handleImageError')
-      .out-of-stock-badge(v-if='currentStock === 0') Agotado
+      .out-of-stock-badge(v-if='isOutOfStock') Agotado
       ul
         li
           a(href='javascript:void(0)' title='Ver mas' v-b-tooltip.hover @click.prevent='quickView')
@@ -32,12 +32,13 @@ div(:class='className')
         href='javascript:void(0)' 
         @click='quickView'
       ) Ya fue Agregado!
-      a.btn.btn-light(
+      a.btn(
         v-else 
         href='javascript:void(0)' 
         @click='addToCart(product)'
-        :class='{ "disabled-btn": currentStock === 0 }'
-      ) {{ currentStock === 0 ? 'Agotado' : 'Agregar al Carrito' }}
+        :class='isOutOfStock ? "btn-secondary disabled-btn" : "btn-light"'
+        :disabled='isOutOfStock'
+      ) {{ isOutOfStock ? 'Agotado' : 'Agregar al Carrito' }}
 </template>
 
 <script>
@@ -58,26 +59,30 @@ export default {
   },
   props: ['id', 'product', 'className'],
   computed: {
-    cart() {
-      return this.$store.getters.cart
-    },
-    wishlist() {
-      // Acceder al store de wishlist correctamente
-      return this.$store.state.wishlist?.items || [];
-    },
-    isInWishlist() {
-      return this.wishlist.some(item => item.id === this.id)
-    },
-    currentStock() {
-      if (this.inventoryData) {
-        return this.inventoryData.stock_actual;
+      cart() {
+        return this.$store.getters.cart
+      },
+      wishlist() {
+        return this.$store.state.wishlist?.items || [];
+      },
+      isInWishlist() {
+        return this.wishlist.some(item => item.id === this.id)
+      },
+      currentStock() {
+        if (this.inventoryData) {
+          // CAMBIO CRÍTICO: usar stock_total en lugar de stock_actual
+          return this.inventoryData.stock_total || 0;
+        }
+        if (this.product.stock) {
+          return this.product.stock;
+        }
+        return 0;
+      },
+      // Agregar computed para verificar si está agotado
+      isOutOfStock() {
+        return this.currentStock <= 0;
       }
-      if (this.product.stock) {
-        return this.product.stock;
-      }
-      return 0;
-    }
-  },
+    },
   methods: {
     // Método para inicializar el store de wishlist
     initializeWishlistStore() {
@@ -232,18 +237,20 @@ export default {
           this.inventoryData = response.data.data[0].attributes;
         } else {
           console.warn('No inventory data found for this product');
-          this.inventoryData = { stock_actual: 0 };
+          // CAMBIO: usar stock_total
+          this.inventoryData = { stock_total: 0 };
         }
       } catch (error) {
         console.error('Error fetching inventory:', error);
-        this.inventoryData = { stock_actual: 0 };
+        // CAMBIO: usar stock_total
+        this.inventoryData = { stock_total: 0 };
       } finally {
         this.loadingInventory = false;
       }
     },
 
     addToCart(item) {
-      if (this.currentStock === 0) {
+      if (this.isOutOfStock) {
         this.$toast.error("Este producto está agotado", {
           icon: 'fas fa-times-circle'
         });
@@ -253,7 +260,9 @@ export default {
       const product = [{
         id: this.id,
         name: item.nombre,
-        price: item.precio_venta,
+        price: item.en_oferta ? item.precio_oferta : item.precio_venta,
+        originalPrice: item.precio_venta,
+        onSale: item.en_oferta,
         image: this.getProductImageUrl(item),
         quantity: 1,
         maxQuantity: this.currentStock
@@ -272,6 +281,15 @@ export default {
             icon: 'fas fa-cart-plus'
           });
         } else {
+          // Verificar que no exceda el stock disponible
+          const currentCartQuantity = this.cart[cartIndex].quantity;
+          if (currentCartQuantity >= this.currentStock) {
+            this.$toast.error(`Solo hay ${this.currentStock} unidades disponibles`, {
+              icon: 'fas fa-exclamation-triangle'
+            });
+            return;
+          }
+          
           this.$store.dispatch('updateCart', {
             id, unit: 1, cart: this.cart
           });
@@ -303,24 +321,49 @@ export default {
   position: absolute;
   top: 10px;
   right: 10px;
-  background-color: #ff0000;
+  background-color: #dc3545;
   color: white;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
   z-index: 10;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
 }
 
 .disabled-btn {
-  background-color: #cccccc !important;
-  color: #666666 !important;
+  background-color: #6c757d !important;
+  color: #fff !important;
   cursor: not-allowed !important;
   pointer-events: none !important;
+  opacity: 0.65 !important;
+  border-color: #6c757d !important;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: #fff;
 }
 
 .product-image {
   position: relative;
+  overflow: hidden;
+}
+
+/* Efecto visual cuando el producto está agotado */
+.single-product-box .product-image img {
+  transition: all 0.3s ease;
+}
+
+.single-product-box:has(.out-of-stock-badge) .product-image img {
+  filter: grayscale(30%) opacity(0.8);
+}
+
+.single-product-box:has(.out-of-stock-badge) {
+  opacity: 0.85;
 }
 
 .single-product-box:hover {
@@ -361,5 +404,17 @@ export default {
 
 .fa-heart:hover {
   transform: scale(1.1);
+}
+
+/* Mejorar visibilidad del botón deshabilitado */
+.btn:disabled,
+.btn.disabled-btn {
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.btn.disabled-btn:hover {
+  transform: none;
+  background-color: #6c757d !important;
 }
 </style>
