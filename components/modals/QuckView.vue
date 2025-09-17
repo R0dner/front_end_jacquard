@@ -42,8 +42,8 @@
                                     <ul class="product-info">
                                         <li><span>Coleccion:</span> <a href="#">{{ product.marca?.data?.attributes?.nombre || 'Verano' }}</a></li>
                                         <li><span>Disponibilidad:</span> 
-                                            <a href="#" v-if="!loadingInventory">
-                                                {{ currentStock > 0 ? `En stock (${currentStock} items)` : 'Agotado' }}
+                                            <a href="#" v-if="!loadingInventory" :class="{ 'text-danger font-weight-bold': isOutOfStock }">
+                                                {{ isOutOfStock ? 'Agotado' : `En stock (${currentStock} items)` }}
                                             </a>
                                             <a href="#" v-else>Cargando stock...</a>
                                         </li>
@@ -73,14 +73,24 @@
                                         </ul>
                                     </div>
                                     <div class="product-add-to-cart">
-                                        <div class="input-counter">
-                                            <span @click="decreaseQuantity()" class="minus-btn"><i class="fas fa-minus"></i></span>
+                                        <div class="input-counter" :class="{ 'disabled': isOutOfStock }">
+                                            <span @click="decreaseQuantity()" class="minus-btn" :class="{ 'disabled': isOutOfStock }">
+                                                <i class="fas fa-minus"></i>
+                                            </span>
                                             {{ quantity }}
-                                            <span @click="increaseQuantity()" class="plus-btn"><i class="fas fa-plus"></i></span>
+                                            <span @click="increaseQuantity()" class="plus-btn" :class="{ 'disabled': isOutOfStock }">
+                                                <i class="fas fa-plus"></i>
+                                            </span>
                                         </div>
-                                        <button type="button" class="btn btn-primary" @click="addToCart(product)" :disabled="currentStock <= 0">
-                                            <i class="fas fa-cart-plus"></i> 
-                                            {{ currentStock > 0 ? 'Añadir a Carrito' : 'Agotado' }}
+                                        <button 
+                                            type="button" 
+                                            class="btn" 
+                                            :class="isOutOfStock ? 'btn-secondary' : 'btn-primary'" 
+                                            @click="addToCart(product)" 
+                                            :disabled="isOutOfStock"
+                                        >
+                                            <i :class="isOutOfStock ? 'fas fa-exclamation-triangle' : 'fas fa-cart-plus'"></i> 
+                                            {{ isOutOfStock ? 'Agotado' : 'Añadir a Carrito' }}
                                         </button>
                                     </div>
                                 </div>
@@ -177,7 +187,8 @@ export default {
             }
         },
         addToCart(product) {
-            if (this.currentStock <= 0) {
+            // VALIDACIÓN PRINCIPAL: Verificar stock antes que todo
+            if (this.isOutOfStock) {
                 this.$toast.error("Este producto está agotado");
                 return;
             }
@@ -206,25 +217,32 @@ export default {
                 id: product.id,
                 name: product.nombre,
                 price: priceToUse,
-                originalPrice: product.precio, // Mantener el precio original para referencia
+                originalPrice: product.precio,
                 onSale: product.enOferta,
                 image: product.imageUrl,
                 quantity: this.quantity,
                 size: this.selectedSize,
-                color: this.productColors.length > 0 ? this.selectedColor : null, // Solo enviar color si hay opciones
+                color: this.productColors.length > 0 ? this.selectedColor : null,
                 maxQuantity: this.currentStock,
                 colorCode: this.selectedColor ? 
                     this.productColors.find(c => c.attributes.nombre === this.selectedColor)?.attributes.color_rgb : null
             };
             
-            // Versión compatible con Vuex estándar
             this.$store.dispatch('addToCart', cartItem);
             this.$toast("Agregado al carrito", {
                 icon: 'fas fa-cart-plus'
             });
             this.closeQuickView();
         },
+        
         increaseQuantity() {
+            if(this.isOutOfStock) {
+                this.$toast.error("Este producto está agotado", {
+                    icon: 'fas fa-exclamation-triangle'
+                });
+                return;
+            }
+            
             if(this.quantity >= this.currentStock) {
                 this.$toast.error(`No puedes agregar más de ${this.currentStock} unidades`, {
                     icon: 'fas fa-cart-plus'
@@ -237,6 +255,7 @@ export default {
                 this.quantity++;
             }
         },
+        
         decreaseQuantity() {
             if(this.quantity <= 1) {
                 this.$toast.error("No puedes agregar menos de 1 unidad", {
@@ -256,13 +275,17 @@ export default {
         },
         currentStock() {
             if (this.inventoryData) {
-                // CAMBIO PRINCIPAL: usar stock_total en lugar de stock_actual
-                return this.inventoryData.stock_total || 0;
+                // CAMBIO CRÍTICO: Verificar que stock_total sea mayor a 0
+                const stock = this.inventoryData.stock_total || 0;
+                return stock;
             }
             if (this.product.stock) {
                 return this.product.stock;
             }
             return 0;
+        },
+        isOutOfStock() {
+           return this.currentStock <= 0;
         }
     },
     watch: {
@@ -888,6 +911,41 @@ export default {
                 border-color: #4a89dc;
             }
         }
+    }
+}
+
+/* Estilos para productos agotados */
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.font-weight-bold {
+    font-weight: 700 !important;
+}
+
+.input-counter.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.input-counter span.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+    
+    &:hover:not(:disabled) {
+        background-color: #5a6268;
+        border-color: #545b62;
+    }
+    
+    &:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
     }
 }
 
