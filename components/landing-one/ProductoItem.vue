@@ -57,7 +57,8 @@ export default {
       loadingInventory: false,
       inventoryData: [],
       availableColorsCount: 0,
-      totalStock: 0
+      totalStock: 0,
+      basicProductInfo: null // Para almacenar info básica del producto
     }
   },
   props: ['id', 'product', 'className'],
@@ -240,30 +241,68 @@ export default {
           return;
         }
         
+        // Primero obtener datos básicos del producto para fallback
+        await this.getProductBasicInfo();
+        
+        // Intentar obtener inventario detallado
         const response = await this.$axios.get(`/api/inventario-colores`, {
           params: {
             'filters[producto][id][$eq]': this.id,
-            'populate[color][populate]': '*',
-            'populate[talla][populate]': '*'
+            'populate': 'color,talla,producto'
           }
         });
         
         if (response.data.data && response.data.data.length > 0) {
+          console.log(`Found inventory data for product ${this.id}:`, response.data.data);
           this.inventoryData = response.data.data;
           this.processInventoryData();
         } else {
-          console.warn('No inventory data found for this product');
-          this.inventoryData = [];
-          this.totalStock = 0;
-          this.availableColorsCount = 0;
+          console.warn(`No inventory data found for product ${this.id}, using basic product info`);
+          this.useBasicProductInfo();
         }
       } catch (error) {
         console.error('Error fetching inventory:', error);
+        console.log('Falling back to basic product information');
+        this.useBasicProductInfo();
+      } finally {
+        this.loadingInventory = false;
+      }
+    },
+
+    // Obtener información básica del producto como fallback
+    async getProductBasicInfo() {
+      try {
+        const response = await this.$axios.get(`/api/productos/${this.id}`, {
+          params: {
+            'populate[colores]': '*',
+            'populate[tallas]': '*'
+          }
+        });
+        
+        if (response.data.data) {
+          this.basicProductInfo = response.data.data.attributes;
+        }
+      } catch (error) {
+        console.error('Error fetching basic product info:', error);
+      }
+    },
+
+    // Usar información básica del producto cuando no hay inventario detallado
+    useBasicProductInfo() {
+      if (this.basicProductInfo) {
+        // Usar colores del producto
+        if (this.basicProductInfo.colores?.data) {
+          this.availableColorsCount = this.basicProductInfo.colores.data.length;
+        } else {
+          this.availableColorsCount = 0;
+        }
+        
+        // Stock por defecto o del producto
+        this.totalStock = this.product.stock || 0;
+      } else {
         this.inventoryData = [];
         this.totalStock = 0;
         this.availableColorsCount = 0;
-      } finally {
-        this.loadingInventory = false;
       }
     },
 
@@ -282,6 +321,8 @@ export default {
         }
       });
       this.availableColorsCount = uniqueColors.size;
+      
+      console.log(`Inventory processed: ${this.totalStock} total stock, ${this.availableColorsCount} colors`);
     },
 
     // Método simplificado - solo abre QuickView
