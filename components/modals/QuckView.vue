@@ -19,17 +19,17 @@
                         <div class="row align-items-center">
                             <div class="col-lg-6 col-md-6">
                                 <div class="productQuickView-image">
-                                    <img :src="product.imageUrl" alt="image">
+                                    <img :src="product.imageUrl || getProductImage()" :alt="product.nombre || 'Producto'">
                                 </div>
                             </div>
                             <div class="col-lg-6 col-md-6">
                                 <div class="product-content">
-                                    <h3><a href="#">{{ product.nombre }}</a></h3>
+                                    <h3><a href="#">{{ product.nombre || 'Producto sin nombre' }}</a></h3>
                                     
                                     <!-- Precio dinámico basado en selección -->
                                     <div class="price">
-                                        <span class="old-price" v-if="selectedInventoryItem && selectedInventoryItem.en_oferta">
-                                            Bs.{{ selectedInventoryItem.precio_venta_sugerido.toFixed(2) }}
+                                        <span class="old-price" v-if="selectedInventoryItem && selectedInventoryItem.attributes.en_oferta">
+                                            Bs.{{ selectedInventoryItem.attributes.precio_venta_sugerido.toFixed(2) }}
                                         </span>
                                         <span class="new-price">
                                             Bs.{{ currentPrice.toFixed(2) }}
@@ -44,18 +44,25 @@
                                             <i class="fas fa-star"></i>
                                             <i class="fas fa-star-half-alt"></i>
                                         </div>
-                                        <a href="#" class="rating-count">5 reviews</a>
+                                        <a href="#" class="rating-count">{{ product.valoracion || 5 }} reviews</a>
                                     </div>
                                     
                                     <ul class="product-info">
-                                        <li><span>Coleccion:</span> <a href="#">{{ product.marca?.data?.attributes?.nombre || 'Verano' }}</a></li>
+                                        <li><span>Código:</span> 
+                                            <a href="#">{{ product.codigo || 'Sin código' }}</a>
+                                        </li>
                                         <li><span>Disponibilidad:</span> 
                                             <a href="#" v-if="!loadingInventory" :class="{ 'text-danger font-weight-bold': isOutOfStock }">
                                                 {{ isOutOfStock ? 'Agotado' : `En stock (${currentStock} items)` }}
                                             </a>
                                             <a href="#" v-else>Cargando stock...</a>
                                         </li>
-                                        <li><span>Tipo de Producto:</span> <a href="#">{{ product.grupo_de_productos?.data?.attributes?.nombre || 'T-Shirt' }}</a></li>
+                                        <li><span>Tipo de Producto:</span> 
+                                            <a href="#">{{ getProductType() }}</a>
+                                        </li>
+                                        <li><span>Estado:</span> 
+                                            <a href="#" :class="getStatusClass()">{{ getProductStatus() }}</a>
+                                        </li>
                                     </ul>
                                     
                                     <div class="product-color-switch">
@@ -65,7 +72,7 @@
                                                 @click="selectColor(color)" 
                                                 :class="{ active: selectedColor?.id === color.id }">
                                                 <span class="color-circle" 
-                                                      :style="{ 'background-color': color.attributes.color_rgb }"
+                                                      :style="{ 'background-color': color.attributes.color_rgb || color.attributes.codigo_hex || '#cccccc' }"
                                                       :title="color.attributes.nombre"></span>
                                             </li>
                                         </ul>
@@ -79,14 +86,26 @@
                                                 @click="selectSize(size)" 
                                                 :class="{ active: selectedSize?.id === size.id, disabled: getSizeStock(size) <= 0 }">
                                                 <a href="#" :class="{ 'out-of-stock': getSizeStock(size) <= 0 }">
-                                                    {{ size.attributes.nombre }}
+                                                    {{ size.attributes.sigla || size.attributes.nombre }}
                                                     <span class="size-stock" v-if="getSizeStock(size) <= 5 && getSizeStock(size) > 0">
                                                         ({{ getSizeStock(size) }})
                                                     </span>
                                                 </a>
                                             </li>
                                         </ul>
-                                        <p v-else class="no-sizes">Selecciona un color para ver tallas</p>
+                                        <p v-else class="no-sizes">{{ selectedColor ? 'No hay tallas para este color' : 'Selecciona un color para ver tallas' }}</p>
+                                    </div>
+                                    
+                                    <!-- Información adicional de precios -->
+                                    <div class="price-info" v-if="selectedInventoryItem">
+                                        <small class="text-muted">
+                                            <div v-if="selectedInventoryItem.attributes.margen_ganancia">
+                                                Margen: {{ selectedInventoryItem.attributes.margen_ganancia }}%
+                                            </div>
+                                            <div v-if="selectedInventoryItem.attributes.unidad_de_medida">
+                                                Unidad: {{ selectedInventoryItem.attributes.unidad_de_medida }}
+                                            </div>
+                                        </small>
                                     </div>
                                     
                                     <div class="product-add-to-cart">
@@ -182,10 +201,10 @@ export default {
         currentPrice() {
             if (this.selectedInventoryItem) {
                 const item = this.selectedInventoryItem.attributes;
-                if (item.en_oferta && item.precio_oferta) {
+                if (item.en_oferta && item.precio_oferta && item.precio_oferta > 0) {
                     return item.precio_oferta;
                 }
-                return item.precio_venta_sugerido || 0;
+                return item.precio_venta_sugerido || item.precio_unitario || 0;
             }
             return 0;
         },
@@ -206,6 +225,47 @@ export default {
     methods: {
         closeQuickView: mutations.toggleQuickView,
         
+        getProductImage() {
+            // Intentar obtener imagen desde diferentes fuentes
+            if (this.product.imagen_principal?.data?.attributes?.url) {
+                return this.product.imagen_principal.data.attributes.url;
+            }
+            if (this.product.imagen_principal?.url) {
+                return this.product.imagen_principal.url;
+            }
+            if (this.product.multimedia?.data?.[0]?.attributes?.url) {
+                return this.product.multimedia.data[0].attributes.url;
+            }
+            return '/placeholder-image.jpg'; // Imagen por defecto
+        },
+        
+        getProductType() {
+            // Intentar obtener tipo de producto desde grupos
+            if (this.product.grupos_de_productos?.data?.[0]?.attributes?.nombre) {
+                return this.product.grupos_de_productos.data[0].attributes.nombre;
+            }
+            if (this.product.grupo_de_productos?.data?.attributes?.nombre) {
+                return this.product.grupo_de_productos.data.attributes.nombre;
+            }
+            return 'General';
+        },
+        
+        getProductStatus() {
+            if (this.selectedInventoryItem) {
+                return this.selectedInventoryItem.attributes.estado_producto || 'Activo';
+            }
+            return this.product.activo ? 'Activo' : 'Inactivo';
+        },
+        
+        getStatusClass() {
+            const status = this.getProductStatus();
+            return {
+                'text-success': status === 'Activo',
+                'text-danger': status === 'Inactivo' || status === 'Descontinuado',
+                'text-warning': status === 'Agotado'
+            };
+        },
+        
         async fetchInventory() {
             this.loadingInventory = true;
             try {
@@ -214,15 +274,19 @@ export default {
                     return;
                 }
                 
+                console.log(`Fetching inventory for product ID: ${this.product.id}`);
+                
                 const response = await this.$axios.get(`/api/inventario-colores`, {
                     params: {
                         'filters[producto][id][$eq]': this.product.id,
-                        'populate': 'color,talla,producto'
+                        'populate[producto]': true,
+                        'populate[color]': true,
+                        'populate[talla]': true
                     }
                 });
                 
                 if (response.data.data && response.data.data.length > 0) {
-                    console.log(`QuickView: Found inventory data for product ${this.product.id}:`, response.data.data);
+                    console.log(`QuickView: Found ${response.data.data.length} inventory records for product ${this.product.id}`);
                     this.inventoryData = response.data.data;
                     this.processInventoryData();
                 } else {
@@ -244,38 +308,44 @@ export default {
             try {
                 console.log('Using product fallback for colors/sizes');
                 
-                // Intentar obtener colores del producto directamente
-                if (this.product.colores?.data) {
+                // Intentar obtener el producto completo con sus relaciones
+                const response = await this.$axios.get(`/api/productos/${this.product.id}`, {
+                    params: { 
+                        'populate[colores]': true,
+                        'populate[tallas]': true,
+                        'populate[grupos_de_productos]': true
+                    }
+                });
+                
+                const productData = response.data.data?.attributes || this.product;
+                
+                // Obtener colores
+                if (productData.colores?.data) {
+                    this.availableColors = productData.colores.data;
+                    console.log('Colors from product API:', this.availableColors.length);
+                } else if (this.product.colores?.data) {
                     this.availableColors = this.product.colores.data;
-                    console.log('Colors from product:', this.availableColors);
+                    console.log('Colors from product prop:', this.availableColors.length);
                 } else {
-                    // Intentar obtener colores del endpoint de productos
-                    const response = await this.$axios.get(`/api/productos/${this.product.id}`, {
-                        params: { 
-                            'populate': 'colores,tallas'
-                        }
-                    });
-                    
-                    if (response.data.data?.attributes?.colores?.data) {
-                        this.availableColors = response.data.data.attributes.colores.data;
-                        console.log('Colors from API:', this.availableColors);
-                    }
-                    
-                    // También obtener tallas si están disponibles
-                    if (response.data.data?.attributes?.tallas?.data) {
-                        this.availableSizes = response.data.data.attributes.tallas.data;
-                        console.log('Sizes from API:', this.availableSizes);
-                    }
+                    console.warn('No colors found for this product');
+                    this.availableColors = [];
+                }
+                
+                // Obtener tallas
+                if (productData.tallas?.data) {
+                    this.availableSizes = productData.tallas.data;
+                    console.log('Sizes from product API:', this.availableSizes.length);
+                } else if (this.product.tallas?.data) {
+                    this.availableSizes = this.product.tallas.data;
+                    console.log('Sizes from product prop:', this.availableSizes.length);
+                } else {
+                    console.warn('No sizes found for this product');
+                    this.availableSizes = [];
                 }
                 
                 // Auto-seleccionar primer color si hay disponibles
                 if (this.availableColors.length > 0 && !this.selectedColor) {
                     this.selectColor(this.availableColors[0]);
-                }
-                
-                // Si no hay inventario, mostrar mensaje apropiado
-                if (this.availableColors.length === 0) {
-                    console.warn('No colors found for this product');
                 }
                 
             } catch (error) {
@@ -286,18 +356,20 @@ export default {
         },
         
         processInventoryData() {
-            // Extraer colores únicos disponibles
+            // Extraer colores únicos disponibles con stock
             const colorsMap = new Map();
             
             this.inventoryData.forEach(item => {
                 const color = item.attributes.color?.data;
+                const stock = item.attributes.stock_actual || 0;
                 
-                if (color && !colorsMap.has(color.id)) {
+                if (color && stock > 0 && !colorsMap.has(color.id)) {
                     colorsMap.set(color.id, color);
                 }
             });
             
             this.availableColors = Array.from(colorsMap.values());
+            console.log(`Processed ${this.availableColors.length} colors with stock`);
             
             // Preseleccionar el primer color si no hay ninguno seleccionado
             if (this.availableColors.length > 0 && !this.selectedColor) {
@@ -309,11 +381,13 @@ export default {
             this.selectedColor = color;
             this.selectedSize = null; // Resetear talla al cambiar color
             this.updateAvailableSizes();
+            console.log(`Selected color: ${color.attributes.nombre}`);
         },
         
         selectSize(size) {
             if (this.getSizeStock(size) > 0) {
                 this.selectedSize = size;
+                console.log(`Selected size: ${size.attributes.nombre || size.attributes.sigla}`);
             }
         },
         
@@ -323,11 +397,12 @@ export default {
                 return;
             }
             
-            // Filtrar tallas disponibles para el color seleccionado
+            // Filtrar tallas disponibles para el color seleccionado con stock > 0
             const sizesForColor = this.inventoryData
                 .filter(item => 
                     item.attributes.color?.data?.id === this.selectedColor.id &&
-                    item.attributes.talla?.data // Verificar que existe la talla
+                    item.attributes.talla?.data && // Verificar que existe la talla
+                    item.attributes.stock_actual > 0 // Solo tallas con stock
                 )
                 .map(item => item.attributes.talla.data);
             
@@ -337,16 +412,13 @@ export default {
             );
             
             this.availableSizes = uniqueSizes;
-            console.log(`Tallas disponibles para color ${this.selectedColor.attributes.nombre}:`, this.availableSizes);
+            console.log(`Tallas disponibles para color ${this.selectedColor.attributes.nombre}:`, this.availableSizes.length);
             
             // Auto-seleccionar primera talla disponible con stock
             if (this.availableSizes.length > 0 && !this.selectedSize) {
-                const firstAvailableSize = this.availableSizes.find(size => this.getSizeStock(size) > 0);
-                if (firstAvailableSize) {
-                    this.selectSize(firstAvailableSize);
-                }
+                this.selectSize(this.availableSizes[0]);
             } else if (this.availableSizes.length === 0) {
-                console.warn('No se encontraron tallas para este color');
+                console.warn('No se encontraron tallas con stock para este color');
             }
         },
         
@@ -359,7 +431,6 @@ export default {
             );
             
             const stock = inventoryItem ? inventoryItem.attributes.stock_actual : 0;
-            console.log(`Stock para ${this.selectedColor.attributes?.nombre} - ${size.attributes?.nombre}: ${stock}`);
             return stock;
         },
         
@@ -392,13 +463,13 @@ export default {
                 price: this.currentPrice,
                 originalPrice: this.selectedInventoryItem?.attributes.precio_venta_sugerido || this.currentPrice,
                 onSale: this.selectedInventoryItem?.attributes.en_oferta || false,
-                image: product.imageUrl,
+                image: this.getProductImage(),
                 quantity: this.quantity,
-                size: this.selectedSize.attributes.nombre,
+                size: this.selectedSize.attributes.sigla || this.selectedSize.attributes.nombre,
                 sizeId: this.selectedSize.id,
                 color: this.selectedColor.attributes.nombre,
                 colorId: this.selectedColor.id,
-                colorCode: this.selectedColor.attributes.color_rgb,
+                colorCode: this.selectedColor.attributes.color_rgb || this.selectedColor.attributes.codigo_hex,
                 maxQuantity: this.currentStock,
                 inventoryId: this.selectedInventoryItem?.id
             };
@@ -451,9 +522,14 @@ export default {
         }
     },
     watch: {
-        product() {
-            this.resetSelections();
-            this.fetchInventory();
+        product: {
+            handler() {
+                this.resetSelections();
+                if (this.product.id) {
+                    this.fetchInventory();
+                }
+            },
+            deep: true
         },
         isQuickViewOpen(newVal) {
             if (newVal && this.product.id) {
@@ -887,6 +963,21 @@ export default {
             }
         }
     }
+    
+    .price-info {
+        margin-bottom: 15px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        
+        small {
+            font-size: 12px;
+            
+            div {
+                margin-bottom: 2px;
+            }
+        }
+    }
 }
 
 .product-color-switch {
@@ -1085,7 +1176,6 @@ export default {
                 }
             }
             
-            /* Nuevos estilos para tallas sin stock */
             &.disabled {
                 opacity: 0.5;
                 cursor: not-allowed;
@@ -1129,6 +1219,18 @@ export default {
 
 .font-weight-bold {
     font-weight: 700 !important;
+}
+
+.text-success {
+    color: #28a745 !important;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+}
+
+.text-muted {
+    color: #6c757d !important;
 }
 
 .input-counter.disabled {
@@ -1262,27 +1364,6 @@ export default {
                 border-color: #2a5ca8;
             }
         }
-    }
-}
-
-.view-full-info {
-    display: inline-block;
-    margin-top: auto;
-    font-size: 14px;
-    color: #4a89dc;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s;
-    
-    @media (max-width: 575.98px) {
-        font-size: 13px;
-        text-align: center;
-        display: block;
-    }
-    
-    &:hover {
-        color: #2a5ca8;
-        text-decoration: underline;
     }
 }
 </style>
