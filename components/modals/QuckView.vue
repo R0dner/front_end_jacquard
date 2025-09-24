@@ -208,12 +208,12 @@ export default {
                     return;
                 }
                 
-                const response = await this.$axios.get(`/api/inventario-colores`, {
+                const response = await this.$axios.get(`/api/inventario-color`, {
                     params: {
                         'filters[producto][id][$eq]': this.product.id,
-                        'populate[color][populate]': '*',
-                        'populate[talla][populate]': '*',
-                        'populate[producto][populate]': '*'
+                        'populate[color]': '*',
+                        'populate[talla]': '*',
+                        'populate[producto]': '*'
                     }
                 });
                 
@@ -222,17 +222,44 @@ export default {
                     this.processInventoryData();
                 } else {
                     console.warn('No inventory data found for this product');
-                    this.inventoryData = [];
-                    this.availableColors = [];
-                    this.availableSizes = [];
+                    // Fallback: usar información del producto
+                    await this.useProductFallback();
                 }
             } catch (error) {
                 console.error('Error fetching inventory:', error);
-                this.inventoryData = [];
-                this.availableColors = [];
-                this.availableSizes = [];
+                // Fallback: usar información del producto
+                await this.useProductFallback();
             } finally {
                 this.loadingInventory = false;
+            }
+        },
+        
+        // Fallback para usar información básica del producto
+        async useProductFallback() {
+            try {
+                if (this.product.colores?.data) {
+                    this.availableColors = this.product.colores.data;
+                } else {
+                    // Intentar obtener colores del endpoint de productos
+                    const response = await this.$axios.get(`/api/productos/${this.product.id}`, {
+                        params: { 
+                            'populate[colores]': '*',
+                            'populate[tallas]': '*'
+                        }
+                    });
+                    
+                    if (response.data.data?.attributes?.colores?.data) {
+                        this.availableColors = response.data.data.attributes.colores.data;
+                    }
+                }
+                
+                // Auto-seleccionar primer color si hay disponibles
+                if (this.availableColors.length > 0 && !this.selectedColor) {
+                    this.selectColor(this.availableColors[0]);
+                }
+            } catch (error) {
+                console.error('Error in product fallback:', error);
+                this.availableColors = [];
             }
         },
         
