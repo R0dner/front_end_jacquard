@@ -21,8 +21,6 @@ div(:class='className')
         .product-brand(v-if='product.marca?.data?.attributes?.nombre')
           span.brand-label Marca: 
           span.brand-name {{ product.marca.data.attributes.nombre }}
-        .product-colors(v-if='availableColorsCount > 0')
-          span.colors-label {{ availableColorsCount }} {{ availableColorsCount === 1 ? 'color disponible' : 'colores disponibles' }}
       .rating
         i.fas.fa-star
         i.fas.fa-star
