@@ -5,7 +5,6 @@ div(:class='className')
       div.product-clickable(@click.prevent='quickView')
         img(:src='getProductImageUrl(product)' @error='handleImageError')
       .out-of-stock-badge(v-if='isOutOfStock') Agotado
-      .low-stock-badge(v-else-if='isLowStock') Pocas unidades
       ul
         li
           a(href='javascript:void(0)' title='Ver mas' v-b-tooltip.hover @click.prevent='quickView')
@@ -17,10 +16,11 @@ div(:class='className')
     .product-content
       h3
         span.product-name(@click.prevent='quickView') {{product.nombre}}
-      .product-meta
-        .product-brand(v-if='product.marca?.data?.attributes?.nombre')
-          span.brand-label Marca: 
-          span.brand-name {{ product.marca.data.attributes.nombre }}
+        .product-price
+          span.old-price(v-if='product.en_oferta')
+            | Bs.{{product.precio_venta}}
+          span.new-price(v-if='product.en_oferta') Bs.{{product.precio_oferta}}
+          span.new-price(v-else) Bs.{{product.precio_venta}}
       .rating
         i.fas.fa-star
         i.fas.fa-star
@@ -35,9 +35,10 @@ div(:class='className')
       a.btn(
         v-else 
         href='javascript:void(0)' 
-        @click='quickView'
-        :class='isOutOfStock ? "btn-secondary disabled-btn" : "btn-primary"'
-      ) {{ isOutOfStock ? 'Ver Detalles' : 'Ver Opciones' }}
+        @click='addToCart(product)'
+        :class='isOutOfStock ? "btn-secondary disabled-btn" : "btn-light"'
+        :disabled='isOutOfStock'
+      ) {{ isOutOfStock ? 'Agotado' : 'Agregar al Carrito' }}
 </template>
 
 <script>
@@ -53,10 +54,7 @@ export default {
       api_url: process.env.strapiBaseUri,
       getExistPId: null,
       loadingInventory: false,
-      inventoryData: [],
-      availableColorsCount: 0,
-      totalStock: 0,
-      basicProductInfo: null // Para almacenar info básica del producto
+      inventoryData: null
     }
   },
   props: ['id', 'product', 'className'],
@@ -71,13 +69,18 @@ export default {
         return this.wishlist.some(item => item.id === this.id)
       },
       currentStock() {
-        return this.totalStock;
+        if (this.inventoryData) {
+          // CAMBIO CRÍTICO: usar stock_total en lugar de stock_actual
+          return this.inventoryData.stock_total || 0;
+        }
+        if (this.product.stock) {
+          return this.product.stock;
+        }
+        return 0;
       },
+      // Agregar computed para verificar si está agotado
       isOutOfStock() {
         return this.currentStock <= 0;
-      },
-      isLowStock() {
-        return this.currentStock > 0 && this.currentStock <= 5;
       }
     },
   methods: {
@@ -162,25 +165,25 @@ export default {
 
     // Añadir/quitar de la lista de deseados
     addToWishlist() {
-      // Obtener el precio base del primer item disponible para wishlist
-      const basePrice = this.getBasePrice();
-      
       const wishlistItem = {
         id: this.id,
         name: this.product.nombre,
-        price: basePrice,
+        price: this.product.en_oferta ? this.product.precio_oferta : this.product.precio_venta,
+        originalPrice: this.product.precio_venta,
+        onSale: this.product.en_oferta,
         image: this.getProductImageUrl(this.product),
         marca: this.product.marca,
-        stock: this.currentStock,
-        hasMultiplePrices: this.inventoryData.length > 1
+        stock: this.currentStock
       };
 
       if (this.isInWishlist) {
+        // Usar mutación en lugar de acción
         this.$store.commit('removeFromWishlist', this.id);
         this.$toast.info("Removido de la lista de deseados", {
           icon: 'fas fa-heart-broken'
         });
       } else {
+        // Usar mutación en lugar de acción
         this.$store.commit('addToWishlist', wishlistItem);
         this.$toast.success("Agregado a la lista de deseados", {
           icon: 'fas fa-heart'
@@ -189,22 +192,6 @@ export default {
       
       // Emitir evento global para actualizar el filtro
       this.$root.$emit('wishlist-updated');
-    },
-
-    // Obtener precio base para wishlist (el más bajo disponible)
-    getBasePrice() {
-      if (!this.inventoryData.length) return 0;
-      
-      const prices = this.inventoryData
-        .filter(item => item.attributes.stock_actual > 0)
-        .map(item => {
-          if (item.attributes.en_oferta && item.attributes.precio_oferta) {
-            return item.attributes.precio_oferta;
-          }
-          return item.attributes.precio_venta_sugerido || 0;
-        });
-      
-      return prices.length > 0 ? Math.min(...prices) : 0;
     },
 
     // QuickView mejorado
@@ -216,21 +203,21 @@ export default {
       const productForQuickView = {
         id: this.id,
         nombre: this.product.nombre,
+        precio: this.product.precio_venta,
+        precioOferta: this.product.precio_oferta,
+        enOferta: this.product.en_oferta,
         imageUrl: this.getProductImageUrl(this.product),
         marca: this.product.marca,
         grupo_de_productos: this.product.grupo_de_productos,
-        categoria: this.product.categoria,
-        // Agregar información de inventario
-        hasInventory: this.inventoryData.length > 0,
-        totalStock: this.totalStock,
-        colorsCount: this.availableColorsCount
+        stock: this.currentStock,
+        colores: this.product.colores,
+        categoria: this.product.categoria
       };
       
       // Emitir evento al componente padre
       this.$emit('clicked', productForQuickView);
     },
 
-    // Nueva función para obtener inventario por color
     async fetchInventory() {
       this.loadingInventory = true;
       try {
@@ -239,99 +226,89 @@ export default {
           return;
         }
         
-        // Primero obtener datos básicos del producto para fallback
-        await this.getProductBasicInfo();
-        
-        // Intentar obtener inventario detallado
-        const response = await this.$axios.get(`/api/inventario-colores`, {
+        const response = await this.$axios.get(`/api/inventarios`, {
           params: {
             'filters[producto][id][$eq]': this.id,
-            'populate': 'color,talla,producto'
+            'populate': '*'
           }
         });
         
         if (response.data.data && response.data.data.length > 0) {
-          console.log(`Found inventory data for product ${this.id}:`, response.data.data);
-          this.inventoryData = response.data.data;
-          this.processInventoryData();
+          this.inventoryData = response.data.data[0].attributes;
         } else {
-          console.warn(`No inventory data found for product ${this.id}, using basic product info`);
-          this.useBasicProductInfo();
+          console.warn('No inventory data found for this product');
+          // CAMBIO: usar stock_total
+          this.inventoryData = { stock_total: 0 };
         }
       } catch (error) {
         console.error('Error fetching inventory:', error);
-        console.log('Falling back to basic product information');
-        this.useBasicProductInfo();
+        // CAMBIO: usar stock_total
+        this.inventoryData = { stock_total: 0 };
       } finally {
         this.loadingInventory = false;
       }
     },
 
-    // Obtener información básica del producto como fallback
-    async getProductBasicInfo() {
-      try {
-        const response = await this.$axios.get(`/api/productos/${this.id}`, {
-          params: {
-            'populate[colores]': '*',
-            'populate[tallas]': '*'
-          }
-        });
-        
-        if (response.data.data) {
-          this.basicProductInfo = response.data.data.attributes;
-        }
-      } catch (error) {
-        console.error('Error fetching basic product info:', error);
-      }
-    },
-
-    // Usar información básica del producto cuando no hay inventario detallado
-    useBasicProductInfo() {
-      if (this.basicProductInfo) {
-        // Usar colores del producto
-        if (this.basicProductInfo.colores?.data) {
-          this.availableColorsCount = this.basicProductInfo.colores.data.length;
-        } else {
-          this.availableColorsCount = 0;
-        }
-        
-        // Stock por defecto o del producto
-        this.totalStock = this.product.stock || 0;
-      } else {
-        this.inventoryData = [];
-        this.totalStock = 0;
-        this.availableColorsCount = 0;
-      }
-    },
-
-    // Procesar datos del inventario
-    processInventoryData() {
-      // Calcular stock total
-      this.totalStock = this.inventoryData.reduce((total, item) => {
-        return total + (item.attributes.stock_actual || 0);
-      }, 0);
-
-      // Contar colores únicos
-      const uniqueColors = new Set();
-      this.inventoryData.forEach(item => {
-        if (item.attributes.color?.data?.id) {
-          uniqueColors.add(item.attributes.color.data.id);
-        }
-      });
-      this.availableColorsCount = uniqueColors.size;
-      
-      console.log(`Inventory processed: ${this.totalStock} total stock, ${this.availableColorsCount} colors`);
-    },
-
-    // Método simplificado - solo abre QuickView
     addToCart(item) {
-      // Redirigir al QuickView para seleccionar opciones
-      this.quickView({ preventDefault: () => {}, stopPropagation: () => {} });
+      if (this.isOutOfStock) {
+        this.$toast.error("Este producto está agotado", {
+          icon: 'fas fa-times-circle'
+        });
+        return;
+      }
+
+      const product = [{
+        id: this.id,
+        name: item.nombre,
+        price: item.en_oferta ? item.precio_oferta : item.precio_venta,
+        originalPrice: item.precio_venta,
+        onSale: item.en_oferta,
+        image: this.getProductImageUrl(item),
+        quantity: 1,
+        maxQuantity: this.currentStock
+      }]
+
+      if (this.cart.length > 0) {
+        let id = this.id 
+        this.getExistPId = id
+        let cartIndex = this.cart.findIndex(cart => {
+          return cart.id == id
+        })
+
+        if (cartIndex == -1) {
+          this.$store.dispatch('addToCart', product);
+          this.$toast("Agregado al Carrito", {
+            icon: 'fas fa-cart-plus'
+          });
+        } else {
+          // Verificar que no exceda el stock disponible
+          const currentCartQuantity = this.cart[cartIndex].quantity;
+          if (currentCartQuantity >= this.currentStock) {
+            this.$toast.error(`Solo hay ${this.currentStock} unidades disponibles`, {
+              icon: 'fas fa-exclamation-triangle'
+            });
+            return;
+          }
+          
+          this.$store.dispatch('updateCart', {
+            id, unit: 1, cart: this.cart
+          });
+          this.$toast.info("Ya fue agregado al carrito, y se incremento la cantidad en uno");
+        }
+      } else {
+        this.$store.dispatch('addToCart', product)
+        this.$toast("Agregado al Carrito", {
+          icon: 'fas fa-cart-plus'
+        });
+      }
     }
   },
   created() {
-    // Obtener inventario del nuevo sistema
-    this.fetchInventory();
+    if (this.product.inventory) {
+      this.inventoryData = this.product.inventory;
+    } else {
+      this.fetchInventory();
+    }
     
     // Inicializar el store de wishlist si no existe
     this.initializeWishlistStore();
@@ -356,22 +333,6 @@ export default {
   box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
 }
 
-.low-stock-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: #f39c12;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: bold;
-  z-index: 10;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(243, 156, 18, 0.3);
-}
-
 .disabled-btn {
   background-color: #6c757d !important;
   color: #fff !important;
@@ -379,17 +340,6 @@ export default {
   pointer-events: none !important;
   opacity: 0.65 !important;
   border-color: #6c757d !important;
-}
-
-.btn-primary {
-  background-color: #4a89dc;
-  border-color: #4a89dc;
-  color: #fff;
-}
-
-.btn-primary:hover {
-  background-color: #3a70c2;
-  border-color: #3a70c2;
 }
 
 .btn-secondary {
@@ -401,35 +351,6 @@ export default {
 .product-image {
   position: relative;
   overflow: hidden;
-}
-
-.product-meta {
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: #666;
-}
-
-.product-brand {
-  margin-bottom: 6px;
-}
-
-.brand-label {
-  color: #999;
-  font-weight: 500;
-}
-
-.brand-name {
-  color: #555;
-  font-weight: 600;
-}
-
-.product-colors {
-  color: #4a89dc;
-  font-weight: 500;
-}
-
-.colors-label {
-  font-size: 12px;
 }
 
 /* Efecto visual cuando el producto está agotado */
@@ -466,9 +387,6 @@ export default {
   color: inherit;
   text-decoration: none;
   transition: color 0.2s ease;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.3;
 }
 
 .product-name:hover {
@@ -498,17 +416,5 @@ export default {
 .btn.disabled-btn:hover {
   transform: none;
   background-color: #6c757d !important;
-}
-
-/* Estilos adicionales para mejor UX */
-.added-btn {
-  background-color: #28a745 !important;
-  border-color: #28a745 !important;
-  color: #fff !important;
-}
-
-.added-btn:hover {
-  background-color: #218838 !important;
-  border-color: #1e7e34 !important;
 }
 </style>
