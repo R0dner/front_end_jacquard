@@ -17,7 +17,8 @@
                         <div class="row align-items-center">
                             <div class="col-lg-6 col-md-6">
                                 <div class="productQuickView-image">
-                                    <img :src="product.imageUrl" alt="image">
+                                    <img v-if="productImage" :src="productImage" :alt="product.nombre">
+                                    <div v-else class="no-image">📦</div>
                                 </div>
                             </div>
                             <div class="col-lg-6 col-md-6">
@@ -179,14 +180,42 @@ export default {
                     return;
                 }
                 
-                const response = await this.$axios.get(`/api/inventario-colores`, {
-                    params: {
-                        'filters[producto][id][$eq]': this.product.id,
-                        'populate[producto]': '*',
-                        'populate[color]': '*',
-                        'populate[talla]': '*'
+                console.log('Fetching inventory for product ID:', this.product.id);
+                
+                // Primero intenta con diferentes nombres de endpoint
+                const possibleEndpoints = [
+                    'inventario-colores',
+                    'inventario-por-color-y-tallas', 
+                    'inventario-color-tallas',
+                    'inventario-color'
+                ];
+                
+                let response = null;
+                let usedEndpoint = '';
+                
+                for (const endpoint of possibleEndpoints) {
+                    try {
+                        console.log(`Trying endpoint: /api/${endpoint}`);
+                        response = await this.$axios.get(`/api/${endpoint}`, {
+                            params: {
+                                'filters[producto][id][$eq]': this.product.id,
+                                'populate[producto][populate]=imagen': '*',
+                                'populate[color]': '*',
+                                'populate[talla]': '*'
+                            }
+                        });
+                        usedEndpoint = endpoint;
+                        console.log(`Success with endpoint: /api/${endpoint}`);
+                        break;
+                    } catch (error) {
+                        console.log(`Failed with endpoint /api/${endpoint}:`, error.response?.status);
+                        continue;
                     }
-                });
+                }
+                
+                if (!response) {
+                    throw new Error('No valid endpoint found for inventory');
+                }
                 
                 if (response.data.data && response.data.data.length > 0) {
                     this.inventoryItems = response.data.data.map(item => ({
@@ -446,6 +475,21 @@ export default {
 
             if (prices.length === 0) return '0.00';
             return this.formatPrice(Math.min(...prices));
+        },
+
+        productImage() {
+            // Buscar imagen del producto principal
+            if (this.product.imagen?.data?.attributes?.url) {
+                return this.product.imagen.data.attributes.url;
+            }
+            if (this.product.imageUrl) {
+                return this.product.imageUrl;
+            }
+            // Buscar imagen en el primer item de inventario
+            if (this.inventoryItems.length > 0 && this.inventoryItems[0].producto?.imagen?.data?.attributes?.url) {
+                return this.inventoryItems[0].producto.imagen.data.attributes.url;
+            }
+            return null;
         }
     },
 
