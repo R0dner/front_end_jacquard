@@ -188,16 +188,54 @@ export default {
                     return;
                 }
                 
-                // Primero obtenemos todos los registros de inventario para este producto
-                const response = await this.$axios.get(`/api/inventario-color`, {
-                    params: {
-                        'filters[producto][id][$eq]': this.product.id,
-                        'populate': 'deep'
+                // Intentar diferentes endpoints hasta encontrar el correcto
+                const possibleEndpoints = [
+                    'inventario-colores',
+                    'inventario-color', 
+                    'inventarios-colores',
+                    'inventarios-color'
+                ];
+                
+                let response = null;
+                let workingEndpoint = null;
+                
+                for (const endpoint of possibleEndpoints) {
+                    try {
+                        console.log(`Trying endpoint: /api/${endpoint}`);
+                        response = await this.$axios.get(`/api/${endpoint}`, {
+                            params: {
+                                'filters[producto][id][$eq]': this.product.id,
+                                'populate': 'deep'
+                            }
+                        });
+                        workingEndpoint = endpoint;
+                        console.log(`Success with endpoint: /api/${endpoint}`);
+                        break;
+                    } catch (err) {
+                        console.log(`Failed with endpoint: /api/${endpoint}`, err.response?.status);
+                        continue;
                     }
-                });
+                }
                 
-                console.log('Inventory response:', response.data); // Para debug
+                if (!response) {
+                    console.error('No working endpoint found for inventory');
+                    // Fallback al inventario general
+                    try {
+                        response = await this.$axios.get(`/api/inventarios`, {
+                            params: {
+                                'filters[producto][id][$eq]': this.product.id,
+                                'populate': 'deep'
+                            }
+                        });
+                        console.log('Using fallback general inventory');
+                    } catch (fallbackError) {
+                        console.error('Fallback also failed:', fallbackError);
+                        this.inventoryData = [];
+                        return;
+                    }
+                }
                 
+                console.log('Inventory response:', response.data);
                 this.inventoryData = response.data.data || [];
                 this.processSizesAndColors();
                 
