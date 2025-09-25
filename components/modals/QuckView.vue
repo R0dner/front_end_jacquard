@@ -189,7 +189,7 @@ export default {
                 }
                 
                 // Primero obtenemos todos los registros de inventario para este producto
-                const response = await this.$axios.get(`/api/inventario-colores`, {
+                const response = await this.$axios.get(`/api/inventario-color`, {
                     params: {
                         'filters[producto][id][$eq]': this.product.id,
                         'populate': 'deep'
