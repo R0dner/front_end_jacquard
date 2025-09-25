@@ -188,16 +188,15 @@ export default {
                     return;
                 }
                 
+                // Primero obtenemos todos los registros de inventario para este producto
                 const response = await this.$axios.get(`/api/inventario-colores`, {
                     params: {
                         'filters[producto][id][$eq]': this.product.id,
-                        'filters[stock_actual][$gt]': 0, // Solo items con stock
-                        'filters[estado_producto][$eq]': 'Activo',
-                        'populate[producto]': '*',
-                        'populate[color]': '*',
-                        'populate[talla]': '*'
+                        'populate': 'deep'
                     }
                 });
+                
+                console.log('Inventory response:', response.data); // Para debug
                 
                 this.inventoryData = response.data.data || [];
                 this.processSizesAndColors();
@@ -211,11 +210,20 @@ export default {
         },
         
         processSizesAndColors() {
-            // Extraer tallas únicas disponibles
+            if (!this.inventoryData.length) {
+                this.availableSizes = [];
+                return;
+            }
+            
+            // Extraer tallas únicas disponibles (con stock > 0)
             const sizesMap = new Map();
             this.inventoryData.forEach(item => {
-                const talla = item.attributes.talla?.data;
-                if (talla && item.attributes.stock_actual > 0) {
+                const attributes = item.attributes;
+                const talla = attributes.talla?.data;
+                
+                // Solo incluir si tiene stock y está activo
+                if (talla && attributes.stock_actual > 0 && 
+                    attributes.estado_producto === 'Activo') {
                     sizesMap.set(talla.id, {
                         id: talla.id,
                         sigla: talla.attributes.sigla,
@@ -225,6 +233,7 @@ export default {
             });
             
             this.availableSizes = Array.from(sizesMap.values());
+            console.log('Available sizes:', this.availableSizes); // Para debug
             
             // Auto-seleccionar primera talla si no hay una seleccionada
             if (this.availableSizes.length > 0 && !this.selectedSize) {
@@ -241,12 +250,14 @@ export default {
             // Filtrar colores disponibles para la talla seleccionada
             const colorsMap = new Map();
             this.inventoryData.forEach(item => {
-                const talla = item.attributes.talla?.data;
-                const color = item.attributes.color?.data;
+                const attributes = item.attributes;
+                const talla = attributes.talla?.data;
+                const color = attributes.color?.data;
                 
                 if (talla && color && 
                     talla.id === this.selectedSize.id && 
-                    item.attributes.stock_actual > 0) {
+                    attributes.stock_actual > 0 &&
+                    attributes.estado_producto === 'Activo') {
                     colorsMap.set(color.id, {
                         id: color.id,
                         nombre: color.attributes.nombre,
@@ -256,6 +267,7 @@ export default {
             });
             
             this.availableColorsForSize = Array.from(colorsMap.values());
+            console.log('Available colors for size:', this.availableColorsForSize); // Para debug
             
             // Auto-seleccionar primer color si no hay uno seleccionado
             if (this.availableColorsForSize.length > 0 && !this.selectedColor) {
