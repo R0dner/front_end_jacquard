@@ -265,7 +265,7 @@ export default {
             }
         },
         
-        processGeneralInventory() {
+processGeneralInventory() {
             console.log('Processing general inventory - using product relations');
             console.log('Product tallas:', this.product.tallas);
             console.log('Product colores:', this.product.colores);
@@ -278,54 +278,17 @@ export default {
                     descripcion: talla.attributes.descripcion
                 }));
                 console.log('Using real sizes from product relations');
+                
+                // Auto-seleccionar primera talla
+                if (this.availableSizes.length > 0 && !this.selectedSize) {
+                    this.selectSize(this.availableSizes[0]);
+                }
             } else {
-                console.log('No tallas found in product relations, using defaults');
-                // Solo usar por defecto si realmente no hay datos
-                this.availableSizes = [
-                    { id: 'xs', sigla: 'XS', descripcion: 'Extra Small' },
-                    { id: 's', sigla: 'S', descripcion: 'Small' },
-                    { id: 'm', sigla: 'M', descripcion: 'Medium' },
-                    { id: 'l', sigla: 'L', descripcion: 'Large' },
-                    { id: 'xl', sigla: 'XL', descripcion: 'Extra Large' }
-                ];
+                console.log('No tallas found in product relations');
+                this.availableSizes = [];
             }
             
             console.log('Available sizes from product:', this.availableSizes);
-            
-            // Auto-seleccionar primera talla
-            if (this.availableSizes.length > 0 && !this.selectedSize) {
-                this.selectSize(this.availableSizes[0]);
-            }
-        },
-        
-        loadColorsForGeneralInventory() {
-            console.log('Loading colors for general inventory');
-            console.log('Product colores data:', this.product.colores);
-            
-            // Obtener colores desde las relaciones del producto
-            if (this.product.colores?.data && this.product.colores.data.length > 0) {
-                this.availableColorsForSize = this.product.colores.data.map(color => ({
-                    id: color.id,
-                    nombre: color.attributes.nombre,
-                    color_rgb: color.attributes.color_rgb || '#000000'
-                }));
-                console.log('Using real colors from product relations');
-            } else {
-                console.log('No colores found in product relations, using defaults');
-                // Solo usar por defecto si realmente no hay datos
-                this.availableColorsForSize = [
-                    { id: 'negro', nombre: 'Negro', color_rgb: '#000000' },
-                    { id: 'blanco', nombre: 'Blanco', color_rgb: '#FFFFFF' },
-                    { id: 'gris', nombre: 'Gris', color_rgb: '#808080' }
-                ];
-            }
-            
-            console.log('Available colors from product:', this.availableColorsForSize);
-            
-            // Auto-seleccionar primer color
-            if (this.availableColorsForSize.length > 0 && !this.selectedColor) {
-                this.selectColor(this.availableColorsForSize[0]);
-            }
         },
         
         loadColorsForSize() {
