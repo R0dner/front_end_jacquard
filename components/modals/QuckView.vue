@@ -172,15 +172,8 @@ export default {
         
         selectSize(talla) {
             this.selectedSize = talla;
-            this.selectedColor = null; // Reset color when size changes
-            
-            // Si tenemos inventario detallado, usar el método específico
-            if (this.inventoryData.length > 0 && this.inventoryData[0].attributes.stock_actual !== undefined) {
-                this.loadColorsForSize();
-            } else {
-                // Si solo tenemos inventario general, usar colores desde relaciones del producto
-                this.loadColorsForGeneralInventory();
-            }
+            this.selectedColor = null;
+            this.loadColorsForSize();
         },
         
         selectColor(color) {
@@ -195,9 +188,12 @@ export default {
                     return;
                 }
                 
-                console.log('Product data received:', this.product);
+                console.log('Fetching inventory for product:', this.product.id);
                 
-                console.log(`Trying correct endpoint: /api/inventario-color`);
+                // Primero obtener el producto completo con sus relaciones
+                await this.fetchProductWithRelations();
+                
+                // Luego obtener el inventario detallado
                 const response = await this.$axios.get(`/api/inventario-color`, {
                     params: {
                         'filters[producto][id][$eq]': this.product.id,
@@ -207,36 +203,25 @@ export default {
                     }
                 });
                 
-                console.log('Success with inventario-color endpoint!');
-                console.log('Detailed inventory response:', JSON.stringify(response.data, null, 2));
+                console.log('Inventory response:', response.data);
                 
                 this.inventoryData = response.data.data || [];
-                this.processSizesAndColors();
+                
+                // Procesar tallas y colores desde el inventario
+                if (this.inventoryData.length > 0) {
+                    this.processSizesFromInventory();
+                } else {
+                    // Si no hay inventario detallado, usar las tallas del producto
+                    this.processSizesFromProduct();
+                }
                 
             } catch (error) {
-                console.error('Error fetching detailed inventory:', error);
-                console.log('Trying fallback to general inventory...');
+                console.error('Error fetching inventory:', error);
                 
-                // Fallback al inventario general
-                try {
-                    const fallbackResponse = await this.$axios.get(`/api/inventarios`, {
-                        params: {
-                            'filters[producto][id][$eq]': this.product.id,
-                            'populate': 'deep'
-                        }
-                    });
-                    console.log('Using fallback general inventory');
-                    
-                    // También obtener el producto completo con sus relaciones
-                    await this.fetchProductWithRelations();
-                    
-                    this.inventoryData = fallbackResponse.data.data || [];
-                    this.processGeneralInventory();
-                    
-                } catch (fallbackError) {
-                    console.error('Fallback also failed:', fallbackError);
-                    this.inventoryData = [];
-                }
+                // Fallback: usar las tallas directamente del producto
+                await this.fetchProductWithRelations();
+                this.processSizesFromProduct();
+                
             } finally {
                 this.loadingInventory = false;
             }
@@ -244,19 +229,20 @@ export default {
         
         async fetchProductWithRelations() {
             try {
-                console.log('Fetching product with full relations...');
+                console.log('Fetching product with relations...');
                 const response = await this.$axios.get(`/api/productos/${this.product.id}`, {
                     params: {
                         'populate[tallas]': '*',
                         'populate[colores]': '*',
-                        'populate[grupos_de_productos]': '*'
+                        'populate[grupos_de_productos]': '*',
+                        'populate[imagen_principal]': '*'
                     }
                 });
                 
-                console.log('Product with relations:', JSON.stringify(response.data, null, 2));
+                console.log('Product with relations:', response.data);
                 
-                // Actualizar el objeto product con las relaciones completas
                 if (response.data.data) {
+                    // Actualizar el producto con las relaciones completas
                     Object.assign(this.product, response.data.data.attributes);
                 }
                 
@@ -265,66 +251,82 @@ export default {
             }
         },
         
-        processGeneralInventory() {
-            console.log('Processing general inventory - using product relations');
-            console.log('Product tallas:', this.product.tallas);
-            console.log('Product colores:', this.product.colores);
+        processSizesFromInventory() {
+            console.log('Processing sizes from inventory...');
             
-            // Obtener tallas desde las relaciones del producto
+            // Extraer tallas únicas del inventario con stock disponible
+            const tallasMap = new Map();
+            
+            this.inventoryData.forEach(item => {
+                const attributes = item.attributes;
+                const talla = attributes.talla?.data;
+                
+                if (talla && attributes.stock_actual > 0 && attributes.estado_producto === 'Activo') {
+                    if (!tallasMap.has(talla.id)) {
+                        tallasMap.set(talla.id, {
+                            id: talla.id,
+                            sigla: talla.attributes.sigla,
+                            descripcion: talla.attributes.descripcion
+                        });
+                    }
+                }
+            });
+            
+            this.availableSizes = Array.from(tallasMap.values());
+            
+            // Ordenar tallas por un orden predefinido
+            const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
+            this.availableSizes.sort((a, b) => {
+                const indexA = sizeOrder.indexOf(a.sigla.toUpperCase());
+                const indexB = sizeOrder.indexOf(b.sigla.toUpperCase());
+                
+                if (indexA !== -1 && indexB !== -1) {
+                    return indexA - indexB;
+                }
+                
+                return a.sigla.localeCompare(b.sigla);
+            });
+            
+            console.log('Available sizes from inventory:', this.availableSizes);
+            
+            // Auto-seleccionar primera talla si hay disponibles
+            if (this.availableSizes.length > 0 && !this.selectedSize) {
+                this.selectSize(this.availableSizes[0]);
+            }
+        },
+        
+        processSizesFromProduct() {
+            console.log('Processing sizes from product relations...');
+            
             if (this.product.tallas?.data && this.product.tallas.data.length > 0) {
                 this.availableSizes = this.product.tallas.data.map(talla => ({
                     id: talla.id,
                     sigla: talla.attributes.sigla,
                     descripcion: talla.attributes.descripcion
                 }));
-                console.log('Using real sizes from product relations');
+                
+                // Ordenar tallas
+                const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
+                this.availableSizes.sort((a, b) => {
+                    const indexA = sizeOrder.indexOf(a.sigla.toUpperCase());
+                    const indexB = sizeOrder.indexOf(b.sigla.toUpperCase());
+                    
+                    if (indexA !== -1 && indexB !== -1) {
+                        return indexA - indexB;
+                    }
+                    
+                    return a.sigla.localeCompare(b.sigla);
+                });
+                
+                console.log('Available sizes from product:', this.availableSizes);
+                
+                // Auto-seleccionar primera talla
+                if (this.availableSizes.length > 0 && !this.selectedSize) {
+                    this.selectSize(this.availableSizes[0]);
+                }
             } else {
-                console.log('No tallas found in product relations, using defaults');
-                // Solo usar por defecto si realmente no hay datos
-                this.availableSizes = [
-                    { id: 'xs', sigla: 'XS', descripcion: 'Extra Small' },
-                    { id: 's', sigla: 'S', descripcion: 'Small' },
-                    { id: 'm', sigla: 'M', descripcion: 'Medium' },
-                    { id: 'l', sigla: 'L', descripcion: 'Large' },
-                    { id: 'xl', sigla: 'XL', descripcion: 'Extra Large' }
-                ];
-            }
-            
-            console.log('Available sizes from product:', this.availableSizes);
-            
-            // Auto-seleccionar primera talla
-            if (this.availableSizes.length > 0 && !this.selectedSize) {
-                this.selectSize(this.availableSizes[0]);
-            }
-        },
-        
-        loadColorsForGeneralInventory() {
-            console.log('Loading colors for general inventory');
-            console.log('Product colores data:', this.product.colores);
-            
-            // Obtener colores desde las relaciones del producto
-            if (this.product.colores?.data && this.product.colores.data.length > 0) {
-                this.availableColorsForSize = this.product.colores.data.map(color => ({
-                    id: color.id,
-                    nombre: color.attributes.nombre,
-                    color_rgb: color.attributes.color_rgb || '#000000'
-                }));
-                console.log('Using real colors from product relations');
-            } else {
-                console.log('No colores found in product relations, using defaults');
-                // Solo usar por defecto si realmente no hay datos
-                this.availableColorsForSize = [
-                    { id: 'negro', nombre: 'Negro', color_rgb: '#000000' },
-                    { id: 'blanco', nombre: 'Blanco', color_rgb: '#FFFFFF' },
-                    { id: 'gris', nombre: 'Gris', color_rgb: '#808080' }
-                ];
-            }
-            
-            console.log('Available colors from product:', this.availableColorsForSize);
-            
-            // Auto-seleccionar primer color
-            if (this.availableColorsForSize.length > 0 && !this.selectedColor) {
-                this.selectColor(this.availableColorsForSize[0]);
+                console.warn('No sizes found in product relations');
+                this.availableSizes = [];
             }
         },
         
@@ -334,29 +336,46 @@ export default {
                 return;
             }
             
-            // Filtrar colores disponibles para la talla seleccionada
-            const colorsMap = new Map();
-            this.inventoryData.forEach(item => {
-                const attributes = item.attributes;
-                const talla = attributes.talla?.data;
-                const color = attributes.color?.data;
+            console.log('Loading colors for size:', this.selectedSize.sigla);
+            
+            // Si hay inventario detallado, usar esos datos
+            if (this.inventoryData.length > 0 && this.inventoryData[0].attributes.stock_actual !== undefined) {
+                const colorsMap = new Map();
                 
-                if (talla && color && 
-                    talla.id === this.selectedSize.id && 
-                    attributes.stock_actual > 0 &&
-                    attributes.estado_producto === 'Activo') {
-                    colorsMap.set(color.id, {
+                this.inventoryData.forEach(item => {
+                    const attributes = item.attributes;
+                    const talla = attributes.talla?.data;
+                    const color = attributes.color?.data;
+                    
+                    if (talla && color && 
+                        talla.id === this.selectedSize.id && 
+                        attributes.stock_actual > 0 &&
+                        attributes.estado_producto === 'Activo') {
+                        colorsMap.set(color.id, {
+                            id: color.id,
+                            nombre: color.attributes.nombre,
+                            color_rgb: color.attributes.color_rgb || '#000000'
+                        });
+                    }
+                });
+                
+                this.availableColorsForSize = Array.from(colorsMap.values());
+            } else {
+                // Fallback: usar todos los colores del producto
+                if (this.product.colores?.data && this.product.colores.data.length > 0) {
+                    this.availableColorsForSize = this.product.colores.data.map(color => ({
                         id: color.id,
                         nombre: color.attributes.nombre,
                         color_rgb: color.attributes.color_rgb || '#000000'
-                    });
+                    }));
+                } else {
+                    this.availableColorsForSize = [];
                 }
-            });
+            }
             
-            this.availableColorsForSize = Array.from(colorsMap.values());
-            console.log('Available colors for size:', this.availableColorsForSize); // Para debug
+            console.log('Available colors for size:', this.availableColorsForSize);
             
-            // Auto-seleccionar primer color si no hay uno seleccionado
+            // Auto-seleccionar primer color si hay disponibles
             if (this.availableColorsForSize.length > 0 && !this.selectedColor) {
                 this.selectColor(this.availableColorsForSize[0]);
             }
@@ -398,7 +417,7 @@ export default {
                 colorId: this.selectedColor.id,
                 colorCode: this.selectedColor.color_rgb,
                 maxQuantity: this.currentStock,
-                variantId: this.currentVariant?.id // ID de la variante específica
+                variantId: this.currentVariant?.id
             };
             
             this.$store.dispatch('addToCart', cartItem);
@@ -467,6 +486,7 @@ export default {
             this.selectedColor = null;
             this.availableSizes = [];
             this.availableColorsForSize = [];
+            this.inventoryData = [];
         }
     },
     
@@ -484,37 +504,39 @@ export default {
                 return null;
             }
             
-            return this.inventoryData.find(item => {
+            const variant = this.inventoryData.find(item => {
                 const talla = item.attributes.talla?.data;
                 const color = item.attributes.color?.data;
                 return talla?.id === this.selectedSize.id && 
                        color?.id === this.selectedColor.id;
-            })?.attributes;
+            });
+            
+            return variant?.attributes || null;
         },
         
         currentStock() {
+            if (this.currentVariant && this.currentVariant.stock_actual !== undefined) {
+                return this.currentVariant.stock_actual;
+            }
+            
+            // Fallback si no hay variante específica
             if (this.inventoryData.length > 0) {
-                // Si tenemos inventario detallado
-                if (this.inventoryData[0].attributes.stock_actual !== undefined) {
-                    return this.currentVariant?.stock_actual || 0;
-                } else {
-                    // Si tenemos inventario general
-                    return this.inventoryData[0].attributes.stock_total || 0;
+                const generalInventory = this.inventoryData[0].attributes;
+                if (generalInventory.stock_total !== undefined) {
+                    return generalInventory.stock_total;
                 }
             }
+            
             return 0;
         },
         
         currentPrice() {
-            // Para inventario general, usar precio base del producto o un valor por defecto
-            if (this.inventoryData.length > 0 && this.inventoryData[0].attributes.stock_total !== undefined) {
-                // Inventario general - usar precio del producto si existe
+            if (!this.currentVariant) {
+                // Fallback al precio del producto
                 return this.product.precio || this.product.precioOferta || 0;
             }
             
-            // Para inventario detallado (si funciona en el futuro)
-            if (!this.currentVariant) return 0;
-            
+            // Verificar si está en oferta y la oferta está vigente
             if (this.currentVariant.en_oferta && this.currentVariant.precio_oferta) {
                 const now = new Date();
                 const inicioOferta = this.currentVariant.fecha_inicio_oferta ? 
@@ -534,14 +556,19 @@ export default {
         },
         
         isOutOfStock() {
-           return this.currentStock <= 0;
+            return this.currentStock <= 0;
         }
     },
     
     watch: {
-        product() {
-            this.resetSelections();
-            this.fetchInventoryData();
+        product: {
+            handler(newVal) {
+                if (newVal && newVal.id) {
+                    this.resetSelections();
+                    this.fetchInventoryData();
+                }
+            },
+            deep: true
         },
         
         isQuickViewOpen(newVal) {
@@ -553,16 +580,16 @@ export default {
         },
         
         selectedSize() {
-            this.quantity = 1; // Reset quantity when changing size
+            this.quantity = 1;
         },
         
         selectedColor() {
-            this.quantity = 1; // Reset quantity when changing color
+            this.quantity = 1;
         }
     },
     
     mounted() {
-        if (this.product.id) {
+        if (this.product && this.product.id) {
             this.fetchInventoryData();
         }
     }
