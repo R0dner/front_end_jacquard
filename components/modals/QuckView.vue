@@ -228,6 +228,7 @@ export default {
                             }
                         });
                         console.log('Using fallback general inventory');
+                        console.log('Full response structure:', JSON.stringify(response.data, null, 2));
                     } catch (fallbackError) {
                         console.error('Fallback also failed:', fallbackError);
                         this.inventoryData = [];
