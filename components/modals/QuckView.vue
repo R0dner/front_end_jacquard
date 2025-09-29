@@ -195,6 +195,8 @@ export default {
                     return;
                 }
                 
+                console.log('Product data received:', this.product);
+                
                 console.log(`Trying correct endpoint: /api/inventario-color`);
                 const response = await this.$axios.get(`/api/inventario-color`, {
                     params: {
@@ -224,9 +226,10 @@ export default {
                         }
                     });
                     console.log('Using fallback general inventory');
-                    console.log('General inventory structure:', JSON.stringify(fallbackResponse.data, null, 2));
                     
-                    // Usar datos del inventario general pero sin tallas/colores específicos
+                    // También obtener el producto completo con sus relaciones
+                    await this.fetchProductWithRelations();
+                    
                     this.inventoryData = fallbackResponse.data.data || [];
                     this.processGeneralInventory();
                     
@@ -239,19 +242,45 @@ export default {
             }
         },
         
+        async fetchProductWithRelations() {
+            try {
+                console.log('Fetching product with full relations...');
+                const response = await this.$axios.get(`/api/productos/${this.product.id}`, {
+                    params: {
+                        'populate[tallas]': '*',
+                        'populate[colores]': '*',
+                        'populate[grupos_de_productos]': '*'
+                    }
+                });
+                
+                console.log('Product with relations:', JSON.stringify(response.data, null, 2));
+                
+                // Actualizar el objeto product con las relaciones completas
+                if (response.data.data) {
+                    Object.assign(this.product, response.data.data.attributes);
+                }
+                
+            } catch (error) {
+                console.error('Error fetching product relations:', error);
+            }
+        },
+        
         processGeneralInventory() {
-            // Si solo tenemos inventario general, usar las tallas y colores desde las relaciones del producto
             console.log('Processing general inventory - using product relations');
+            console.log('Product tallas:', this.product.tallas);
+            console.log('Product colores:', this.product.colores);
             
             // Obtener tallas desde las relaciones del producto
-            if (this.product.tallas?.data) {
+            if (this.product.tallas?.data && this.product.tallas.data.length > 0) {
                 this.availableSizes = this.product.tallas.data.map(talla => ({
                     id: talla.id,
                     sigla: talla.attributes.sigla,
                     descripcion: talla.attributes.descripcion
                 }));
+                console.log('Using real sizes from product relations');
             } else {
-                // Tallas por defecto si no hay relaciones
+                console.log('No tallas found in product relations, using defaults');
+                // Solo usar por defecto si realmente no hay datos
                 this.availableSizes = [
                     { id: 'xs', sigla: 'XS', descripcion: 'Extra Small' },
                     { id: 's', sigla: 'S', descripcion: 'Small' },
@@ -270,15 +299,20 @@ export default {
         },
         
         loadColorsForGeneralInventory() {
+            console.log('Loading colors for general inventory');
+            console.log('Product colores data:', this.product.colores);
+            
             // Obtener colores desde las relaciones del producto
-            if (this.product.colores?.data) {
+            if (this.product.colores?.data && this.product.colores.data.length > 0) {
                 this.availableColorsForSize = this.product.colores.data.map(color => ({
                     id: color.id,
                     nombre: color.attributes.nombre,
                     color_rgb: color.attributes.color_rgb || '#000000'
                 }));
+                console.log('Using real colors from product relations');
             } else {
-                // Colores por defecto si no hay relaciones
+                console.log('No colores found in product relations, using defaults');
+                // Solo usar por defecto si realmente no hay datos
                 this.availableColorsForSize = [
                     { id: 'negro', nombre: 'Negro', color_rgb: '#000000' },
                     { id: 'blanco', nombre: 'Blanco', color_rgb: '#FFFFFF' },
@@ -459,13 +493,28 @@ export default {
         },
         
         currentStock() {
-            return this.currentVariant?.stock_actual || 0;
+            if (this.inventoryData.length > 0) {
+                // Si tenemos inventario detallado
+                if (this.inventoryData[0].attributes.stock_actual !== undefined) {
+                    return this.currentVariant?.stock_actual || 0;
+                } else {
+                    // Si tenemos inventario general
+                    return this.inventoryData[0].attributes.stock_total || 0;
+                }
+            }
+            return 0;
         },
         
         currentPrice() {
+            // Para inventario general, usar precio base del producto o un valor por defecto
+            if (this.inventoryData.length > 0 && this.inventoryData[0].attributes.stock_total !== undefined) {
+                // Inventario general - usar precio del producto si existe
+                return this.product.precio || this.product.precioOferta || 0;
+            }
+            
+            // Para inventario detallado (si funciona en el futuro)
             if (!this.currentVariant) return 0;
             
-            // Si está en oferta y dentro del periodo válido
             if (this.currentVariant.en_oferta && this.currentVariant.precio_oferta) {
                 const now = new Date();
                 const inicioOferta = this.currentVariant.fecha_inicio_oferta ? 
@@ -473,7 +522,6 @@ export default {
                 const finOferta = this.currentVariant.fecha_fin_oferta ? 
                     new Date(this.currentVariant.fecha_fin_oferta) : null;
                 
-                // Verificar si la oferta está vigente
                 const ofertaVigente = (!inicioOferta || now >= inicioOferta) && 
                                      (!finOferta || now <= finOferta);
                 
