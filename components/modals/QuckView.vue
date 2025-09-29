@@ -172,15 +172,8 @@ export default {
         
         selectSize(talla) {
             this.selectedSize = talla;
-            this.selectedColor = null; // Reset color when size changes
-            
-            // Si tenemos inventario detallado, usar el método específico
-            if (this.inventoryData.length > 0 && this.inventoryData[0].attributes.stock_actual !== undefined) {
-                this.loadColorsForSize();
-            } else {
-                // Si solo tenemos inventario general, usar colores desde relaciones del producto
-                this.loadColorsForGeneralInventory();
-            }
+            this.selectedColor = null;
+            this.loadColorsForSize();
         },
         
         selectColor(color) {
@@ -195,77 +188,136 @@ export default {
                     return;
                 }
                 
-                console.log('Product data received:', this.product);
+                console.log('Fetching inventory for product:', this.product.id);
                 
-                console.log(`Trying correct endpoint: /api/inventario-color`);
-                const response = await this.$axios.get(`/api/inventario-color`, {
-                    params: {
-                        'filters[producto][id][$eq]': this.product.id,
-                        'populate[color]': '*',
-                        'populate[talla]': '*',
-                        'populate[producto]': '*'
+                // Primero intentar con diferentes nombres posibles del endpoint
+                const possibleEndpoints = [
+                    'inventario-colors',  // Plural con guión
+                    'inventario-color',   // Singular con guión
+                    'inventarioColors',   // camelCase plural
+                    'inventarioColor'     // camelCase singular
+                ];
+                
+                let response = null;
+                let workingEndpoint = null;
+                
+                for (const endpoint of possibleEndpoints) {
+                    try {
+                        console.log(`Trying endpoint: /api/${endpoint}`);
+                        response = await this.$axios.get(`/api/${endpoint}`, {
+                            params: {
+                                'filters[producto][id][$eq]': this.product.id,
+                                'populate[color][fields][0]': 'nombre',
+                                'populate[color][fields][1]': 'color_rgb',
+                                'populate[talla][fields][0]': 'sigla',
+                                'populate[talla][fields][1]': 'descripcion',
+                                'filters[stock_actual][$gt]': 0,
+                                'filters[estado_producto][$eq]': 'Activo'
+                            }
+                        });
+                        workingEndpoint = endpoint;
+                        console.log(`✓ Success with endpoint: ${endpoint}`);
+                        break;
+                    } catch (error) {
+                        console.log(`✗ Failed with endpoint: ${endpoint}`, error.response?.status);
+                        continue;
                     }
-                });
+                }
                 
-                console.log('Success with inventario-color endpoint!');
-                console.log('Detailed inventory response:', JSON.stringify(response.data, null, 2));
+                if (!response || !response.data) {
+                    console.warn('No working endpoint found, falling back to general inventory');
+                    await this.fallbackToGeneralInventory();
+                    return;
+                }
+                
+                console.log('Detailed inventory response:', response.data);
                 
                 this.inventoryData = response.data.data || [];
-                this.processSizesAndColors();
+                
+                if (this.inventoryData.length > 0) {
+                    this.processSizesAndColors();
+                } else {
+                    console.log('No inventory items found, using general inventory');
+                    await this.fallbackToGeneralInventory();
+                }
                 
             } catch (error) {
-                console.error('Error fetching detailed inventory:', error);
-                console.log('Trying fallback to general inventory...');
-                
-                // Fallback al inventario general
-                try {
-                    const fallbackResponse = await this.$axios.get(`/api/inventarios`, {
-                        params: {
-                            'filters[producto][id][$eq]': this.product.id,
-                            'populate': 'deep'
-                        }
-                    });
-                    console.log('Using fallback general inventory');
-                    
-                    // También obtener el producto completo con sus relaciones
-                    await this.fetchProductWithRelations();
-                    
-                    this.inventoryData = fallbackResponse.data.data || [];
-                    this.processGeneralInventory();
-                    
-                } catch (fallbackError) {
-                    console.error('Fallback also failed:', fallbackError);
-                    this.inventoryData = [];
-                }
+                console.error('Error in fetchInventoryData:', error);
+                await this.fallbackToGeneralInventory();
             } finally {
                 this.loadingInventory = false;
             }
         },
         
-        async fetchProductWithRelations() {
+        async fallbackToGeneralInventory() {
             try {
-                console.log('Fetching product with full relations...');
-                const response = await this.$axios.get(`/api/productos/${this.product.id}`, {
+                console.log('Using fallback: general inventory');
+                
+                // Obtener inventario general
+                const invResponse = await this.$axios.get(`/api/inventarios`, {
                     params: {
-                        'populate[tallas]': '*',
-                        'populate[colores]': '*',
-                        'populate[grupos_de_productos]': '*'
+                        'filters[producto][id][$eq]': this.product.id,
+                        'populate': '*'
                     }
                 });
                 
-                console.log('Product with relations:', JSON.stringify(response.data, null, 2));
+                // Obtener producto con todas sus relaciones
+                const prodResponse = await this.$axios.get(`/api/productos/${this.product.id}`, {
+                    params: {
+                        'populate': 'deep,3'
+                    }
+                });
                 
-                // Actualizar el objeto product con las relaciones completas
-                if (response.data.data) {
-                    Object.assign(this.product, response.data.data.attributes);
+                console.log('Product with full relations:', prodResponse.data);
+                
+                // Actualizar producto con relaciones completas
+                if (prodResponse.data.data?.attributes) {
+                    const originalId = this.product.id;
+                    Object.assign(this.product, prodResponse.data.data.attributes);
+                    this.product.id = originalId;
                 }
                 
+                this.inventoryData = invResponse.data.data || [];
+                this.processGeneralInventory();
+                
             } catch (error) {
-                console.error('Error fetching product relations:', error);
+                console.error('Fallback also failed:', error);
+                this.inventoryData = [];
+                this.availableSizes = [];
+                this.availableColorsForSize = [];
             }
         },
         
-processGeneralInventory() {
+        processSizesAndColors() {
+            console.log('Processing detailed inventory (inventario-color)');
+            
+            // Extraer tallas únicas con stock disponible
+            const tallasMap = new Map();
+            this.inventoryData.forEach(item => {
+                const attributes = item.attributes;
+                const talla = attributes.talla?.data;
+                
+                if (talla && attributes.stock_actual > 0 && attributes.estado_producto === 'Activo') {
+                    if (!tallasMap.has(talla.id)) {
+                        tallasMap.set(talla.id, {
+                            id: talla.id,
+                            sigla: talla.attributes.sigla,
+                            descripcion: talla.attributes.descripcion
+                        });
+                    }
+                }
+            });
+            
+            this.availableSizes = Array.from(tallasMap.values());
+            console.log('Available sizes from inventory:', this.availableSizes);
+            
+            // Auto-seleccionar primera talla
+            if (this.availableSizes.length > 0 && !this.selectedSize) {
+                this.selectSize(this.availableSizes[0]);
+            }
+        },
+        
+        processGeneralInventory() {
             console.log('Processing general inventory - using product relations');
             console.log('Product tallas:', this.product.tallas);
             console.log('Product colores:', this.product.colores);
@@ -277,7 +329,7 @@ processGeneralInventory() {
                     sigla: talla.attributes.sigla,
                     descripcion: talla.attributes.descripcion
                 }));
-                console.log('Using real sizes from product relations');
+                console.log('Using sizes from product relations:', this.availableSizes);
                 
                 // Auto-seleccionar primera talla
                 if (this.availableSizes.length > 0 && !this.selectedSize) {
@@ -287,8 +339,6 @@ processGeneralInventory() {
                 console.log('No tallas found in product relations');
                 this.availableSizes = [];
             }
-            
-            console.log('Available sizes from product:', this.availableSizes);
         },
         
         loadColorsForSize() {
@@ -296,6 +346,17 @@ processGeneralInventory() {
                 this.availableColorsForSize = [];
                 return;
             }
+            
+            // Si tenemos inventario detallado por color/talla
+            if (this.inventoryData.length > 0 && this.inventoryData[0].attributes.stock_actual !== undefined) {
+                this.loadColorsFromDetailedInventory();
+            } else {
+                this.loadColorsFromGeneralInventory();
+            }
+        },
+        
+        loadColorsFromDetailedInventory() {
+            console.log('Loading colors from detailed inventory for size:', this.selectedSize.sigla);
             
             // Filtrar colores disponibles para la talla seleccionada
             const colorsMap = new Map();
@@ -317,16 +378,37 @@ processGeneralInventory() {
             });
             
             this.availableColorsForSize = Array.from(colorsMap.values());
-            console.log('Available colors for size:', this.availableColorsForSize); // Para debug
+            console.log('Available colors from inventory:', this.availableColorsForSize);
             
-            // Auto-seleccionar primer color si no hay uno seleccionado
+            // Auto-seleccionar primer color
             if (this.availableColorsForSize.length > 0 && !this.selectedColor) {
                 this.selectColor(this.availableColorsForSize[0]);
             }
         },
         
+        loadColorsFromGeneralInventory() {
+            console.log('Loading colors from general inventory (product relations)');
+            
+            // Obtener colores desde las relaciones del producto
+            if (this.product.colores?.data && this.product.colores.data.length > 0) {
+                this.availableColorsForSize = this.product.colores.data.map(color => ({
+                    id: color.id,
+                    nombre: color.attributes.nombre,
+                    color_rgb: color.attributes.color_rgb || '#000000'
+                }));
+                console.log('Using colors from product relations:', this.availableColorsForSize);
+                
+                // Auto-seleccionar primer color
+                if (this.availableColorsForSize.length > 0 && !this.selectedColor) {
+                    this.selectColor(this.availableColorsForSize[0]);
+                }
+            } else {
+                console.log('No colores found in product relations');
+                this.availableColorsForSize = [];
+            }
+        },
+        
         addToCart(product) {
-            // Validaciones
             if (this.isOutOfStock) {
                 this.$toast.error("Este producto está agotado");
                 return;
@@ -361,7 +443,7 @@ processGeneralInventory() {
                 colorId: this.selectedColor.id,
                 colorCode: this.selectedColor.color_rgb,
                 maxQuantity: this.currentStock,
-                variantId: this.currentVariant?.id // ID de la variante específica
+                variantId: this.currentVariant?.id
             };
             
             this.$store.dispatch('addToCart', cartItem);
@@ -373,20 +455,14 @@ processGeneralInventory() {
         
         increaseQuantity() {
             if(this.isOutOfStock) {
-                this.$toast.error("Este producto está agotado", {
-                    icon: 'fas fa-exclamation-triangle'
-                });
+                this.$toast.error("Este producto está agotado");
                 return;
             }
             
             if(this.quantity >= this.currentStock) {
-                this.$toast.error(`No puedes agregar más de ${this.currentStock} unidades`, {
-                    icon: 'fas fa-cart-plus'
-                });
+                this.$toast.error(`No puedes agregar más de ${this.currentStock} unidades`);
             } else if(this.quantity >= 10) {
-                this.$toast.error("No puedes agregar más de 10 unidades por pedido", {
-                    icon: 'fas fa-cart-plus'
-                });
+                this.$toast.error("No puedes agregar más de 10 unidades por pedido");
             } else {
                 this.quantity++;
             }
@@ -394,9 +470,7 @@ processGeneralInventory() {
         
         decreaseQuantity() {
             if(this.quantity <= 1) {
-                this.$toast.error("No puedes agregar menos de 1 unidad", {
-                    icon: 'fas fa-cart-plus'
-                });
+                this.$toast.error("No puedes agregar menos de 1 unidad");
             } else {
                 this.quantity--;
             }
@@ -469,13 +543,12 @@ processGeneralInventory() {
         },
         
         currentPrice() {
-            // Para inventario general, usar precio base del producto o un valor por defecto
+            // Para inventario general, usar precio base del producto
             if (this.inventoryData.length > 0 && this.inventoryData[0].attributes.stock_total !== undefined) {
-                // Inventario general - usar precio del producto si existe
                 return this.product.precio || this.product.precioOferta || 0;
             }
             
-            // Para inventario detallado (si funciona en el futuro)
+            // Para inventario detallado
             if (!this.currentVariant) return 0;
             
             if (this.currentVariant.en_oferta && this.currentVariant.precio_oferta) {
@@ -516,11 +589,11 @@ processGeneralInventory() {
         },
         
         selectedSize() {
-            this.quantity = 1; // Reset quantity when changing size
+            this.quantity = 1;
         },
         
         selectedColor() {
-            this.quantity = 1; // Reset quantity when changing color
+            this.quantity = 1;
         }
     },
     
