@@ -190,54 +190,47 @@ export default {
                 
                 console.log('Fetching inventory for product:', this.product.id);
                 
-                // Primero intentar con diferentes nombres posibles del endpoint
+                // Intentar obtener inventario detallado por color/talla
                 const possibleEndpoints = [
-                    'inventario-colors',  // Plural con guión
-                    'inventario-color',   // Singular con guión
-                    'inventarioColors',   // camelCase plural
-                    'inventarioColor'     // camelCase singular
+                    'inventario-colors',
+                    'inventario-color',
+                    'inventarioColors',
+                    'inventarioColor'
                 ];
                 
-                let response = null;
-                let workingEndpoint = null;
+                let detailedInventoryFound = false;
                 
                 for (const endpoint of possibleEndpoints) {
                     try {
                         console.log(`Trying endpoint: /api/${endpoint}`);
-                        response = await this.$axios.get(`/api/${endpoint}`, {
+                        const response = await this.$axios.get(`/api/${endpoint}`, {
                             params: {
                                 'filters[producto][id][$eq]': this.product.id,
-                                'populate[color][fields][0]': 'nombre',
-                                'populate[color][fields][1]': 'color_rgb',
-                                'populate[talla][fields][0]': 'sigla',
-                                'populate[talla][fields][1]': 'descripcion',
+                                'populate[color]': '*',
+                                'populate[talla]': '*',
+                                'populate[producto]': '*',
                                 'filters[stock_actual][$gt]': 0,
                                 'filters[estado_producto][$eq]': 'Activo'
                             }
                         });
-                        workingEndpoint = endpoint;
-                        console.log(`✓ Success with endpoint: ${endpoint}`);
-                        break;
+                        
+                        if (response.data.data && response.data.data.length > 0) {
+                            console.log(`✓ Success with endpoint: ${endpoint}`);
+                            console.log('Detailed inventory data:', response.data);
+                            this.inventoryData = response.data.data;
+                            this.processSizesAndColors();
+                            detailedInventoryFound = true;
+                            break;
+                        }
                     } catch (error) {
                         console.log(`✗ Failed with endpoint: ${endpoint}`, error.response?.status);
                         continue;
                     }
                 }
                 
-                if (!response || !response.data) {
-                    console.warn('No working endpoint found, falling back to general inventory');
-                    await this.fallbackToGeneralInventory();
-                    return;
-                }
-                
-                console.log('Detailed inventory response:', response.data);
-                
-                this.inventoryData = response.data.data || [];
-                
-                if (this.inventoryData.length > 0) {
-                    this.processSizesAndColors();
-                } else {
-                    console.log('No inventory items found, using general inventory');
+                // Si no se encontró inventario detallado, usar fallback
+                if (!detailedInventoryFound) {
+                    console.log('No detailed inventory found, using fallback');
                     await this.fallbackToGeneralInventory();
                 }
                 
@@ -251,37 +244,56 @@ export default {
         
         async fallbackToGeneralInventory() {
             try {
-                console.log('Using fallback: general inventory');
+                console.log('Using fallback: fetching product with relations');
                 
-                // Obtener inventario general
-                const invResponse = await this.$axios.get(`/api/inventarios`, {
+                // Obtener producto con relaciones EXPLÍCITAS (no usar deep)
+                const response = await this.$axios.get(`/api/productos/${this.product.id}`, {
                     params: {
-                        'filters[producto][id][$eq]': this.product.id,
-                        'populate': '*'
+                        'populate[tallas][populate]': '*',
+                        'populate[colores][populate]': '*',
+                        'populate[grupos_de_productos][populate]': '*',
+                        'populate[imagen][populate]': '*'
                     }
                 });
                 
-                // Obtener producto con todas sus relaciones
-                const prodResponse = await this.$axios.get(`/api/productos/${this.product.id}`, {
-                    params: {
-                        'populate': 'deep,3'
-                    }
-                });
+                console.log('Product with explicit relations:', response.data);
                 
-                console.log('Product with full relations:', prodResponse.data);
-                
-                // Actualizar producto con relaciones completas
-                if (prodResponse.data.data?.attributes) {
+                if (response.data.data?.attributes) {
+                    // Actualizar el producto manteniendo el ID
                     const originalId = this.product.id;
-                    Object.assign(this.product, prodResponse.data.data.attributes);
+                    const originalImageUrl = this.product.imageUrl;
+                    
+                    // Actualizar atributos
+                    Object.assign(this.product, response.data.data.attributes);
+                    
+                    // Restaurar datos que no deben cambiar
                     this.product.id = originalId;
+                    if (!this.product.imageUrl && originalImageUrl) {
+                        this.product.imageUrl = originalImageUrl;
+                    }
+                    
+                    console.log('Product updated - tallas:', this.product.tallas);
+                    console.log('Product updated - colores:', this.product.colores);
                 }
                 
-                this.inventoryData = invResponse.data.data || [];
+                // Obtener inventario general para el stock
+                try {
+                    const invResponse = await this.$axios.get(`/api/inventarios`, {
+                        params: {
+                            'filters[producto][id][$eq]': this.product.id,
+                            'populate': '*'
+                        }
+                    });
+                    this.inventoryData = invResponse.data.data || [];
+                } catch (invError) {
+                    console.log('Could not fetch general inventory:', invError);
+                    this.inventoryData = [];
+                }
+                
                 this.processGeneralInventory();
                 
             } catch (error) {
-                console.error('Fallback also failed:', error);
+                console.error('Fallback failed:', error);
                 this.inventoryData = [];
                 this.availableSizes = [];
                 this.availableColorsForSize = [];
@@ -289,7 +301,7 @@ export default {
         },
         
         processSizesAndColors() {
-            console.log('Processing detailed inventory (inventario-color)');
+            console.log('Processing detailed inventory (from inventario-color table)');
             
             // Extraer tallas únicas con stock disponible
             const tallasMap = new Map();
@@ -309,7 +321,7 @@ export default {
             });
             
             this.availableSizes = Array.from(tallasMap.values());
-            console.log('Available sizes from inventory:', this.availableSizes);
+            console.log('Available sizes from detailed inventory:', this.availableSizes);
             
             // Auto-seleccionar primera talla
             if (this.availableSizes.length > 0 && !this.selectedSize) {
@@ -319,24 +331,24 @@ export default {
         
         processGeneralInventory() {
             console.log('Processing general inventory - using product relations');
-            console.log('Product tallas:', this.product.tallas);
-            console.log('Product colores:', this.product.colores);
+            console.log('Product tallas data:', this.product.tallas);
+            console.log('Product colores data:', this.product.colores);
             
             // Obtener tallas desde las relaciones del producto
             if (this.product.tallas?.data && this.product.tallas.data.length > 0) {
                 this.availableSizes = this.product.tallas.data.map(talla => ({
                     id: talla.id,
                     sigla: talla.attributes.sigla,
-                    descripcion: talla.attributes.descripcion
+                    descripcion: talla.attributes.descripcion || talla.attributes.sigla
                 }));
-                console.log('Using sizes from product relations:', this.availableSizes);
+                console.log('✓ Using sizes from product relations:', this.availableSizes);
                 
                 // Auto-seleccionar primera talla
                 if (this.availableSizes.length > 0 && !this.selectedSize) {
                     this.selectSize(this.availableSizes[0]);
                 }
             } else {
-                console.log('No tallas found in product relations');
+                console.warn('⚠ No tallas found in product relations');
                 this.availableSizes = [];
             }
         },
@@ -347,10 +359,11 @@ export default {
                 return;
             }
             
-            // Si tenemos inventario detallado por color/talla
-            if (this.inventoryData.length > 0 && this.inventoryData[0].attributes.stock_actual !== undefined) {
+            // Si tenemos inventario detallado (con stock_actual)
+            if (this.inventoryData.length > 0 && this.inventoryData[0].attributes?.stock_actual !== undefined) {
                 this.loadColorsFromDetailedInventory();
             } else {
+                // Si solo tenemos inventario general
                 this.loadColorsFromGeneralInventory();
             }
         },
@@ -358,7 +371,6 @@ export default {
         loadColorsFromDetailedInventory() {
             console.log('Loading colors from detailed inventory for size:', this.selectedSize.sigla);
             
-            // Filtrar colores disponibles para la talla seleccionada
             const colorsMap = new Map();
             this.inventoryData.forEach(item => {
                 const attributes = item.attributes;
@@ -369,6 +381,7 @@ export default {
                     talla.id === this.selectedSize.id && 
                     attributes.stock_actual > 0 &&
                     attributes.estado_producto === 'Activo') {
+                    
                     colorsMap.set(color.id, {
                         id: color.id,
                         nombre: color.attributes.nombre,
@@ -378,7 +391,7 @@ export default {
             });
             
             this.availableColorsForSize = Array.from(colorsMap.values());
-            console.log('Available colors from inventory:', this.availableColorsForSize);
+            console.log('Available colors from detailed inventory:', this.availableColorsForSize);
             
             // Auto-seleccionar primer color
             if (this.availableColorsForSize.length > 0 && !this.selectedColor) {
@@ -388,6 +401,7 @@ export default {
         
         loadColorsFromGeneralInventory() {
             console.log('Loading colors from general inventory (product relations)');
+            console.log('Product colores available:', this.product.colores);
             
             // Obtener colores desde las relaciones del producto
             if (this.product.colores?.data && this.product.colores.data.length > 0) {
@@ -396,14 +410,14 @@ export default {
                     nombre: color.attributes.nombre,
                     color_rgb: color.attributes.color_rgb || '#000000'
                 }));
-                console.log('Using colors from product relations:', this.availableColorsForSize);
+                console.log('✓ Using colors from product relations:', this.availableColorsForSize);
                 
                 // Auto-seleccionar primer color
                 if (this.availableColorsForSize.length > 0 && !this.selectedColor) {
                     this.selectColor(this.availableColorsForSize[0]);
                 }
             } else {
-                console.log('No colores found in product relations');
+                console.warn('⚠ No colores found in product relations');
                 this.availableColorsForSize = [];
             }
         },
@@ -521,21 +535,27 @@ export default {
                 return null;
             }
             
-            return this.inventoryData.find(item => {
-                const talla = item.attributes.talla?.data;
-                const color = item.attributes.color?.data;
-                return talla?.id === this.selectedSize.id && 
-                       color?.id === this.selectedColor.id;
-            })?.attributes;
+            // Solo buscar variante si tenemos inventario detallado
+            if (this.inventoryData[0].attributes?.stock_actual !== undefined) {
+                return this.inventoryData.find(item => {
+                    const talla = item.attributes.talla?.data;
+                    const color = item.attributes.color?.data;
+                    return talla?.id === this.selectedSize.id && 
+                           color?.id === this.selectedColor.id;
+                })?.attributes;
+            }
+            
+            return null;
         },
         
         currentStock() {
             if (this.inventoryData.length > 0) {
-                // Si tenemos inventario detallado
-                if (this.inventoryData[0].attributes.stock_actual !== undefined) {
+                // Si tenemos inventario detallado con stock por color/talla
+                if (this.inventoryData[0].attributes?.stock_actual !== undefined) {
                     return this.currentVariant?.stock_actual || 0;
-                } else {
-                    // Si tenemos inventario general
+                }
+                // Si tenemos inventario general
+                else if (this.inventoryData[0].attributes?.stock_total !== undefined) {
                     return this.inventoryData[0].attributes.stock_total || 0;
                 }
             }
@@ -543,30 +563,28 @@ export default {
         },
         
         currentPrice() {
-            // Para inventario general, usar precio base del producto
-            if (this.inventoryData.length > 0 && this.inventoryData[0].attributes.stock_total !== undefined) {
-                return this.product.precio || this.product.precioOferta || 0;
-            }
-            
-            // Para inventario detallado
-            if (!this.currentVariant) return 0;
-            
-            if (this.currentVariant.en_oferta && this.currentVariant.precio_oferta) {
-                const now = new Date();
-                const inicioOferta = this.currentVariant.fecha_inicio_oferta ? 
-                    new Date(this.currentVariant.fecha_inicio_oferta) : null;
-                const finOferta = this.currentVariant.fecha_fin_oferta ? 
-                    new Date(this.currentVariant.fecha_fin_oferta) : null;
-                
-                const ofertaVigente = (!inicioOferta || now >= inicioOferta) && 
-                                     (!finOferta || now <= finOferta);
-                
-                if (ofertaVigente) {
-                    return this.currentVariant.precio_oferta;
+            // Para inventario detallado con precios por variante
+            if (this.currentVariant) {
+                if (this.currentVariant.en_oferta && this.currentVariant.precio_oferta) {
+                    const now = new Date();
+                    const inicioOferta = this.currentVariant.fecha_inicio_oferta ? 
+                        new Date(this.currentVariant.fecha_inicio_oferta) : null;
+                    const finOferta = this.currentVariant.fecha_fin_oferta ? 
+                        new Date(this.currentVariant.fecha_fin_oferta) : null;
+                    
+                    const ofertaVigente = (!inicioOferta || now >= inicioOferta) && 
+                                         (!finOferta || now <= finOferta);
+                    
+                    if (ofertaVigente) {
+                        return this.currentVariant.precio_oferta;
+                    }
                 }
+                
+                return this.currentVariant.precio_venta_sugerido || 0;
             }
             
-            return this.currentVariant.precio_venta_sugerido || 0;
+            // Para inventario general, usar precio del producto
+            return this.product.precio || this.product.precioOferta || 0;
         },
         
         isOutOfStock() {
