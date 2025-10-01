@@ -195,17 +195,15 @@ export default {
                 }
 
                 // 1. Intentar inventario detallado
-                const response = await this.$axios.get(`/api/inventario-color`, {
+                const response = await this.$axios.get(`/api/inventario-por-color-y-tallas`, {
                     params: {
                         'filters[producto][id][$eq]': this.product.id,
-                        'populate[color]': '*',
-                        'populate[talla]': '*',
-                        'populate[producto]': '*'
+                        'populate': ['color', 'talla', 'producto']
                     }
                 });
 
                 if (response.data?.data?.length > 0) {
-                    console.log('Usando inventario detallado');
+                    console.log('✅ Usando inventario detallado');
                     this.inventoryMode = 'detailed';
                     this.inventoryData = response.data.data;
                     this.processSizesAndColors();
@@ -213,11 +211,11 @@ export default {
                 }
 
                 // 2. Fallback: inventario general
-                console.log('Inventario detallado vacío, usando general');
+                console.log('⚠️ Inventario detallado vacío, usando general');
                 await this.fetchGeneralInventory();
 
             } catch (error) {
-                console.error('Error en inventario detallado:', error);
+                console.error('❌ Error en inventario detallado:', error);
                 // fallback siempre
                 await this.fetchGeneralInventory();
             } finally {
@@ -238,7 +236,7 @@ export default {
                 await this.fetchProductWithRelations();
                 this.processGeneralInventory();
             } catch (error) {
-                console.error('Error en inventario general:', error);
+                console.error('❌ Error en inventario general:', error);
                 this.inventoryData = [];
             }
         },
@@ -247,9 +245,7 @@ export default {
             try {
                 const response = await this.$axios.get(`/api/productos/${this.product.id}`, {
                     params: {
-                        'populate[tallas]': '*',
-                        'populate[colores]': '*',
-                        'populate[grupos_de_productos]': '*'
+                        'populate': ['tallas', 'colores', 'grupos_de_productos']
                     }
                 });
                 if (response.data.data) {
@@ -500,7 +496,6 @@ export default {
     }
 }
 </script>
-
 
 <style lang="scss" scoped>
 @import "../../assets/scss/styles/_transitions.scss";
