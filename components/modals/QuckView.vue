@@ -194,8 +194,8 @@ export default {
                     return;
                 }
 
-                // 1. Intentar inventario detallado
-                const response = await this.$axios.get(`/api/inventario-por-color-y-tallas`, {
+                // ✅ Usar el pluralName correcto
+                const response = await this.$axios.get(`/api/inventario-colores`, {
                     params: {
                         'filters[producto][id][$eq]': this.product.id,
                         'populate': ['color', 'talla', 'producto']
