@@ -467,71 +467,72 @@ export default {
     .product-quantity {
         .input-counter {
             display: inline-flex;
-            align-items: center;
-            background: #ffffff;
-            border-radius: 6px;
-            border: 1px solid #d0d0d0;
-            max-width: 130px;
+            align-items: stretch;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            max-width: 120px;
+            height: 40px;
             margin: 0 auto;
             overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            
+            @media (max-width: 767px) {
+                height: 36px;
+                max-width: 110px;
+            }
             
             .minus-btn,
             .plus-btn {
-                width: 38px;
-                height: 38px;
+                flex: 0 0 35px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
-                color: #555;
-                background: #f8f9fa;
-                transition: all 0.2s;
+                color: #333;
+                background: transparent;
+                transition: background-color 0.2s;
                 border: none;
+                padding: 0;
+                margin: 0;
                 user-select: none;
                 
                 @media (max-width: 767px) {
-                    width: 34px;
-                    height: 34px;
+                    flex: 0 0 32px;
                 }
                 
                 i {
-                    font-size: 12px;
+                    font-size: 13px;
+                    pointer-events: none;
                 }
                 
                 &:hover {
-                    background-color: #e9ecef;
-                    color: #333;
+                    background-color: #e2e6ea;
                 }
                 
                 &:active {
-                    background-color: #dee2e6;
+                    background-color: #dae0e5;
                 }
             }
             
-            .minus-btn {
-                border-right: 1px solid #d0d0d0;
-            }
-            
-            .plus-btn {
-                border-left: 1px solid #d0d0d0;
-            }
-            
             .quantity-display {
-                min-width: 50px;
-                padding: 0 8px;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 text-align: center;
                 font-weight: 600;
                 font-size: 15px;
                 color: #333;
                 background: #ffffff;
-                line-height: 38px;
+                border-left: 1px solid #dee2e6;
+                border-right: 1px solid #dee2e6;
                 user-select: none;
+                min-width: 40px;
                 
                 @media (max-width: 767px) {
-                    min-width: 44px;
-                    line-height: 34px;
                     font-size: 14px;
+                    min-width: 36px;
                 }
             }
         }
