@@ -468,40 +468,70 @@ export default {
         .input-counter {
             display: inline-flex;
             align-items: center;
-            background: #f8f9fa;
-            border-radius: 4px;
-            border: 1px solid #e0e0e0;
-            max-width: 120px;
+            background: #ffffff;
+            border-radius: 6px;
+            border: 1px solid #d0d0d0;
+            max-width: 130px;
             margin: 0 auto;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             
             .minus-btn,
             .plus-btn {
-                width: 36px;
-                height: 36px;
+                width: 38px;
+                height: 38px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
                 color: #555;
+                background: #f8f9fa;
                 transition: all 0.2s;
+                border: none;
+                user-select: none;
                 
                 @media (max-width: 767px) {
-                    width: 32px;
-                    height: 32px;
+                    width: 34px;
+                    height: 34px;
+                }
+                
+                i {
+                    font-size: 12px;
                 }
                 
                 &:hover {
                     background-color: #e9ecef;
+                    color: #333;
+                }
+                
+                &:active {
+                    background-color: #dee2e6;
                 }
             }
             
+            .minus-btn {
+                border-right: 1px solid #d0d0d0;
+            }
+            
+            .plus-btn {
+                border-left: 1px solid #d0d0d0;
+            }
+            
             .quantity-display {
-                min-width: 40px;
+                min-width: 50px;
+                padding: 0 8px;
                 text-align: center;
                 font-weight: 600;
+                font-size: 15px;
+                color: #333;
+                background: #ffffff;
+                line-height: 38px;
+                user-select: none;
                 
                 @media (max-width: 767px) {
-                    min-width: 36px;
+                    min-width: 44px;
+                    line-height: 34px;
+                    font-size: 14px;
                 }
             }
         }
