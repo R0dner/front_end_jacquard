@@ -1026,7 +1026,7 @@ export default {
 }
 
 .selected-filters-wrap-list li a {
-  background: var(--sidebar-accent);
+  background: white;
   color: rgb(9, 2, 76) !important;
   padding: 10px 16px;
   border-radius: 20px;
@@ -1037,25 +1037,33 @@ export default {
   align-items: center;
   gap: 8px;
   transition: all 0.3s ease;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  text-shadow: none;
+  border: 2px solid #1a202c; /* Borde oscuro visible desde el inicio */
 }
 
-/* Eliminar cualquier contenido ::before o ::after heredado */
+.selected-filters-wrap-list li a:hover {
+  background: #f7fafc;
+  transform: scale(1.05);
+  border-color: var(--sidebar-accent); /* Borde azul al hover */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Eliminar cualquier contenido heredado */
 .selected-filters-wrap-list li a::before,
 .selected-filters-wrap-list li a::after {
   content: none !important;
   display: none !important;
 }
 
-.selected-filters-wrap-list li a:hover {
-  background: var(--sidebar-accent-hover);
-  transform: scale(1.05);
-}
-
 .selected-filters-wrap-list li a .fa-times {
   font-weight: 700;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #e53e3e; /* X roja */
+  margin-left: 4px;
+}
+
+.selected-filters-wrap-list li a:hover .fa-times {
+  color: #c53030; /* X roja más oscura al hover */
 }
 
 .delete-selected-filters {
