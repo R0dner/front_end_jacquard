@@ -195,9 +195,12 @@ export default {
   created() {
     this.debouncedNotifyProductsComponent = debounce(this.notifyProductsComponent, 300);
   },
-  mounted() {
-    this.loadGruposProductos();
+  async mounted() {
+    // Cargar grupos primero antes de cargar filtros desde URL
+    await this.loadGruposProductos();
     this.loadProductosPopulares();
+    
+    // Ahora cargar filtros desde URL cuando ya tenemos los grupos
     this.loadFiltersFromUrl();
     this.loadWishlist();
     
@@ -621,7 +624,8 @@ export default {
             processedValue = parseInt(value);
           }
           
-          this.applyFilter(type, processedValue);
+          // IMPORTANTE: NO pasar customLabel aquí, dejar que applyFilter lo genere
+          this.applyFilter(type, processedValue, null);
         });
       });
     },
