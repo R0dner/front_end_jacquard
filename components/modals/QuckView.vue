@@ -165,7 +165,7 @@ export default {
             loadingInventory: false,
             availableSizes: [],
             availableColorsForSize: [],
-            inventoryMode: 'unknown' // 'detailed' o 'general'
+            inventoryMode: 'unknown'
         }
     },
     methods: {
@@ -173,10 +173,15 @@ export default {
         
         selectSize(talla) {
             this.selectedSize = talla;
-            this.selectedColor = null; 
+            this.selectedColor = null;
+            this.quantity = 1;
 
             if (this.inventoryMode === 'detailed') {
                 this.loadColorsForSize();
+                
+                if (this.availableColorsForSize.length === 1) {
+                    this.selectColor(this.availableColorsForSize[0]);
+                }
             } else {
                 this.loadColorsForGeneralInventory();
             }
@@ -194,7 +199,6 @@ export default {
                     return;
                 }
 
-                // 1. Intentar inventario detallado (por color y talla)
                 try {
                     const detailedResponse = await this.$axios.get(`/api/inventario-colores`, {
                         params: {
@@ -216,7 +220,6 @@ export default {
                     console.warn('Inventario detallado no disponible, usando fallback');
                 }
 
-                // 2. Fallback: inventario general + datos del producto
                 await this.fetchProductWithRelations();
                 
                 const generalResponse = await this.$axios.get(`/api/inventarios`, {
@@ -240,24 +243,6 @@ export default {
                 this.loadingInventory = false;
             }
         },
-
-        async fetchGeneralInventory() {
-            try {
-                const fallbackResponse = await this.$axios.get(`/api/inventarios`, {
-                    params: {
-                        'filters[producto][id][$eq]': this.product.id,
-                        'populate': 'deep'
-                    }
-                });
-                this.inventoryMode = 'general';
-                this.inventoryData = fallbackResponse.data.data || [];
-                await this.fetchProductWithRelations();
-                this.processGeneralInventory();
-            } catch (error) {
-                console.error('❌ Error en inventario general:', error);
-                this.inventoryData = [];
-            }
-        },
         
         async fetchProductWithRelations() {
             try {
@@ -275,31 +260,35 @@ export default {
         },
         
         processSizesAndColors() {
-            // solo inventario detallado
             const sizesMap = new Map();
+            
             this.inventoryData.forEach(item => {
                 const talla = item.attributes.talla?.data;
-                if (talla) {
+                if (talla && item.attributes.stock_actual > 0) {
                     sizesMap.set(talla.id, {
                         id: talla.id,
                         sigla: talla.attributes.sigla,
-                        descripcion: talla.attributes.descripcion
+                        descripcion: talla.attributes.descripcion || talla.attributes.sigla
                     });
                 }
             });
+            
             this.availableSizes = Array.from(sizesMap.values());
+            
             if (this.availableSizes.length > 0) {
                 this.selectSize(this.availableSizes[0]);
+            } else {
+                this.availableSizes = [];
+                this.availableColorsForSize = [];
             }
         },
 
         processGeneralInventory() {
-            // tallas
             if (this.product.tallas?.data?.length > 0) {
                 this.availableSizes = this.product.tallas.data.map(talla => ({
                     id: talla.id,
                     sigla: talla.attributes.sigla,
-                    descripcion: talla.attributes.descripcion
+                    descripcion: talla.attributes.descripcion || talla.attributes.sigla
                 }));
             } else {
                 this.availableSizes = [
@@ -310,6 +299,7 @@ export default {
                     { id: 'xl', sigla: 'XL', descripcion: 'Extra Large' }
                 ];
             }
+            
             if (this.availableSizes.length > 0 && !this.selectedSize) {
                 this.selectSize(this.availableSizes[0]);
             }
@@ -329,6 +319,7 @@ export default {
                     { id: 'gris', nombre: 'Gris', color_rgb: '#808080' }
                 ];
             }
+            
             if (this.availableColorsForSize.length > 0 && !this.selectedColor) {
                 this.selectColor(this.availableColorsForSize[0]);
             }
@@ -339,14 +330,18 @@ export default {
                 this.availableColorsForSize = [];
                 return;
             }
+            
             const colorsMap = new Map();
+            
             this.inventoryData.forEach(item => {
                 const talla = item.attributes.talla?.data;
                 const color = item.attributes.color?.data;
+                
                 if (talla && color && 
                     talla.id === this.selectedSize.id && 
                     item.attributes.stock_actual > 0 &&
                     item.attributes.estado_producto === 'Activo') {
+                    
                     colorsMap.set(color.id, {
                         id: color.id,
                         nombre: color.attributes.nombre,
@@ -354,15 +349,16 @@ export default {
                     });
                 }
             });
+            
             this.availableColorsForSize = Array.from(colorsMap.values());
+            
             if (this.availableColorsForSize.length > 0 && !this.selectedColor) {
                 this.selectColor(this.availableColorsForSize[0]);
+            } else if (this.availableColorsForSize.length === 0) {
+                this.selectedColor = null;
             }
         },
 
-        // ---------------------
-        // Métodos de carrito
-        // ---------------------
         addToCart(product) {
             if (this.isOutOfStock) {
                 this.$toast.error("Este producto está agotado");
@@ -380,6 +376,7 @@ export default {
                 this.$toast.error(`Solo hay ${this.currentStock} unidades disponibles`);
                 return;
             }
+            
             const cartItem = {
                 id: product.id,
                 name: product.nombre,
@@ -396,19 +393,20 @@ export default {
                 maxQuantity: this.currentStock,
                 variantId: this.currentVariant?.id
             };
+            
             this.$store.dispatch('addToCart', cartItem);
             this.$toast("Agregado al carrito", { icon: 'fas fa-cart-plus' });
             this.closeQuickView();
         },
 
         increaseQuantity() {
-            if(this.isOutOfStock) {
+            if (this.isOutOfStock) {
                 this.$toast.error("Este producto está agotado");
                 return;
             }
-            if(this.quantity >= this.currentStock) {
+            if (this.quantity >= this.currentStock) {
                 this.$toast.error(`Máximo ${this.currentStock} unidades`);
-            } else if(this.quantity >= 10) {
+            } else if (this.quantity >= 10) {
                 this.$toast.error("No puedes agregar más de 10 unidades por pedido");
             } else {
                 this.quantity++;
@@ -416,19 +414,68 @@ export default {
         },
         
         decreaseQuantity() {
-            if(this.quantity <= 1) {
+            if (this.quantity <= 1) {
                 this.$toast.error("Mínimo 1 unidad");
             } else {
                 this.quantity--;
             }
         },
 
-        // Helpers UI
         getButtonText() {
             if (this.isOutOfStock) return 'Agotado';
             if (!this.selectedSize) return 'Selecciona Talla';
-            if (!this.selectedColor) return 'Selecciona Color';
+            if (!this.selectedColor && this.availableColorsForSize.length === 0) {
+                return 'Sin stock en esta talla';
+            }
+            if (!this.selectedColor && this.availableColorsForSize.length > 0) {
+                return 'Selecciona Color';
+            }
             return 'Añadir a Carrito';
+        },
+        
+        getButtonClass() {
+            if (this.isOutOfStock || 
+                (!this.selectedColor && this.availableColorsForSize.length === 0)) {
+                return 'btn-secondary';
+            }
+            if (!this.selectedSize || !this.selectedColor) {
+                return 'btn-light';
+            }
+            return 'btn-primary';
+        },
+        
+        getButtonIcon() {
+            if (this.isOutOfStock) return 'fas fa-exclamation-triangle';
+            if (!this.selectedColor && this.availableColorsForSize.length === 0) {
+                return 'fas fa-ban';
+            }
+            if (!this.selectedSize || !this.selectedColor) {
+                return 'fas fa-hand-pointer';
+            }
+            return 'fas fa-cart-plus';
+        },
+        
+        isButtonDisabled() {
+            return this.isOutOfStock || 
+                   !this.selectedSize || 
+                   !this.selectedColor ||
+                   (this.availableColorsForSize.length === 0);
+        },
+        
+        getStatusClass(status) {
+            const statusMap = {
+                'Activo': 'text-success',
+                'Inactivo': 'text-secondary',
+                'Descontinuado': 'text-warning',
+                'Agotado': 'text-danger'
+            };
+            return statusMap[status] || 'text-muted';
+        },
+        
+        formatDate(date) {
+            if (!date) return 'N/A';
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(date).toLocaleDateString('es-ES', options);
         },
         
         resetSelections() {
@@ -444,46 +491,70 @@ export default {
         isQuickViewOpen() {
             return store.isQuickViewOpen;
         },
+        
         cart() {
             return this.$store.getters.cart;
         },
+        
         currentVariant() {
-            if (!this.selectedSize || !this.selectedColor || !this.inventoryData.length) return null;
-            return this.inventoryData.find(item => {
-                const talla = item.attributes.talla?.data;
-                const color = item.attributes.color?.data;
-                return talla?.id === this.selectedSize.id && 
-                       color?.id === this.selectedColor.id;
-            })?.attributes;
+            if (!this.selectedSize || !this.selectedColor || !this.inventoryData.length) {
+                return null;
+            }
+            
+            if (this.inventoryMode === 'detailed') {
+                const variant = this.inventoryData.find(item => {
+                    const talla = item.attributes.talla?.data;
+                    const color = item.attributes.color?.data;
+                    return talla?.id === this.selectedSize.id && 
+                           color?.id === this.selectedColor.id;
+                });
+                return variant?.attributes;
+            }
+            
+            return null;
         },
+        
         currentStock() {
             if (!this.inventoryData.length) return 0;
+            
             if (this.inventoryMode === 'detailed') {
                 return this.currentVariant?.stock_actual || 0;
             }
+            
             if (this.inventoryMode === 'general') {
                 return this.inventoryData[0].attributes.stock_total || 0;
             }
+            
             return 0;
         },
+        
         currentPrice() {
             if (this.inventoryMode === 'general') {
                 return this.product.precio || this.product.precioOferta || 0;
             }
+            
             if (this.inventoryMode === 'detailed' && this.currentVariant) {
                 if (this.currentVariant.en_oferta && this.currentVariant.precio_oferta) {
                     const now = new Date();
-                    const inicio = this.currentVariant.fecha_inicio_oferta ? new Date(this.currentVariant.fecha_inicio_oferta) : null;
-                    const fin = this.currentVariant.fecha_fin_oferta ? new Date(this.currentVariant.fecha_fin_oferta) : null;
+                    const inicio = this.currentVariant.fecha_inicio_oferta ? 
+                        new Date(this.currentVariant.fecha_inicio_oferta) : null;
+                    const fin = this.currentVariant.fecha_fin_oferta ? 
+                        new Date(this.currentVariant.fecha_fin_oferta) : null;
+                    
                     const activa = (!inicio || now >= inicio) && (!fin || now <= fin);
-                    if (activa) return this.currentVariant.precio_oferta;
+                    
+                    if (activa) {
+                        return this.currentVariant.precio_oferta;
+                    }
                 }
                 return this.currentVariant.precio_venta_sugerido || 0;
             }
+            
             return 0;
         },
+        
         isOutOfStock() {
-           return this.currentStock <= 0;
+            return this.currentStock <= 0;
         }
     },
     
@@ -492,6 +563,7 @@ export default {
             this.resetSelections();
             this.fetchInventoryData();
         },
+        
         isQuickViewOpen(newVal) {
             if (newVal && this.product.id) {
                 this.fetchInventoryData();
@@ -499,9 +571,11 @@ export default {
                 this.resetSelections();
             }
         },
+        
         selectedSize() {
             this.quantity = 1;
         },
+        
         selectedColor() {
             this.quantity = 1;
         }
