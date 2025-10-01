@@ -17,7 +17,7 @@ section.offer-area.ptb-60
               h3 {{ category.attributes.descripcion }}
               ul(v-if="category.attributes.grupos_de_productos && category.attributes.grupos_de_productos.data")
                 li(v-for="grupo in category.attributes.grupos_de_productos.data" :key="grupo.id")
-                  router-link(:to="{ name: 'products', query: { grupo_producto: grupo.id } }")
+                  router-link(:to="{ name: 'products', query: { grupo_producto: String(grupo.id) } }")
                     | {{ grupo.attributes.nombre }}
     .row(v-else-if="loading")
       .col-12
