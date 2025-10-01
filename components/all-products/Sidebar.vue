@@ -309,59 +309,140 @@ export default {
     async loadProductosPopulares() {
       this.loading.productosPopulares = true;
       try {
-        const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+        // Intentar cargar productos con descuentos desde inventario-colores
+        const inventarioResponse = await axios.get(`${this.strapiBaseUrl}/api/inventario-colores`, {
           params: {
+            'filters[en_oferta][$eq]': true,
+            'filters[estado_producto][$eq]': 'Activo',
+            'filters[stock_actual][$gt]': 0,
             'sort': 'precio_oferta:asc',
-            'pagination[pageSize]': 3,
-            'populate': '*',
-            'filters[en_oferta]': true
+            'pagination[pageSize]': 10,
+            'populate': ['producto', 'producto.imagen_principal', 'producto.grupos_de_productos', 'color', 'talla']
           }
         });
 
-        this.productosPopulares = response.data.data.map(item => {
-          let imagenPrincipal = '../../assets/img/default-product.jpg';
+        if (inventarioResponse.data?.data?.length > 0) {
+          // Agrupar por producto para evitar duplicados
+          const productosMap = new Map();
           
-          let imageUrl = null;
-          if (item.attributes?.imagen_principal?.data?.attributes?.url) {
-            imageUrl = item.attributes.imagen_principal.data.attributes.url;
-          } else if (item.attributes?.images?.data?.[0]?.attributes?.url) {
-            imageUrl = item.attributes.images.data[0].attributes.url;
-          }
-          
-          if (imageUrl) {
-            if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-              imagenPrincipal = imageUrl;
+          inventarioResponse.data.data.forEach(item => {
+            const producto = item.attributes?.producto?.data;
+            if (!producto) return;
+            
+            const productoId = producto.id;
+            
+            // Si ya tenemos este producto, comparar precios y quedarnos con el menor
+            if (productosMap.has(productoId)) {
+              const existing = productosMap.get(productoId);
+              if (item.attributes.precio_oferta < existing.precio_oferta) {
+                productosMap.set(productoId, {
+                  id: productoId,
+                  producto: producto,
+                  precio_venta: item.attributes.precio_venta_sugerido,
+                  precio_oferta: item.attributes.precio_oferta,
+                  en_oferta: true
+                });
+              }
             } else {
-              imagenPrincipal = `${this.strapiBaseUrl}${imageUrl}`;
+              productosMap.set(productoId, {
+                id: productoId,
+                producto: producto,
+                precio_venta: item.attributes.precio_venta_sugerido,
+                precio_oferta: item.attributes.precio_oferta,
+                en_oferta: true
+              });
             }
-          }
+          });
+          
+          // Convertir el Map a array y tomar solo los primeros 3
+          const productosConDescuento = Array.from(productosMap.values()).slice(0, 3);
+          
+          this.productosPopulares = productosConDescuento.map(item => {
+            let imagenPrincipal = '../../assets/img/default-product.jpg';
+            
+            let imageUrl = null;
+            if (item.producto.attributes?.imagen_principal?.data?.attributes?.url) {
+              imageUrl = item.producto.attributes.imagen_principal.data.attributes.url;
+            }
+            
+            if (imageUrl) {
+              if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                imagenPrincipal = imageUrl;
+              } else {
+                imagenPrincipal = `${this.strapiBaseUrl}${imageUrl}`;
+              }
+            }
 
-          let grupoProducto = 'Sin tipo';
-          let grupoProductoId = null;
-          
-          if (item.attributes?.grupos_de_productos?.data?.length > 0) {
-            grupoProducto = item.attributes.grupos_de_productos.data[0].attributes.nombre;
-            grupoProductoId = item.attributes.grupos_de_productos.data[0].id;
-          }
-          else if (item.attributes?.grupo_de_productos?.data?.attributes?.nombre) {
-            grupoProducto = item.attributes.grupo_de_productos.data.attributes.nombre;
-            grupoProductoId = item.attributes.grupo_de_productos.data.id;
-          }
-          
-          return {
-            id: item.id,
-            nombre: item.attributes?.nombre || item.attributes?.name || `Producto ${item.id}`,
-            grupo_producto: grupoProducto,
-            grupo_producto_id: grupoProductoId,
-            precio_venta: item.attributes?.precio_venta || item.attributes?.price || 0,
-            precio_oferta: item.attributes?.precio_oferta || item.attributes?.sale_price || null,
-            en_oferta: item.attributes?.en_oferta || item.attributes?.on_sale || false,
-            stock: item.attributes?.stock || 0,
-            imagen_principal: imagenPrincipal,
-            marca: item.attributes?.marca?.data || null,
-            grupos_de_productos: item.attributes?.grupos_de_productos?.data || []
-          };
-        });
+            let grupoProducto = 'Sin tipo';
+            let grupoProductoId = null;
+            
+            if (item.producto.attributes?.grupos_de_productos?.data?.length > 0) {
+              grupoProducto = item.producto.attributes.grupos_de_productos.data[0].attributes.nombre;
+              grupoProductoId = item.producto.attributes.grupos_de_productos.data[0].id;
+            }
+            
+            return {
+              id: item.id,
+              nombre: item.producto.attributes?.nombre || `Producto ${item.id}`,
+              grupo_producto: grupoProducto,
+              grupo_producto_id: grupoProductoId,
+              precio_venta: item.precio_venta,
+              precio_oferta: item.precio_oferta,
+              en_oferta: true,
+              imagen_principal: imagenPrincipal,
+              marca: item.producto.attributes?.marca?.data || null,
+              grupos_de_productos: item.producto.attributes?.grupos_de_productos?.data || []
+            };
+          });
+        } else {
+          // Fallback: si no hay productos con descuento en inventario-colores, 
+          // intentar con el sistema anterior
+          const fallbackResponse = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
+            params: {
+              'sort': 'createdAt:desc',
+              'pagination[pageSize]': 3,
+              'populate': '*'
+            }
+          });
+
+          this.productosPopulares = fallbackResponse.data.data.map(item => {
+            let imagenPrincipal = '../../assets/img/default-product.jpg';
+            
+            let imageUrl = null;
+            if (item.attributes?.imagen_principal?.data?.attributes?.url) {
+              imageUrl = item.attributes.imagen_principal.data.attributes.url;
+            }
+            
+            if (imageUrl) {
+              if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                imagenPrincipal = imageUrl;
+              } else {
+                imagenPrincipal = `${this.strapiBaseUrl}${imageUrl}`;
+              }
+            }
+
+            let grupoProducto = 'Sin tipo';
+            let grupoProductoId = null;
+            
+            if (item.attributes?.grupos_de_productos?.data?.length > 0) {
+              grupoProducto = item.attributes.grupos_de_productos.data[0].attributes.nombre;
+              grupoProductoId = item.attributes.grupos_de_productos.data[0].id;
+            }
+            
+            return {
+              id: item.id,
+              nombre: item.attributes?.nombre || `Producto ${item.id}`,
+              grupo_producto: grupoProducto,
+              grupo_producto_id: grupoProductoId,
+              precio_venta: 0,
+              precio_oferta: null,
+              en_oferta: false,
+              imagen_principal: imagenPrincipal,
+              marca: item.attributes?.marca?.data || null,
+              grupos_de_productos: item.attributes?.grupos_de_productos?.data || []
+            };
+          });
+        }
       } catch (error) {
         console.error('Error al cargar productos en oferta:', error);
         this.$toast.error('Error al cargar productos en oferta');
