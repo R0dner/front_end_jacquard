@@ -194,30 +194,48 @@ export default {
                     return;
                 }
 
-                // ✅ Usar el pluralName correcto
-                const response = await this.$axios.get(`/api/inventario-colores`, {
+                // 1. Intentar inventario detallado (por color y talla)
+                try {
+                    const detailedResponse = await this.$axios.get(`/api/inventario-colores`, {
+                        params: {
+                            'filters[producto][id][$eq]': this.product.id,
+                            'filters[estado_producto][$eq]': 'Activo',
+                            'populate[color]': '*',
+                            'populate[talla]': '*',
+                            'populate[producto]': '*'
+                        }
+                    });
+
+                    if (detailedResponse.data?.data?.length > 0) {
+                        this.inventoryMode = 'detailed';
+                        this.inventoryData = detailedResponse.data.data;
+                        this.processSizesAndColors();
+                        return;
+                    }
+                } catch (detailError) {
+                    console.warn('Inventario detallado no disponible, usando fallback');
+                }
+
+                // 2. Fallback: inventario general + datos del producto
+                await this.fetchProductWithRelations();
+                
+                const generalResponse = await this.$axios.get(`/api/inventarios`, {
                     params: {
                         'filters[producto][id][$eq]': this.product.id,
-                        'populate': ['color', 'talla', 'producto']
+                        'populate': '*'
                     }
                 });
 
-                if (response.data?.data?.length > 0) {
-                    console.log('✅ Usando inventario detallado');
-                    this.inventoryMode = 'detailed';
-                    this.inventoryData = response.data.data;
-                    this.processSizesAndColors();
-                    return;
-                }
-
-                // 2. Fallback: inventario general
-                console.log('⚠️ Inventario detallado vacío, usando general');
-                await this.fetchGeneralInventory();
+                this.inventoryMode = 'general';
+                this.inventoryData = generalResponse.data.data || [];
+                this.processGeneralInventory();
 
             } catch (error) {
-                console.error('❌ Error en inventario detallado:', error);
-                // fallback siempre
-                await this.fetchGeneralInventory();
+                console.error('Error cargando inventario:', error);
+                this.inventoryData = [];
+                this.inventoryMode = 'general';
+                await this.fetchProductWithRelations();
+                this.processGeneralInventory();
             } finally {
                 this.loadingInventory = false;
             }
