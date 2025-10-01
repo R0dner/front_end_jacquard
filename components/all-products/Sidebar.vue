@@ -8,15 +8,27 @@
           <i class="fas fa-angle-up"></i>
         </h3>
 
-        <b-collapse visible id="collapse-1" class="selected-filters-wrap-list">
-          <ul>
-            <li v-for="(filter, index) in activeFilters" :key="index">
-              <a href="#" @click.prevent="removeFilter(filter.type, filter.value)">{{ filter.label }}</a>
-            </li>
-          </ul>
+        <b-collapse visible id="collapse-1">
+          <div class="selected-filters-wrap-list" v-if="activeFilters.length > 0">
+            <ul>
+              <li v-for="(filter, index) in activeFilters" :key="index">
+                <a href="#" @click.prevent="removeFilter(filter.type, filter.value)">
+                  {{ filter.label }}
+                  <i class="fas fa-times ml-2"></i>
+                </a>
+              </li>
+            </ul>
 
-          <div class="delete-selected-filters" v-if="activeFilters.length > 0">
-            <a href="#" @click.prevent="clearFilters"><i class="far fa-trash-alt"></i> <span>Borrar selecciones</span></a>
+            <div class="delete-selected-filters">
+              <a href="#" @click.prevent="clearFilters">
+                <i class="far fa-trash-alt"></i> 
+                <span>Borrar selecciones</span>
+              </a>
+            </div>
+          </div>
+          
+          <div class="no-filters-selected" v-else>
+            <p>No hay filtros seleccionados</p>
           </div>
         </b-collapse>
       </div>
@@ -462,6 +474,7 @@ export default {
         return;
       }
 
+      // Remover filtro anterior del mismo tipo para filtros únicos
       if (['precio', 'grupo_producto', 'deseados'].includes(type)) {
         const typeIndex = this.activeFilters.findIndex(filter => filter.type === type);
         if (typeIndex !== -1) {
@@ -469,18 +482,20 @@ export default {
         }
       }
 
-      let label = customLabel || value;
+      // Generar label correctamente
+      let label = customLabel || String(value);
+      
       if (!customLabel) {
         if (type === 'grupo_producto') {
-          const grupo = this.gruposProductos.find(g => g.id === value);
-          if (grupo) label = grupo.nombre;
+          const grupo = this.gruposProductos.find(g => g.id === parseInt(value));
+          label = grupo ? grupo.nombre : `Tipo ${value}`;
         } else if (type === 'en_oferta' && value === true) {
-          label = 'Ofertas';
+          label = 'Productos en oferta';
         } else if (type === 'precio') {
           const range = this.priceRanges.find(r => r.value === value);
-          if (range) label = range.label;
+          label = range ? range.label : value;
         } else if (type === 'deseados' && value === true) {
-          label = 'Mis favoritos';
+          label = `Mis favoritos (${this.wishlist.length})`;
         }
       }
 
@@ -980,18 +995,22 @@ export default {
 }
 
 /* Filtros activos - eliminar fondo rosa */
+.selected-filters-wrap-list {
+  padding: 16px;
+}
+
 .selected-filters-wrap-list ul {
   padding: 0;
-  background: rgba(98, 106, 113, 0.15); /* Azul suave */
+  background: rgba(98, 106, 113, 0.15);
   border-radius: 8px;
-  margin-top: 10px;
-  margin-left: 10px;
+  margin: 0;
   border: 1px solid rgba(49, 130, 206, 0.3);
+  list-style: none;
 }
 
 .selected-filters-wrap-list li {
-  margin-bottom: 8px;
-  padding: 0 16px;
+  margin: 0;
+  padding: 8px 16px;
 }
 
 .selected-filters-wrap-list li:first-child {
@@ -1005,7 +1024,7 @@ export default {
 .selected-filters-wrap-list li a {
   background: var(--sidebar-accent);
   color: rgb(9, 2, 76) !important;
-  padding: 10px 16px; /* Más padding para mejor legibilidad */
+  padding: 10px 16px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 700;
@@ -1022,9 +1041,9 @@ export default {
   transform: scale(1.05);
 }
 
-.selected-filters-wrap-list li a::after {
+.selected-filters-wrap-list li a .fa-times {
   font-weight: 700;
-  font-size: 18px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.9);
 }
 
@@ -1245,7 +1264,8 @@ export default {
 }
 
 /* Lista de deseos vacía mejorada */
-.no-wishlist-items {
+.no-wishlist-items,
+.no-filters-selected {
   background: rgba(255, 255, 255, 0.05);
   padding: 24px 20px; /* Más padding vertical */
   border-radius: 8px;
@@ -1254,6 +1274,11 @@ export default {
   color: var(--sidebar-text-muted);
   font-style: italic;
   margin-top: 8px; /* Pequeño margen del título */
+}
+
+.no-filters-selected p {
+  margin: 0;
+  font-size: 14px;
 }
 
 /* Separador visual entre secciones */
