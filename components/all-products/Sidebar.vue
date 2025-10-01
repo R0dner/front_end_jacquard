@@ -1040,6 +1040,13 @@ export default {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
+/* Eliminar cualquier contenido ::before o ::after heredado */
+.selected-filters-wrap-list li a::before,
+.selected-filters-wrap-list li a::after {
+  content: none !important;
+  display: none !important;
+}
+
 .selected-filters-wrap-list li a:hover {
   background: var(--sidebar-accent-hover);
   transform: scale(1.05);
