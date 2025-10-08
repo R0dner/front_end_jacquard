@@ -57,11 +57,13 @@ export default {
     cart() {
       return this.$store.getters.cart
     },
+    // ✅ COMPUTED ACTUALIZADO
     wishlist() {
-      return this.$store.state.wishlist?.items || [];
+      return this.$store.getters.wishlist || [];
     },
+    // ✅ COMPUTED ACTUALIZADO
     isInWishlist() {
-      return this.wishlist.some(item => item.id === this.id)
+      return this.$store.getters.isInWishlist(this.id);
     },
     currentStock() {
       if (this.inventoryData) {
@@ -77,36 +79,6 @@ export default {
     }
   },
   methods: {
-    initializeWishlistStore() {
-      if (!this.$store.state.wishlist) {
-        this.$store.registerModule('wishlist', {
-          state: {
-            items: JSON.parse(localStorage.getItem('wishlist') || '[]')
-          },
-          mutations: {
-            addToWishlist(state, product) {
-              const existingIndex = state.items.findIndex(item => item.id === product.id);
-              if (existingIndex === -1) {
-                state.items.push(product);
-                localStorage.setItem('wishlist', JSON.stringify(state.items));
-              }
-            },
-            removeFromWishlist(state, productId) {
-              state.items = state.items.filter(item => item.id !== productId);
-              localStorage.setItem('wishlist', JSON.stringify(state.items));
-            }
-          },
-          getters: {
-            wishlist: state => state.items,
-            wishlistCount: state => state.items.length,
-            isInWishlist: state => productId => {
-              return state.items.some(item => item.id === productId);
-            }
-          }
-        });
-      }
-    },
-
     getProductImageUrl(product) {
       let imagenData = null;
       
@@ -150,13 +122,15 @@ export default {
       event.target.src = '/images/default-product.jpg';
     },
 
+    // ✅ MÉTODO COMPLETAMENTE ACTUALIZADO
     addToWishlist() {
-      console.log('=== ADD TO WISHLIST CLICKED ===');
-      console.log('Product ID:', this.id);
-      console.log('Is in wishlist:', this.isInWishlist);
+      console.log('═══════════════════════════════════');
+      console.log('❤️ [PRODUCTO] Add to wishlist');
+      console.log('🆔 [PRODUCTO] ID:', this.id);
+      console.log('📊 [PRODUCTO] ¿En wishlist?', this.isInWishlist);
       
       const wishlistItem = {
-        id: parseInt(this.id), // Asegurar que es un número
+        id: this.id,
         name: this.product.nombre,
         price: this.product.en_oferta ? this.product.precio_oferta : this.product.precio_venta,
         originalPrice: this.product.precio_venta,
@@ -166,26 +140,27 @@ export default {
         stock: this.currentStock
       };
 
-      console.log('Wishlist item:', wishlistItem);
+      console.log('📦 [PRODUCTO] Item a guardar:', wishlistItem);
 
       if (this.isInWishlist) {
-        console.log('Removiendo de wishlist...');
-        this.$store.commit('removeFromWishlist', this.id);
+        console.log('➖ [PRODUCTO] Removiendo de wishlist...');
+        this.$store.dispatch('removeFromWishlist', this.id);
         this.$toast.info("Removido de la lista de deseados", {
           icon: 'fas fa-heart-broken'
         });
       } else {
-        console.log('Agregando a wishlist...');
-        this.$store.commit('addToWishlist', wishlistItem);
+        console.log('➕ [PRODUCTO] Agregando a wishlist...');
+        this.$store.dispatch('addToWishlist', wishlistItem);
         this.$toast.success("Agregado a la lista de deseados", {
           icon: 'fas fa-heart'
         });
       }
       
-      // IMPORTANTE: Emitir evento con delay para asegurar que el store se actualizó
       this.$nextTick(() => {
-        console.log('Emitiendo wishlist-updated desde ProductoUnico');
-        console.log('Wishlist después de cambio:', this.$store.state.wishlist.items);
+        console.log('📡 [PRODUCTO] Emitiendo wishlist-updated');
+        console.log('📊 [PRODUCTO] Store count:', this.$store.getters.wishlistCount);
+        console.log('📋 [PRODUCTO] Store items:', this.$store.getters.wishlist);
+        console.log('═══════════════════════════════════');
         this.$root.$emit('wishlist-updated');
       });
     },
@@ -299,8 +274,6 @@ export default {
     } else {
       this.fetchInventory();
     }
-    
-    this.initializeWishlistStore();
   }
 }
 </script>

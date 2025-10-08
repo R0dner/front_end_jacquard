@@ -189,17 +189,9 @@ export default {
   },
   computed: {
     wishlistIds() {
-      console.log('=== CALCULANDO wishlistIds ===');
-      console.log('Wishlist actual:', this.wishlist);
-      
-      const ids = this.wishlist.map(item => {
-        if (typeof item === 'object' && item.id) {
-          return parseInt(item.id);
-        }
-        return parseInt(item);
-      }).filter(id => !isNaN(id));
-      
-      console.log('IDs procesados:', ids);
+      const storeWishlist = this.$store.getters.wishlist || [];
+      const ids = storeWishlist.map(item => parseInt(item.id)).filter(id => !isNaN(id));
+      console.log('🔢 [SIDEBAR] wishlistIds computed:', ids);
       return ids;
     }
   },
@@ -207,17 +199,17 @@ export default {
     this.debouncedNotifyProductsComponent = debounce(this.notifyProductsComponent, 300);
   },
   async mounted() {
-    console.log('=== SIDEBAR MOUNTED ===');
+    console.log('🚀 [SIDEBAR] Componente montado');
     
-    // Inicializar store primero
-    this.initializeWishlistStore();
+    // ✅ INICIALIZAR WISHLIST DESDE STORE
+    this.$store.dispatch('initWishlist');
+    
+    // Cargar wishlist local para display
+    this.loadWishlist();
     
     // Cargar grupos primero
     await this.loadGruposProductos();
     this.loadProductosPopulares();
-    
-    // Cargar wishlist
-    this.loadWishlist();
     
     // Cargar filtros desde URL
     this.loadFiltersFromUrl();
@@ -231,70 +223,32 @@ export default {
     this.$root.$off('wishlist-updated', this.handleWishlistUpdate);
   },
   methods: {
-    initializeWishlistStore() {
-      console.log('=== INICIALIZANDO WISHLIST STORE ===');
-      if (!this.$store.state.wishlist) {
-        this.$store.registerModule('wishlist', {
-          state: {
-            items: JSON.parse(localStorage.getItem('wishlist') || '[]')
-          },
-          mutations: {
-            addToWishlist(state, product) {
-              const existingIndex = state.items.findIndex(item => item.id === product.id);
-              if (existingIndex === -1) {
-                state.items.push(product);
-                localStorage.setItem('wishlist', JSON.stringify(state.items));
-                console.log('Producto agregado al wishlist:', product);
-              }
-            },
-            removeFromWishlist(state, productId) {
-              state.items = state.items.filter(item => item.id !== productId);
-              localStorage.setItem('wishlist', JSON.stringify(state.items));
-              console.log('Producto removido del wishlist:', productId);
-            },
-            clearWishlist(state) {
-              state.items = [];
-              localStorage.setItem('wishlist', '[]');
-            }
-          },
-          getters: {
-            wishlist: state => state.items,
-            wishlistCount: state => state.items.length,
-            isInWishlist: state => productId => {
-              return state.items.some(item => item.id === productId);
-            }
-          }
-        });
-      }
-      console.log('Store inicializado, items:', this.$store.state.wishlist?.items);
-    },
-    
+    // ✅ MÉTODO ACTUALIZADO
     loadWishlist() {
-      console.log('=== CARGANDO WISHLIST ===');
-      try {
-        if (this.$store.state.wishlist && this.$store.state.wishlist.items) {
-          this.wishlist = this.$store.state.wishlist.items;
-        } else {
-          const stored = localStorage.getItem('wishlist');
-          this.wishlist = stored ? JSON.parse(stored) : [];
-        }
-        
-        console.log('Wishlist cargada en sidebar:', this.wishlist);
-        console.log('Total items:', this.wishlist.length);
-        console.log('IDs:', this.wishlistIds);
-      } catch (error) {
-        console.error('Error loading wishlist:', error);
+      console.log('📥 [SIDEBAR] loadWishlist');
+      
+      const storeWishlist = this.$store.getters.wishlist;
+      
+      if (storeWishlist && Array.isArray(storeWishlist)) {
+        this.wishlist = [...storeWishlist];
+        console.log('✅ [SIDEBAR] Wishlist cargada:', this.wishlist.length, 'items');
+      } else {
+        console.log('⚠️ [SIDEBAR] No se pudo cargar wishlist');
         this.wishlist = [];
       }
     },
     
+    // ✅ MÉTODO ACTUALIZADO
     handleWishlistUpdate() {
-      console.log('=== WISHLIST ACTUALIZADA - EVENTO RECIBIDO ===');
+      console.log('🔄 [SIDEBAR] Evento wishlist-updated recibido');
       this.loadWishlist();
+      
+      console.log('📊 [SIDEBAR] Total items:', this.wishlist.length);
+      console.log('🔢 [SIDEBAR] IDs:', this.wishlistIds);
       
       // Si el filtro de deseados está activo, actualizar productos
       if (this.isActive('deseados', true)) {
-        console.log('Filtro de deseados activo, actualizando productos...');
+        console.log('🔄 [SIDEBAR] Filtro activo - Actualizando productos...');
         this.debouncedNotifyProductsComponent();
       }
     },
@@ -540,14 +494,13 @@ export default {
           label = range ? range.label : value;
         } else if (type === 'deseados' && value === true) {
           label = `Mis favoritos (${this.wishlist.length})`;
-          console.log('Aplicando filtro deseados');
-          console.log('Wishlist IDs:', this.wishlistIds);
-          console.log('Wishlist completo:', this.wishlist);
+          console.log('✅ [SIDEBAR] Aplicando filtro deseados');
+          console.log('🔢 [SIDEBAR] Wishlist IDs:', this.wishlistIds);
         }
       }
 
       this.activeFilters.push({ type, value, label });
-      console.log('Filtros activos:', this.activeFilters);
+      console.log('📋 [SIDEBAR] Filtros activos:', this.activeFilters);
       
       this.updateUrlWithFilters();
       this.debouncedNotifyProductsComponent();
@@ -555,16 +508,17 @@ export default {
       this.$root.$emit('sidebar-filters-changed', this.buildFiltersObject());
     },
 
+    // ✅ MÉTODO ACTUALIZADO
     buildFiltersObject() {
       const filtersObj = {};
       this.activeFilters.forEach(filter => {
         filtersObj[filter.type] = filter.value;
       });
       
-      // IMPORTANTE: Agregar los IDs del wishlist si el filtro está activo
+      // Agregar wishlistIds si el filtro está activo
       if (this.isActive('deseados', true)) {
         filtersObj.wishlistIds = this.wishlistIds;
-        console.log('Agregando wishlistIds al filtro:', filtersObj.wishlistIds);
+        console.log('📋 [SIDEBAR] buildFiltersObject - wishlistIds:', filtersObj.wishlistIds);
       }
       
       return filtersObj;
@@ -620,7 +574,7 @@ export default {
         }
       }
       
-      console.log('Filtros activos después de remover:', this.activeFilters);
+      console.log('📋 [SIDEBAR] Filtros después de remover:', this.activeFilters);
       
       this.updateUrlWithFilters();
       this.debouncedNotifyProductsComponent();
@@ -629,7 +583,7 @@ export default {
     },
 
     clearFilters() {
-      console.log('=== LIMPIANDO TODOS LOS FILTROS ===');
+      console.log('🗑️ [SIDEBAR] Limpiando todos los filtros');
       this.activeFilters = [];
       this.priceRange.min = null;
       this.priceRange.max = null;
@@ -733,29 +687,31 @@ export default {
       return params;
     },
 
+    // ✅ MÉTODO ACTUALIZADO
     async notifyProductsComponent() {
-      console.log('=== NOTIFICANDO COMPONENTE DE PRODUCTOS ===');
+      console.log('═══════════════════════════════════');
+      console.log('📤 [SIDEBAR] Notificando componente de productos');
       
       if (this.currentRequest) {
         this.currentRequest.cancel();
       }
       
       const queryParams = this.buildStrapiFilters();
-      console.log("Parámetros Strapi:", queryParams);
+      console.log("📋 [SIDEBAR] Parámetros Strapi:", queryParams);
       
       const cacheKey = JSON.stringify(queryParams);
       
-      // CAMBIO CRÍTICO: Enviar los IDs correctamente
+      // ✅ ENVIAR FILTROS CON WISHLIST
       const filtersWithWishlist = {
         ...queryParams,
         wishlistFilter: this.isActive('deseados', true),
         wishlistIds: this.isActive('deseados', true) ? this.wishlistIds : null
       };
       
-      console.log("=== FILTROS CON WISHLIST ===");
-      console.log('wishlistFilter activo:', filtersWithWishlist.wishlistFilter);
-      console.log('wishlistIds:', filtersWithWishlist.wishlistIds);
-      console.log('Objeto completo:', filtersWithWishlist);
+      console.log("📊 [SIDEBAR] Filtros completos:");
+      console.log('  - wishlistFilter:', filtersWithWishlist.wishlistFilter);
+      console.log('  - wishlistIds:', filtersWithWishlist.wishlistIds);
+      console.log('═══════════════════════════════════');
       
       this.$root.$emit('filters-changed', filtersWithWishlist);
       
