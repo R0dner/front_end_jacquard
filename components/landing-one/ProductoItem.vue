@@ -54,32 +54,29 @@ export default {
   },
   props: ['id', 'product', 'className'],
   computed: {
-      cart() {
-        return this.$store.getters.cart
-      },
-      wishlist() {
-        return this.$store.state.wishlist?.items || [];
-      },
-      isInWishlist() {
-        return this.wishlist.some(item => item.id === this.id)
-      },
-      currentStock() {
-        if (this.inventoryData) {
-          // CAMBIO CRÍTICO: usar stock_total en lugar de stock_actual
-          return this.inventoryData.stock_total || 0;
-        }
-        if (this.product.stock) {
-          return this.product.stock;
-        }
-        return 0;
-      },
-      // Agregar computed para verificar si está agotado
-      isOutOfStock() {
-        return this.currentStock <= 0;
-      }
+    cart() {
+      return this.$store.getters.cart
     },
+    wishlist() {
+      return this.$store.state.wishlist?.items || [];
+    },
+    isInWishlist() {
+      return this.wishlist.some(item => item.id === this.id)
+    },
+    currentStock() {
+      if (this.inventoryData) {
+        return this.inventoryData.stock_total || 0;
+      }
+      if (this.product.stock) {
+        return this.product.stock;
+      }
+      return 0;
+    },
+    isOutOfStock() {
+      return this.currentStock <= 0;
+    }
+  },
   methods: {
-    // Método para inicializar el store de wishlist
     initializeWishlistStore() {
       if (!this.$store.state.wishlist) {
         this.$store.registerModule('wishlist', {
@@ -113,7 +110,6 @@ export default {
     getProductImageUrl(product) {
       let imagenData = null;
       
-      // Buscar la imagen en diferentes ubicaciones
       if (product?.imagen_principal?.data?.attributes) {
         imagenData = product.imagen_principal.data.attributes;
       }
@@ -127,7 +123,6 @@ export default {
       if (imagenData?.url) {
         let cleanUrl = imagenData.url.trim();
         
-        // Detectar y corregir URLs malformadas
         if (cleanUrl.includes('strapiapp.comhttps')) {
           const mediaUrlMatch = cleanUrl.match(/https:\/\/[^\/]*\.media\.strapiapp\.com\/.*$/);
           if (mediaUrlMatch) {
@@ -135,12 +130,10 @@ export default {
           }
         }
         
-        // Si ya es una URL completa, devolverla tal como está
         if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
           return cleanUrl;
         }
         
-        // Si es relativa, agregar el dominio base
         const baseUrl = this.api_url?.endsWith('/') 
           ? this.api_url.slice(0, -1) 
           : this.api_url;
@@ -152,16 +145,18 @@ export default {
       return '/images/default-product.jpg';
     },
 
-    // Manejar errores de imagen
     handleImageError(event) {
       console.log('Error loading image:', event.target.src);
       event.target.src = '/images/default-product.jpg';
     },
 
-    // Añadir/quitar de la lista de deseados
     addToWishlist() {
+      console.log('=== ADD TO WISHLIST CLICKED ===');
+      console.log('Product ID:', this.id);
+      console.log('Is in wishlist:', this.isInWishlist);
+      
       const wishlistItem = {
-        id: this.id,
+        id: parseInt(this.id), // Asegurar que es un número
         name: this.product.nombre,
         price: this.product.en_oferta ? this.product.precio_oferta : this.product.precio_venta,
         originalPrice: this.product.precio_venta,
@@ -171,30 +166,34 @@ export default {
         stock: this.currentStock
       };
 
+      console.log('Wishlist item:', wishlistItem);
+
       if (this.isInWishlist) {
-        // Usar mutación en lugar de acción
+        console.log('Removiendo de wishlist...');
         this.$store.commit('removeFromWishlist', this.id);
         this.$toast.info("Removido de la lista de deseados", {
           icon: 'fas fa-heart-broken'
         });
       } else {
-        // Usar mutación en lugar de acción
+        console.log('Agregando a wishlist...');
         this.$store.commit('addToWishlist', wishlistItem);
         this.$toast.success("Agregado a la lista de deseados", {
           icon: 'fas fa-heart'
         });
       }
       
-      // Emitir evento global para actualizar el filtro
-      this.$root.$emit('wishlist-updated');
+      // IMPORTANTE: Emitir evento con delay para asegurar que el store se actualizó
+      this.$nextTick(() => {
+        console.log('Emitiendo wishlist-updated desde ProductoUnico');
+        console.log('Wishlist después de cambio:', this.$store.state.wishlist.items);
+        this.$root.$emit('wishlist-updated');
+      });
     },
 
-    // QuickView mejorado
     quickView(e) {
       e.preventDefault();
       e.stopPropagation();
       
-      // Preparar datos del producto para QuickView
       const productForQuickView = {
         id: this.id,
         nombre: this.product.nombre,
@@ -209,7 +208,6 @@ export default {
         categoria: this.product.categoria
       };
       
-      // Emitir evento al componente padre
       this.$emit('clicked', productForQuickView);
     },
 
@@ -232,12 +230,10 @@ export default {
           this.inventoryData = response.data.data[0].attributes;
         } else {
           console.warn('No inventory data found for this product');
-          // CAMBIO: usar stock_total
           this.inventoryData = { stock_total: 0 };
         }
       } catch (error) {
         console.error('Error fetching inventory:', error);
-        // CAMBIO: usar stock_total
         this.inventoryData = { stock_total: 0 };
       } finally {
         this.loadingInventory = false;
@@ -276,7 +272,6 @@ export default {
             icon: 'fas fa-cart-plus'
           });
         } else {
-          // Verificar que no exceda el stock disponible
           const currentCartQuantity = this.cart[cartIndex].quantity;
           if (currentCartQuantity >= this.currentStock) {
             this.$toast.error(`Solo hay ${this.currentStock} unidades disponibles`, {
@@ -305,7 +300,6 @@ export default {
       this.fetchInventory();
     }
     
-    // Inicializar el store de wishlist si no existe
     this.initializeWishlistStore();
   }
 }

@@ -189,32 +189,50 @@ export default {
   },
   computed: {
     wishlistIds() {
-      return this.wishlist.map(item => item.id);
+      console.log('=== CALCULANDO wishlistIds ===');
+      console.log('Wishlist actual:', this.wishlist);
+      
+      const ids = this.wishlist.map(item => {
+        if (typeof item === 'object' && item.id) {
+          return parseInt(item.id);
+        }
+        return parseInt(item);
+      }).filter(id => !isNaN(id));
+      
+      console.log('IDs procesados:', ids);
+      return ids;
     }
   },
   created() {
     this.debouncedNotifyProductsComponent = debounce(this.notifyProductsComponent, 300);
   },
   async mounted() {
-    // Cargar grupos primero antes de cargar filtros desde URL
+    console.log('=== SIDEBAR MOUNTED ===');
+    
+    // Inicializar store primero
+    this.initializeWishlistStore();
+    
+    // Cargar grupos primero
     await this.loadGruposProductos();
     this.loadProductosPopulares();
     
-    // Ahora cargar filtros desde URL cuando ya tenemos los grupos
-    this.loadFiltersFromUrl();
+    // Cargar wishlist
     this.loadWishlist();
     
-    this.$root.$on('update-filters', this.updateFiltersFromExternal);
-    this.$root.$on('wishlist-updated', this.loadWishlist);
+    // Cargar filtros desde URL
+    this.loadFiltersFromUrl();
     
-    this.initializeWishlistStore();
+    // Escuchar eventos
+    this.$root.$on('update-filters', this.updateFiltersFromExternal);
+    this.$root.$on('wishlist-updated', this.handleWishlistUpdate);
   },
   beforeDestroy() {
     this.$root.$off('update-filters', this.updateFiltersFromExternal);
-    this.$root.$off('wishlist-updated', this.loadWishlist);
+    this.$root.$off('wishlist-updated', this.handleWishlistUpdate);
   },
   methods: {
     initializeWishlistStore() {
+      console.log('=== INICIALIZANDO WISHLIST STORE ===');
       if (!this.$store.state.wishlist) {
         this.$store.registerModule('wishlist', {
           state: {
@@ -226,11 +244,13 @@ export default {
               if (existingIndex === -1) {
                 state.items.push(product);
                 localStorage.setItem('wishlist', JSON.stringify(state.items));
+                console.log('Producto agregado al wishlist:', product);
               }
             },
             removeFromWishlist(state, productId) {
               state.items = state.items.filter(item => item.id !== productId);
               localStorage.setItem('wishlist', JSON.stringify(state.items));
+              console.log('Producto removido del wishlist:', productId);
             },
             clearWishlist(state) {
               state.items = [];
@@ -246,11 +266,37 @@ export default {
           }
         });
       }
+      console.log('Store inicializado, items:', this.$store.state.wishlist?.items);
     },
     
     loadWishlist() {
-      this.wishlist = this.$store.getters.wishlist || [];
-      console.log("Wishlist cargada:", this.wishlist);
+      console.log('=== CARGANDO WISHLIST ===');
+      try {
+        if (this.$store.state.wishlist && this.$store.state.wishlist.items) {
+          this.wishlist = this.$store.state.wishlist.items;
+        } else {
+          const stored = localStorage.getItem('wishlist');
+          this.wishlist = stored ? JSON.parse(stored) : [];
+        }
+        
+        console.log('Wishlist cargada en sidebar:', this.wishlist);
+        console.log('Total items:', this.wishlist.length);
+        console.log('IDs:', this.wishlistIds);
+      } catch (error) {
+        console.error('Error loading wishlist:', error);
+        this.wishlist = [];
+      }
+    },
+    
+    handleWishlistUpdate() {
+      console.log('=== WISHLIST ACTUALIZADA - EVENTO RECIBIDO ===');
+      this.loadWishlist();
+      
+      // Si el filtro de deseados está activo, actualizar productos
+      if (this.isActive('deseados', true)) {
+        console.log('Filtro de deseados activo, actualizando productos...');
+        this.debouncedNotifyProductsComponent();
+      }
     },
     
     openQuickView(producto) {
@@ -324,7 +370,6 @@ export default {
     async loadProductosPopulares() {
       this.loading.productosPopulares = true;
       try {
-        // Intentar cargar productos con descuentos desde inventario-colores
         const inventarioResponse = await axios.get(`${this.strapiBaseUrl}/api/inventario-colores`, {
           params: {
             'filters[en_oferta][$eq]': true,
@@ -337,7 +382,6 @@ export default {
         });
 
         if (inventarioResponse.data?.data?.length > 0) {
-          // Agrupar por producto para evitar duplicados
           const productosMap = new Map();
           
           inventarioResponse.data.data.forEach(item => {
@@ -346,7 +390,6 @@ export default {
             
             const productoId = producto.id;
             
-            // Si ya tenemos este producto, comparar precios y quedarnos con el menor
             if (productosMap.has(productoId)) {
               const existing = productosMap.get(productoId);
               if (item.attributes.precio_oferta < existing.precio_oferta) {
@@ -369,7 +412,6 @@ export default {
             }
           });
           
-          // Convertir el Map a array y tomar solo los primeros 3
           const productosConDescuento = Array.from(productosMap.values()).slice(0, 3);
           
           this.productosPopulares = productosConDescuento.map(item => {
@@ -410,8 +452,6 @@ export default {
             };
           });
         } else {
-          // Fallback: si no hay productos con descuento en inventario-colores, 
-          // intentar con el sistema anterior
           const fallbackResponse = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
             params: {
               'sort': 'createdAt:desc',
@@ -468,6 +508,9 @@ export default {
     },
 
     applyFilter(type, value, customLabel = null) {
+      console.log('=== APLICANDO FILTRO ===');
+      console.log('Tipo:', type, 'Valor:', value);
+      
       const existingIndex = this.activeFilters.findIndex(
         filter => filter.type === type && filter.value === value
       );
@@ -477,7 +520,6 @@ export default {
         return;
       }
 
-      // Remover filtro anterior del mismo tipo para filtros únicos
       if (['precio', 'grupo_producto', 'deseados'].includes(type)) {
         const typeIndex = this.activeFilters.findIndex(filter => filter.type === type);
         if (typeIndex !== -1) {
@@ -485,7 +527,6 @@ export default {
         }
       }
 
-      // Generar label correctamente
       let label = customLabel || String(value);
       
       if (!customLabel) {
@@ -499,10 +540,15 @@ export default {
           label = range ? range.label : value;
         } else if (type === 'deseados' && value === true) {
           label = `Mis favoritos (${this.wishlist.length})`;
+          console.log('Aplicando filtro deseados');
+          console.log('Wishlist IDs:', this.wishlistIds);
+          console.log('Wishlist completo:', this.wishlist);
         }
       }
 
       this.activeFilters.push({ type, value, label });
+      console.log('Filtros activos:', this.activeFilters);
+      
       this.updateUrlWithFilters();
       this.debouncedNotifyProductsComponent();
       
@@ -514,6 +560,13 @@ export default {
       this.activeFilters.forEach(filter => {
         filtersObj[filter.type] = filter.value;
       });
+      
+      // IMPORTANTE: Agregar los IDs del wishlist si el filtro está activo
+      if (this.isActive('deseados', true)) {
+        filtersObj.wishlistIds = this.wishlistIds;
+        console.log('Agregando wishlistIds al filtro:', filtersObj.wishlistIds);
+      }
+      
       return filtersObj;
     },
 
@@ -539,6 +592,9 @@ export default {
     },
 
     removeFilter(type, value) {
+      console.log('=== REMOVIENDO FILTRO ===');
+      console.log('Tipo:', type, 'Valor:', value);
+      
       if (type === 'precio') {
         this.priceRange.min = null;
         this.priceRange.max = null;
@@ -564,6 +620,8 @@ export default {
         }
       }
       
+      console.log('Filtros activos después de remover:', this.activeFilters);
+      
       this.updateUrlWithFilters();
       this.debouncedNotifyProductsComponent();
       
@@ -571,6 +629,7 @@ export default {
     },
 
     clearFilters() {
+      console.log('=== LIMPIANDO TODOS LOS FILTROS ===');
       this.activeFilters = [];
       this.priceRange.min = null;
       this.priceRange.max = null;
@@ -624,7 +683,6 @@ export default {
             processedValue = parseInt(value);
           }
           
-          // IMPORTANTE: NO pasar customLabel aquí, dejar que applyFilter lo genere
           this.applyFilter(type, processedValue, null);
         });
       });
@@ -676,19 +734,28 @@ export default {
     },
 
     async notifyProductsComponent() {
+      console.log('=== NOTIFICANDO COMPONENTE DE PRODUCTOS ===');
+      
       if (this.currentRequest) {
         this.currentRequest.cancel();
       }
       
       const queryParams = this.buildStrapiFilters();
-      console.log("Parámetros a enviar:", queryParams);
+      console.log("Parámetros Strapi:", queryParams);
       
       const cacheKey = JSON.stringify(queryParams);
       
+      // CAMBIO CRÍTICO: Enviar los IDs correctamente
       const filtersWithWishlist = {
         ...queryParams,
-        wishlistFilter: this.isActive('deseados', true) ? this.wishlistIds : null
+        wishlistFilter: this.isActive('deseados', true),
+        wishlistIds: this.isActive('deseados', true) ? this.wishlistIds : null
       };
+      
+      console.log("=== FILTROS CON WISHLIST ===");
+      console.log('wishlistFilter activo:', filtersWithWishlist.wishlistFilter);
+      console.log('wishlistIds:', filtersWithWishlist.wishlistIds);
+      console.log('Objeto completo:', filtersWithWishlist);
       
       this.$root.$emit('filters-changed', filtersWithWishlist);
       
