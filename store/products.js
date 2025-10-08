@@ -1,224 +1,233 @@
-// store/products.js - REEMPLAZAR desde la línea 1
-
 const state = () => ({
-    cart: [],
-    totalAmount: 0,
-    totalQuantity: 0,
-    orders: [],
-    wishlist: { items: [] } // ✅ CAMBIO: Ahora es un objeto con items
+    all: [
+        {
+            id: 1,
+            name: 'Linen crochet trim t-shirt',
+            price: 191.00,
+            offer: true,
+            offerPrice: 3,
+            latest: true,
+            bestSellers: false,
+            trending: false,
+            image: require('../assets/img/img1.jpg'),
+            imageHover: require('../assets/img/img-hover1.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 2,
+            name: 'Neck empire sleeve t-shirts',
+            price: 300.00,
+            offer: false,
+            offerPrice: 3,
+            latest: true,
+            bestSellers: false,
+            trending: false,
+            image: require('../assets/img/img2.jpg'),
+            imageHover: require('../assets/img/img-hover2.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 3,
+            name: 'Mermaid pencil midi lace',
+            price: 166.00,
+            offer: true,
+            offerPrice: 5,
+            latest: true,
+            bestSellers: false,
+            trending: false,
+            image: require('../assets/img/img3.jpg'),
+            imageHover: require('../assets/img/img-hover3.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 4,
+            name: 'Criss-cross V neck bodycon',
+            price: 200.00,
+            offer: false,
+            offerPrice: 7,
+            latest: true,
+            bestSellers: false,
+            trending: false,
+            image: require('../assets/img/img4.jpg'),
+            imageHover: require('../assets/img/img-hover4.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 5,
+            name: 'The cosmic cornucopia',
+            price: 150.00,
+            offer: true,
+            offerPrice: 7,
+            latest: true,
+            bestSellers: false,
+            trending: false,
+            image: require('../assets/img/img5.jpg'),
+            imageHover: require('../assets/img/img-hover5.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 6,
+            name: 'Tenku remastered',
+            price: 177.00,
+            offer: false,
+            offerPrice: 7,
+            latest: true,
+            bestSellers: false,
+            trending: false,
+            image: require('../assets/img/img6.jpg'),
+            imageHover: require('../assets/img/img-hover6.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 7,
+            name: 'Women\'s sherpa lined hoodie',
+            price: 300.00,
+            offer: true,
+            offerPrice: 4,
+            latest: true,
+            bestSellers: false,
+            trending: false,
+            image: require('../assets/img/img7.jpg'),
+            imageHover: require('../assets/img/img-hover7.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 8,
+            name: 'Belted chino trousers polo',
+            price: 191.00,
+            offer: false,
+            offerPrice: 4,
+            latest: true,
+            bestSellers: false,
+            trending: false,
+            image: require('../assets/img/img8.jpg'),
+            imageHover: require('../assets/img/img-hover8.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 9,
+            name: 'The cosmic cornucopia',
+            price: 150.00,
+            offer: true,
+            offerPrice: 7,
+            latest: false,
+            bestSellers: true,
+            trending: false,
+            image: require('../assets/img/bestseller-img1.jpg'),
+            imageHover: require('../assets/img/bestseller-hover-img1.jpg'),
+            timePeriod: true,
+            dateTime: new Date("August 19, 2022 17:00:00 PDT")
+        },
+        {
+            id: 10,
+            name: 'Tenku remastered',
+            price: 177.00,
+            offer: false,
+            offerPrice: 7,
+            latest: false,
+            bestSellers: true,
+            trending: false,
+            image: require('../assets/img/bestseller-img2.jpg'),
+            imageHover: require('../assets/img/bestseller-hover-img2.jpg'),
+            timePeriod: false,
+            trendingProducts: false,
+            dateTime: new Date("August 19, 2021 17:00:00 PDT")
+        },
+        {
+            id: 11,
+            name: 'Women\'s sherpa lined hoodie',
+            price: 300.00,
+            offer: true,
+            offerPrice: 4,
+            latest: false,
+            bestSellers: true,
+            trending: false,
+            image: require('../assets/img/bestseller-img3.jpg'),
+            imageHover: require('../assets/img/bestseller-hover-img3.jpg'),
+            timePeriod: true,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 12,
+            name: 'Belted chino trousers polo',
+            price: 191.00,
+            offer: false,
+            offerPrice: 4,
+            latest: false,
+            bestSellers: true,
+            trending: false,
+            image: require('../assets/img/bestseller-img4.jpg'),
+            imageHover: require('../assets/img/bestseller-hover-img4.jpg'),
+            timePeriod: false,
+            dateTime: new Date("April 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 13,
+            name: 'The cosmic cornucopia',
+            price: 150.00,
+            offer: true,
+            offerPrice: 7,
+            latest: false,
+            bestSellers: false,
+            trending: true,
+            image: require('../assets/img/trending-img1.jpg'),
+            imageHover: require('../assets/img/trending-hover-img1.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 14,
+            name: 'Tenku remastered',
+            price: 177.00,
+            offer: false,
+            offerPrice: 7,
+            latest: false,
+            bestSellers: false,
+            trending: true,
+            image: require('../assets/img/trending-img2.jpg'),
+            imageHover: require('../assets/img/trending-hover-img2.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 15,
+            name: 'Women\'s sherpa lined hoodie',
+            price: 300.00,
+            offer: true,
+            offerPrice: 4,
+            latest: false,
+            bestSellers: false,
+            trending: true,
+            image: require('../assets/img/trending-img3.jpg'),
+            imageHover: require('../assets/img/trending-hover-img3.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+        {
+            id: 16,
+            name: 'Belted chino trousers polo',
+            price: 191.00,
+            offer: false,
+            offerPrice: 4,
+            latest: false,
+            bestSellers: false,
+            trending: true,
+            image: require('../assets/img/trending-img4.jpg'),
+            imageHover: require('../assets/img/trending-hover-img4.jpg'),
+            timePeriod: false,
+            dateTime: new Date("December 19, 2020 17:00:00 PDT")
+        },
+    ]
 });
 
-export const totals = (paylodArr) => {
-    const totalAmount = paylodArr.map(cartArr => {
-        return cartArr.price * cartArr.quantity
-    }).reduce((a, b) => a + b, 0);
-
-    const totalQuantity = paylodArr.map(cartArr => {
-        return cartArr.quantity;
-    }).reduce((a, b) => a + b, 0);
-
-    return {
-        amount: totalAmount.toFixed(2),
-        qty: totalQuantity
-    }
-};
-
-const mutations = {
-    'GET_ORDER'(state, payload){
-        state.orders = payload
-    },
-    'GET_CART'(state, payload){
-        state.cart = payload
-        state.totalAmount = totals(payload).amount
-        state.totalQuantity = totals(payload).qty
-    },
-    'ADD_TO_CART'(state, payload){
-        const itemsToAdd = Array.isArray(payload) ? payload : [payload];
-        
-        itemsToAdd.forEach(newItem => {
-            const existingIndex = state.cart.findIndex(item => 
-                item.id === newItem.id && 
-                item.size === newItem.size && 
-                item.color === newItem.color
-            );
-            
-            if (existingIndex >= 0) {
-                state.cart[existingIndex].quantity += newItem.quantity;
-            } else {
-                state.cart.push(newItem);
-            }
-        });
-        
-        state.totalAmount = totals(state.cart).amount;
-        state.totalQuantity = totals(state.cart).qty;
-    },
-    'DELETE_CART'(state, id){
-        const currentCartToDelete = state.cart
-        const indexToDelete = currentCartToDelete.findIndex(cart => {
-            return cart.id == id
-        })
-
-        state.cart = [...currentCartToDelete.slice(0, indexToDelete), ...currentCartToDelete.slice(indexToDelete + 1)]
-        state.totalAmount = totals(state.cart).amount
-        state.totalQuantity = totals(state.cart).qty
-    },
-    'UPDATE_CART'(state, payload){
-        state.cart = payload
-        state.totalAmount = totals(payload).amount
-        state.totalQuantity = totals(payload).qty
-    }, 
-    'CART_EMPTY'(state){
-        state.cart = []
-        state.totalAmount = 0
-        state.totalQuantity = 0
-    },
-    
-    // ✅ WISHLIST MUTATIONS CORREGIDAS
-    'INIT_WISHLIST'(state) {
-        console.log('🔄 [STORE] Inicializando wishlist');
-        if (process.client) {
-            const stored = localStorage.getItem('wishlist');
-            if (stored) {
-                try {
-                    state.wishlist.items = JSON.parse(stored);
-                    console.log('✅ [STORE] Wishlist cargada:', state.wishlist.items.length, 'items');
-                } catch (e) {
-                    console.error('❌ [STORE] Error parsing wishlist:', e);
-                    state.wishlist.items = [];
-                }
-            } else {
-                state.wishlist.items = [];
-            }
-        }
-    },
-    
-    'ADD_TO_WISHLIST'(state, product) {
-        console.log('➕ [STORE] ADD_TO_WISHLIST mutation');
-        console.log('Producto a agregar:', product);
-        
-        const existingIndex = state.wishlist.items.findIndex(item => item.id === product.id);
-        
-        if (existingIndex === -1) {
-            state.wishlist.items.push(product);
-            if (process.client) {
-                localStorage.setItem('wishlist', JSON.stringify(state.wishlist.items));
-            }
-            console.log('✅ [STORE] Agregado. Total:', state.wishlist.items.length);
-        } else {
-            console.log('⚠️ [STORE] Ya existe en wishlist');
-        }
-    },
-    
-    'REMOVE_FROM_WISHLIST'(state, productId) {
-        console.log('➖ [STORE] REMOVE_FROM_WISHLIST mutation');
-        console.log('ID a remover:', productId);
-        
-        const lengthBefore = state.wishlist.items.length;
-        state.wishlist.items = state.wishlist.items.filter(item => item.id !== productId);
-        
-        if (process.client) {
-            localStorage.setItem('wishlist', JSON.stringify(state.wishlist.items));
-        }
-        
-        console.log('✅ [STORE] Removido. Antes:', lengthBefore, '| Después:', state.wishlist.items.length);
-    },
-    
-    'CLEAR_WISHLIST'(state) {
-        console.log('🗑️ [STORE] Limpiando wishlist');
-        state.wishlist.items = [];
-        if (process.client) {
-            localStorage.setItem('wishlist', '[]');
-        }
-    }
-};
-
-const actions = {
-    addToCart({ commit }, product){
-        commit('ADD_TO_CART', product)
-    },
-    deleteCart({ commit }, id){
-        commit('DELETE_CART', id)
-    },
-    updateCart({ commit }, payload){
-        const currentCartToUpdate = payload.cart
-        const indexToUpdate = currentCartToUpdate.findIndex(cart => {
-            return cart.id == payload.id
-        })
-
-        const newCart = {
-            ...currentCartToUpdate[indexToUpdate],
-            quantity: currentCartToUpdate[indexToUpdate].quantity + payload.unit
-        }
-
-        const cartUpdate = [...currentCartToUpdate.slice(0, indexToUpdate), newCart, ...currentCartToUpdate.slice(indexToUpdate + 1)]
-        commit('UPDATE_CART', cartUpdate)
-    }, 
-    cartEmpty({commit}){
-        commit('CART_EMPTY')
-    },
-    
-    // ✅ WISHLIST ACTIONS CORREGIDAS
-    initWishlist({ commit }) {
-        console.log('🚀 [STORE] initWishlist action');
-        commit('INIT_WISHLIST');
-    },
-    
-    addToWishlist({ commit }, product) {
-        console.log('🚀 [STORE] addToWishlist action');
-        commit('ADD_TO_WISHLIST', product);
-    },
-    
-    removeFromWishlist({ commit }, productId) {
-        console.log('🚀 [STORE] removeFromWishlist action');
-        commit('REMOVE_FROM_WISHLIST', productId);
-    },
-    
-    clearWishlist({ commit }) {
-        console.log('🚀 [STORE] clearWishlist action');
-        commit('CLEAR_WISHLIST');
-    }
-};
-
-const getters = {
-    cart(state){
-        return state.cart
-    },
-    totalAmount(state){
-        return state.totalAmount
-    },
-    totalQuantity(state){
-        return state.totalQuantity
-    },
-    getOrders(state){
-        return state.orders
-    },
-    
-    // ✅ WISHLIST GETTERS CORREGIDOS
-    wishlist: (state) => {
-        console.log('🔍 [STORE GETTER] wishlist -', state.wishlist.items.length, 'items');
-        return state.wishlist.items;
-    },
-    
-    wishlistCount: (state) => {
-        return state.wishlist.items.length;
-    },
-    
-    isInWishlist: (state) => (productId) => {
-        const exists = state.wishlist.items.some(item => item.id === productId);
-        console.log(`🔍 [STORE GETTER] ¿Producto ${productId} en wishlist?`, exists);
-        return exists;
-    },
-    
-    wishlistIds: (state) => {
-        const ids = state.wishlist.items.map(item => item.id);
-        console.log('🔢 [STORE GETTER] wishlistIds:', ids);
-        return ids;
-    }
-};
-
-export default{
-    state, 
-    mutations, 
-    actions, 
-    getters
+export default {
+    state
 };
