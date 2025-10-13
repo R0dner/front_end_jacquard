@@ -231,6 +231,7 @@ export default {
         grupo_de_productos: this.product.grupo_de_productos,
         stock: this.currentStock,
         colores: this.product.colores,
+        tallas: this.product.tallas,
         categoria: this.product.categoria
       };
       
@@ -245,6 +246,19 @@ export default {
           return;
         }
         
+        // Primero obtener el producto completo con sus relaciones
+        const productResponse = await this.$axios.get(`/api/productos/${this.id}`, {
+          params: {
+            'populate': ['tallas', 'colores', 'imagen_principal', 'images', 'image']
+          }
+        });
+        
+        if (productResponse.data.data) {
+          // Actualizar el producto con las relaciones
+          Object.assign(this.product, productResponse.data.data.attributes);
+        }
+        
+        // Luego obtener el inventario
         const response = await this.$axios.get(`/api/inventarios`, {
           params: {
             'filters[producto][id][$eq]': this.id,
@@ -274,6 +288,21 @@ export default {
         return;
       }
 
+      // Verificar si el producto tiene variantes (tallas/colores)
+      const hasSizes = item.tallas?.data?.length > 0;
+      const hasColors = item.colores?.data?.length > 0;
+      
+      // Si el producto tiene tallas o colores, abrir el QuickView
+      if (hasSizes || hasColors) {
+        this.$toast.info("Por favor selecciona talla y color", {
+          icon: 'fas fa-hand-pointer'
+        });
+        // Abrir el QuickView en lugar de agregar directamente
+        this.quickView(new Event('click'));
+        return;
+      }
+
+      // Si no tiene variantes, proceder con el flujo normal
       const product = [{
         id: this.id,
         name: item.nombre,
@@ -294,7 +323,7 @@ export default {
 
         if (cartIndex == -1) {
           this.$store.dispatch('addToCart', product);
-          this.$toast("Agregado al Carrito", {
+          this.$toast.success("Agregado al Carrito", {
             icon: 'fas fa-cart-plus'
           });
         } else {
@@ -313,7 +342,7 @@ export default {
         }
       } else {
         this.$store.dispatch('addToCart', product)
-        this.$toast("Agregado al Carrito", {
+        this.$toast.success("Agregado al Carrito", {
           icon: 'fas fa-cart-plus'
         });
       }
