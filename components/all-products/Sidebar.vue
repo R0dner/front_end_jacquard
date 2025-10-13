@@ -34,17 +34,18 @@
       </div>
       
       <!-- Nuevo Filtro: Productos Deseados -->
-      <div class="filter-section">
+      <div class="filter-section productos-deseados-section">
         <h4 class="section-title">Productos Deseados</h4>
-        <div v-if="wishlist.length === 0" class="no-wishlist-items">
+        <div v-if="wishlistIds.length === 0" class="no-wishlist-items">
           <p>No tienes productos en tu lista de deseos.</p>
         </div>
         <ul class="filter-list" v-else>
           <li>
             <a href="#" 
-               @click.prevent="applyFilter('deseados', true)"
-               :class="{'active': isActive('deseados', true)}">
-              <i class="fas fa-heart mr-1 text-danger"></i> Ver mis favoritos ({{ wishlist.length }})
+               @click.prevent="toggleWishlistFilter"
+               :class="{'active': isWishlistFilterActive}">
+              <i class="fas fa-heart mr-1 text-danger"></i> 
+              Ver mis favoritos ({{ wishlistIds.length }})
             </a>
           </li>
         </ul>
@@ -66,7 +67,7 @@
         </ul>
       </div>
 
-      <!-- Precio - Versión mejorada -->
+      <!-- Precio -->
       <div class="collapse-widget price-list-widget">
         <h3 v-b-toggle.collapse-5 class="collapse-widget-title">
           Precio
@@ -105,7 +106,6 @@
             <button @click="resetPriceFilter" class="btn btn-sm btn-outline-secondary mt-2 ml-2">Limpiar</button>
           </div>
 
-          <!-- Rangos predefinidos -->
           <h4 class="mt-4 mb-2">Rangos sugeridos</h4>
           <ul class="price-list-row mt-3">
             <li v-for="(range, index) in priceRanges" :key="index" :class="{ active: isActive('precio', range.value) }">
@@ -184,25 +184,22 @@ export default {
       ],
       productsCache: new Map(),
       currentRequest: null,
-      wishlist: []
+      wishlistIds: []
     };
   },
   computed: {
-    wishlistIds() {
-      return this.wishlist.map(item => item.id);
+    isWishlistFilterActive() {
+      return this.activeFilters.some(f => f.type === 'deseados');
     }
   },
   created() {
     this.debouncedNotifyProductsComponent = debounce(this.notifyProductsComponent, 300);
   },
   async mounted() {
-    // Cargar grupos primero antes de cargar filtros desde URL
     await this.loadGruposProductos();
     this.loadProductosPopulares();
-    
-    // Ahora cargar filtros desde URL cuando ya tenemos los grupos
-    this.loadFiltersFromUrl();
     this.loadWishlist();
+    this.loadFiltersFromUrl();
     
     this.$root.$on('update-filters', this.updateFiltersFromExternal);
     this.$root.$on('wishlist-updated', this.loadWishlist);
@@ -249,8 +246,24 @@ export default {
     },
     
     loadWishlist() {
-      this.wishlist = this.$store.getters.wishlist || [];
-      console.log("Wishlist cargada:", this.wishlist);
+      try {
+        const wishlistData = localStorage.getItem('wishlist');
+        const wishlistItems = wishlistData ? JSON.parse(wishlistData) : [];
+        this.wishlistIds = wishlistItems.map(item => item.id);
+        console.log("Wishlist IDs cargados:", this.wishlistIds);
+      } catch (error) {
+        console.error("Error al cargar wishlist:", error);
+        this.wishlistIds = [];
+      }
+    },
+    
+    toggleWishlistFilter() {
+      if (this.isWishlistFilterActive) {
+        this.removeFilter('deseados');
+      } else {
+        const label = `Mis favoritos (${this.wishlistIds.length})`;
+        this.applyFilter('deseados', this.wishlistIds.join(','), label);
+      }
     },
     
     openQuickView(producto) {
@@ -311,11 +324,7 @@ export default {
       } catch (error) {
         console.error('Error al cargar grupos de productos:', error);
         this.$toast.error('Error al cargar tipos de productos');
-        this.gruposProductos = [
-          { id: 1, nombre: 'Chompas', codigo: 'chompas' },
-          { id: 2, nombre: 'Pantalones', codigo: 'pantalones' },
-          { id: 3, nombre: 'Accesorios', codigo: 'accesorios' }
-        ];
+        this.gruposProductos = [];
       } finally {
         this.loading.gruposProductos = false;
       }
@@ -324,7 +333,6 @@ export default {
     async loadProductosPopulares() {
       this.loading.productosPopulares = true;
       try {
-        // Intentar cargar productos con descuentos desde inventario-colores
         const inventarioResponse = await axios.get(`${this.strapiBaseUrl}/api/inventario-colores`, {
           params: {
             'filters[en_oferta][$eq]': true,
@@ -337,7 +345,6 @@ export default {
         });
 
         if (inventarioResponse.data?.data?.length > 0) {
-          // Agrupar por producto para evitar duplicados
           const productosMap = new Map();
           
           inventarioResponse.data.data.forEach(item => {
@@ -346,7 +353,6 @@ export default {
             
             const productoId = producto.id;
             
-            // Si ya tenemos este producto, comparar precios y quedarnos con el menor
             if (productosMap.has(productoId)) {
               const existing = productosMap.get(productoId);
               if (item.attributes.precio_oferta < existing.precio_oferta) {
@@ -369,7 +375,6 @@ export default {
             }
           });
           
-          // Convertir el Map a array y tomar solo los primeros 3
           const productosConDescuento = Array.from(productosMap.values()).slice(0, 3);
           
           this.productosPopulares = productosConDescuento.map(item => {
@@ -409,54 +414,6 @@ export default {
               grupos_de_productos: item.producto.attributes?.grupos_de_productos?.data || []
             };
           });
-        } else {
-          // Fallback: si no hay productos con descuento en inventario-colores, 
-          // intentar con el sistema anterior
-          const fallbackResponse = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-            params: {
-              'sort': 'createdAt:desc',
-              'pagination[pageSize]': 3,
-              'populate': '*'
-            }
-          });
-
-          this.productosPopulares = fallbackResponse.data.data.map(item => {
-            let imagenPrincipal = '../../assets/img/default-product.jpg';
-            
-            let imageUrl = null;
-            if (item.attributes?.imagen_principal?.data?.attributes?.url) {
-              imageUrl = item.attributes.imagen_principal.data.attributes.url;
-            }
-            
-            if (imageUrl) {
-              if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-                imagenPrincipal = imageUrl;
-              } else {
-                imagenPrincipal = `${this.strapiBaseUrl}${imageUrl}`;
-              }
-            }
-
-            let grupoProducto = 'Sin tipo';
-            let grupoProductoId = null;
-            
-            if (item.attributes?.grupos_de_productos?.data?.length > 0) {
-              grupoProducto = item.attributes.grupos_de_productos.data[0].attributes.nombre;
-              grupoProductoId = item.attributes.grupos_de_productos.data[0].id;
-            }
-            
-            return {
-              id: item.id,
-              nombre: item.attributes?.nombre || `Producto ${item.id}`,
-              grupo_producto: grupoProducto,
-              grupo_producto_id: grupoProductoId,
-              precio_venta: 0,
-              precio_oferta: null,
-              en_oferta: false,
-              imagen_principal: imagenPrincipal,
-              marca: item.attributes?.marca?.data || null,
-              grupos_de_productos: item.attributes?.grupos_de_productos?.data || []
-            };
-          });
         }
       } catch (error) {
         console.error('Error al cargar productos en oferta:', error);
@@ -477,7 +434,6 @@ export default {
         return;
       }
 
-      // Remover filtro anterior del mismo tipo para filtros únicos
       if (['precio', 'grupo_producto', 'deseados'].includes(type)) {
         const typeIndex = this.activeFilters.findIndex(filter => filter.type === type);
         if (typeIndex !== -1) {
@@ -485,7 +441,6 @@ export default {
         }
       }
 
-      // Generar label correctamente
       let label = customLabel || String(value);
       
       if (!customLabel) {
@@ -497,8 +452,8 @@ export default {
         } else if (type === 'precio') {
           const range = this.priceRanges.find(r => r.value === value);
           label = range ? range.label : value;
-        } else if (type === 'deseados' && value === true) {
-          label = `Mis favoritos (${this.wishlist.length})`;
+        } else if (type === 'deseados') {
+          label = customLabel || `Mis favoritos (${this.wishlistIds.length})`;
         }
       }
 
@@ -624,7 +579,6 @@ export default {
             processedValue = parseInt(value);
           }
           
-          // IMPORTANTE: NO pasar customLabel aquí, dejar que applyFilter lo genere
           this.applyFilter(type, processedValue, null);
         });
       });
@@ -681,16 +635,20 @@ export default {
       }
       
       const queryParams = this.buildStrapiFilters();
-      console.log("Parámetros a enviar:", queryParams);
       
-      const cacheKey = JSON.stringify(queryParams);
+      const wishlistFilter = this.activeFilters.find(f => f.type === 'deseados');
+      const wishlistIds = wishlistFilter ? wishlistFilter.value.split(',').map(id => parseInt(id)) : null;
       
       const filtersWithWishlist = {
         ...queryParams,
-        wishlistFilter: this.isActive('deseados', true) ? this.wishlistIds : null
+        wishlistFilter: wishlistIds
       };
       
+      console.log("Filtros enviados (incluyendo wishlist):", filtersWithWishlist);
+      
       this.$root.$emit('filters-changed', filtersWithWishlist);
+      
+      const cacheKey = JSON.stringify(queryParams);
       
       if (this.productsCache.has(cacheKey)) {
         return;
@@ -713,30 +671,8 @@ export default {
       } catch (error) {
         if (!axios.isCancel(error)) {
           console.error('Error al filtrar productos:', error);
-          
-          if (error.response) {
-            console.log('Respuesta del servidor:', error.response.status, error.response.data);
-          }
-          
           this.$root.$emit('filters-error', error.message);
-          this.$toast.error('Error al aplicar filtros: ' + (error.response ? error.response.status : error.message));
-          
-          try {
-            const fallbackResponse = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-              params: {
-                'sort': 'createdAt:desc',
-                'pagination[page]': 1,
-                'pagination[pageSize]': 12,
-                'populate': '*'
-              },
-              cancelToken: source.token
-            });
-            
-            this.$root.$emit('filters-changed', {});
-            this.$toast.warning('Mostrando todos los productos (filtros no aplicados)');
-          } catch (fallbackError) {
-            console.error('Error al cargar productos sin filtros:', fallbackError);
-          }
+          this.$toast.error('Error al aplicar filtros');
         }
       } finally {
         this.$root.$emit('filters-loading', false);
