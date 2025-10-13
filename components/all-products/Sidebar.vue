@@ -459,27 +459,23 @@ export default {
 
       this.activeFilters.push({ type, value, label });
       this.updateUrlWithFilters();
-      this.notifyProductsComponent();
+      this.debouncedNotifyProductsComponent();
     },
 
     buildFiltersObject() {
       const filters = {};
       
-      // Separar filtro de wishlist de los demás
-      const wishlistFilter = this.activeFilters.find(f => f.type === 'deseados');
-      
-      if (wishlistFilter) {
-        // Si hay filtro de wishlist, enviarlo separado
-        filters.wishlistFilter = wishlistFilter.value.split(',').map(id => parseInt(id));
-      }
-      
-      // Agregar otros filtros
       this.activeFilters.forEach(filter => {
-        if (filter.type !== 'deseados') {
+        if (filter.type === 'deseados') {
+          // Para deseados, enviar array de IDs
+          filters.wishlistFilter = filter.value.split(',').map(id => parseInt(id));
+        } else {
+          // Para otros filtros, enviar el valor directamente
           filters[filter.type] = filter.value;
         }
       });
       
+      console.log('Filtros construidos:', filters);
       return filters;
     },
 
@@ -531,7 +527,7 @@ export default {
       }
       
       this.updateUrlWithFilters();
-      this.notifyProductsComponent();
+      this.debouncedNotifyProductsComponent();
     },
 
     clearFilters() {
@@ -539,7 +535,7 @@ export default {
       this.priceRange.min = null;
       this.priceRange.max = null;
       this.updateUrlWithFilters();
-      this.notifyProductsComponent();
+      this.debouncedNotifyProductsComponent();
     },
 
     isActive(type, value) {
@@ -582,7 +578,7 @@ export default {
           if (value === 'true') processedValue = true;
           if (value === 'false') processedValue = false;
           
-          if (!isNaN(value) && type !== 'precio') {
+          if (!isNaN(value) && type !== 'precio' && type !== 'deseados') {
             processedValue = parseInt(value);
           }
           
