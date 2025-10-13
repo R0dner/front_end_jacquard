@@ -33,7 +33,7 @@
         </b-collapse>
       </div>
       
-      <!-- Nuevo Filtro: Productos Deseados -->
+      <!-- Filtro: Productos Deseados -->
       <div class="filter-section productos-deseados-section">
         <h4 class="section-title">Productos Deseados</h4>
         <div v-if="wishlistIds.length === 0" class="no-wishlist-items">
@@ -51,6 +51,7 @@
         </ul>
       </div>
       
+      <!-- Tipos de Producto -->
       <div class="filter-section">
         <h4 class="section-title">Tipos de Producto</h4>
         <div class="loading-indicator" v-if="loading.gruposProductos">
@@ -182,8 +183,6 @@ export default {
         { value: '500-1000', label: 'Bs.500 - Bs.1000' },
         { value: '1000-999999', label: 'Más de Bs.1000' }
       ],
-      productsCache: new Map(),
-      currentRequest: null,
       wishlistIds: []
     };
   },
@@ -434,6 +433,7 @@ export default {
         return;
       }
 
+      // Solo permitir un filtro del mismo tipo
       if (['precio', 'grupo_producto', 'deseados'].includes(type)) {
         const typeIndex = this.activeFilters.findIndex(filter => filter.type === type);
         if (typeIndex !== -1) {
@@ -459,17 +459,28 @@ export default {
 
       this.activeFilters.push({ type, value, label });
       this.updateUrlWithFilters();
-      this.debouncedNotifyProductsComponent();
-      
-      this.$root.$emit('sidebar-filters-changed', this.buildFiltersObject());
+      this.notifyProductsComponent();
     },
 
     buildFiltersObject() {
-      const filtersObj = {};
+      const filters = {};
+      
+      // Separar filtro de wishlist de los demás
+      const wishlistFilter = this.activeFilters.find(f => f.type === 'deseados');
+      
+      if (wishlistFilter) {
+        // Si hay filtro de wishlist, enviarlo separado
+        filters.wishlistFilter = wishlistFilter.value.split(',').map(id => parseInt(id));
+      }
+      
+      // Agregar otros filtros
       this.activeFilters.forEach(filter => {
-        filtersObj[filter.type] = filter.value;
+        if (filter.type !== 'deseados') {
+          filters[filter.type] = filter.value;
+        }
       });
-      return filtersObj;
+      
+      return filters;
     },
 
     applyPriceFilter() {
@@ -520,9 +531,7 @@ export default {
       }
       
       this.updateUrlWithFilters();
-      this.debouncedNotifyProductsComponent();
-      
-      this.$root.$emit('sidebar-filters-changed', this.buildFiltersObject());
+      this.notifyProductsComponent();
     },
 
     clearFilters() {
@@ -530,9 +539,7 @@ export default {
       this.priceRange.min = null;
       this.priceRange.max = null;
       this.updateUrlWithFilters();
-      this.debouncedNotifyProductsComponent();
-      
-      this.$root.$emit('sidebar-filters-changed', {});
+      this.notifyProductsComponent();
     },
 
     isActive(type, value) {
@@ -596,89 +603,12 @@ export default {
       }
     },
 
-    buildStrapiFilters() {
-      let params = {
-        'sort': 'createdAt:desc',
-        'pagination[page]': 1,
-        'pagination[pageSize]': 12,
-        'populate': '*'
-      };
+    notifyProductsComponent() {
+      const filters = this.buildFiltersObject();
+      console.log('Enviando filtros al componente de productos:', filters);
       
-      params.populate = ['imagen_principal', 'marca', 'grupos_de_productos'].join(',');
-      
-      this.activeFilters.forEach(filter => {
-        if (filter.type === 'precio') {
-          const [min, max] = filter.value.split('-').map(val => parseFloat(val));
-          
-          if (!isNaN(min)) {
-            params['filters[precio_venta][$gte]'] = min;
-          }
-          
-          if (!isNaN(max)) {
-            params['filters[precio_venta][$lte]'] = max;
-          }
-        } 
-        else if (filter.type === 'grupo_producto') {
-          params['filters[grupos_de_productos][id][$in]'] = [parseInt(filter.value)];
-        }
-        else if (filter.type === 'en_oferta' && filter.value === true) {
-          params['filters[en_oferta]'] = true;
-        }
-      });
-      
-      return params;
-    },
-
-    async notifyProductsComponent() {
-      if (this.currentRequest) {
-        this.currentRequest.cancel();
-      }
-      
-      const queryParams = this.buildStrapiFilters();
-      
-      const wishlistFilter = this.activeFilters.find(f => f.type === 'deseados');
-      const wishlistIds = wishlistFilter ? wishlistFilter.value.split(',').map(id => parseInt(id)) : null;
-      
-      const filtersWithWishlist = {
-        ...queryParams,
-        wishlistFilter: wishlistIds
-      };
-      
-      console.log("Filtros enviados (incluyendo wishlist):", filtersWithWishlist);
-      
-      this.$root.$emit('filters-changed', filtersWithWishlist);
-      
-      const cacheKey = JSON.stringify(queryParams);
-      
-      if (this.productsCache.has(cacheKey)) {
-        return;
-      }
-      
-      const CancelToken = axios.CancelToken;
-      const source = CancelToken.source();
-      this.currentRequest = source;
-      
-      this.$root.$emit('filters-loading', true);
-      this.loading.applying = true;
-      
-      try {
-        const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-          params: queryParams,
-          cancelToken: source.token
-        });
-        
-        this.productsCache.set(cacheKey, response.data);
-      } catch (error) {
-        if (!axios.isCancel(error)) {
-          console.error('Error al filtrar productos:', error);
-          this.$root.$emit('filters-error', error.message);
-          this.$toast.error('Error al aplicar filtros');
-        }
-      } finally {
-        this.$root.$emit('filters-loading', false);
-        this.loading.applying = false;
-        this.currentRequest = null;
-      }
+      // Emitir evento con filtros estructurados correctamente
+      this.$root.$emit('filters-changed', filters);
     }
   }
 };
