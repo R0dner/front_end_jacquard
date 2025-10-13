@@ -1,403 +1,615 @@
 <template>
-  <div class="col-lg-8 col-md-12 order-lg-2 order-1">
-    <div class="products-filter-options">
-      <div class="row align-items-center">
-        <div class="col-lg-4 col-md-6 col-12 d-flex">
-          <p>Mostrando {{ products.length }} de {{ totalProducts }} resultados</p>
+  <div class="col-lg-4 col-md-12 order-lg-1 order-2 sidebar-container">
+    <div class="woocommerce-sidebar-area">
+      <!-- Filtros actualmente seleccionados -->
+      <div class="collapse-widget filter-list-widget">
+        <h3 v-b-toggle.collapse-1 class="collapse-widget-title">
+          Seleccionados actualmente
+          <i class="fas fa-angle-up"></i>
+        </h3>
+
+        <b-collapse visible id="collapse-1">
+          <div class="selected-filters-wrap-list" v-if="activeFilters.length > 0">
+            <ul>
+              <li v-for="(filter, index) in activeFilters" :key="index">
+                <a href="#" @click.prevent="removeFilter(filter.type, filter.value)">
+                  {{ filter.label }}
+                  <i class="fas fa-times ml-2"></i>
+                </a>
+              </li>
+            </ul>
+
+            <div class="delete-selected-filters">
+              <a href="#" @click.prevent="clearFilters">
+                <i class="far fa-trash-alt"></i> 
+                <span>Borrar selecciones</span>
+              </a>
+            </div>
+          </div>
+          
+          <div class="no-filters-selected" v-else>
+            <p>No hay filtros seleccionados</p>
+          </div>
+        </b-collapse>
+      </div>
+      
+      <!-- Filtro: Productos Deseados -->
+      <div class="filter-section productos-deseados-section">
+        <h4 class="section-title">Productos Deseados</h4>
+        <div v-if="wishlistIds.length === 0" class="no-wishlist-items">
+          <p>No tienes productos en tu lista de deseos.</p>
         </div>
-        <div class="col-lg-8 col-md-6 col-12 d-flex flex-wrap filter-controls">
-          <div class="filter-item">
-            <span>Mostrar:</span>
-            <div class="show-products-number">
-              <select v-model="pageSize" @change="fetchProducts">
-                <option value="12">12</option>
-                <option value="24">24</option>
-                <option value="36">36</option>
-                <option value="48">48</option>
-              </select>
+        <ul class="filter-list" v-else>
+          <li>
+            <a href="#" 
+               @click.prevent="toggleWishlistFilter"
+               :class="{'active': isWishlistFilterActive}">
+              <i class="fas fa-heart mr-1 text-danger"></i> 
+              Ver mis favoritos ({{ wishlistIds.length }})
+            </a>
+          </li>
+        </ul>
+      </div>
+      
+      <!-- Tipos de Producto -->
+      <div class="filter-section">
+        <h4 class="section-title">Tipos de Producto</h4>
+        <div class="loading-indicator" v-if="loading.gruposProductos">
+          <span>Cargando tipos de producto...</span>
+        </div>
+        <ul class="filter-list" v-else>
+          <li v-for="grupo in gruposProductos" :key="'grupo-'+grupo.id">
+            <a href="#" 
+               @click.prevent="applyFilter('grupo_producto', grupo.id)"
+               :class="{'active': isActive('grupo_producto', grupo.id)}">
+              {{ grupo.nombre }}
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Precio -->
+      <div class="collapse-widget price-list-widget">
+        <h3 v-b-toggle.collapse-5 class="collapse-widget-title">
+          Precio
+          <i class="fas fa-angle-up"></i>
+        </h3>
+
+        <b-collapse visible id="collapse-5">
+          <div class="price-range-slider">
+            <div class="price-range-wrap mb-3">
+              <b-input-group class="mb-2">
+                <b-input-group-prepend>
+                  <span class="input-group-text">$</span>
+                </b-input-group-prepend>
+                <b-form-input 
+                  type="number" 
+                  v-model.number="priceRange.min" 
+                  placeholder="Mínimo" 
+                  min="0"
+                  @keyup.enter="applyPriceFilter"
+                ></b-form-input>
+              </b-input-group>
+              <b-input-group>
+                <b-input-group-prepend>
+                  <span class="input-group-text">$</span>
+                </b-input-group-prepend>
+                <b-form-input 
+                  type="number" 
+                  v-model.number="priceRange.max" 
+                  placeholder="Máximo" 
+                  min="0"
+                  @keyup.enter="applyPriceFilter"
+                ></b-form-input>
+              </b-input-group>
+            </div>
+            <button @click="applyPriceFilter" class="btn btn-sm btn-primary mt-2">Aplicar</button>
+            <button @click="resetPriceFilter" class="btn btn-sm btn-outline-secondary mt-2 ml-2">Limpiar</button>
+          </div>
+
+          <h4 class="mt-4 mb-2">Rangos sugeridos</h4>
+          <ul class="price-list-row mt-3">
+            <li v-for="(range, index) in priceRanges" :key="index" :class="{ active: isActive('precio', range.value) }">
+              <a href="#" @click.prevent="applyFilter('precio', range.value, range.label)">{{ range.label }}</a>
+            </li>
+          </ul>
+        </b-collapse>
+      </div>
+
+      <!-- Productos populares -->
+      <div class="collapse-widget aside-products-widget">
+        <h3 class="aside-widget-title">
+          Productos Con Descuento
+        </h3>
+
+        <div v-if="loading.productosPopulares" class="text-center py-3">
+          <div class="spinner-border spinner-border-sm" role="status">
+            <span class="sr-only">Cargando...</span>
+          </div>
+        </div>
+        <div v-else-if="productosPopulares.length > 0">
+          <div v-for="(producto, index) in productosPopulares" :key="index" class="aside-single-products" @click="openQuickView(producto)">
+            <div class="products-image">
+              <a href="#">
+                <img :src="producto.imagen_principal" :alt="producto.nombre">
+              </a>
+            </div>
+
+            <div class="products-content">
+              <h3><a href="#">{{ producto.nombre }}</a></h3>
+              <div class="product-price">
+                <span v-if="producto.en_oferta" class="old-price">Bs.{{ producto.precio_venta }}</span>
+                <span v-if="producto.en_oferta" class="new-price">Bs.{{ producto.precio_oferta }}</span>
+                <span v-else class="new-price">Bs.{{ producto.precio_venta }}</span>
+              </div>
             </div>
           </div>
-          <div class="filter-item">
-            <span>Ordenar:</span>
-            <div class="products-ordering-list">
-              <select v-model="sortOrder" @change="fetchProducts">
-                <option value="createdAt:desc">Más recientes</option>
-                <option value="createdAt:asc">Más antiguos</option>
-                <option value="precio_venta:asc">Precio: Menor a Mayor</option>
-                <option value="precio_venta:desc">Precio: Mayor a Menor</option>
-                <option value="nombre:asc">Nombre: A-Z</option>
-                <option value="nombre:desc">Nombre: Z-A</option>
-              </select>
-            </div>
-          </div>
+        </div>
+        <div v-else>
+          <p>No hay productos populares disponibles.</p>
         </div>
       </div>
     </div>
-
-    <!-- Listado de productos en filas de 4 -->
-    <div id="products-filter" class="products-collections-listing row">
-      <ProductoItem
-        v-for="product in products"
-        :key="product.id"
-        :id="product.id"
-        :product="{
-          ...product.attributes,
-          imageUrl: getProductImageUrl(product),
-          inventory: product.attributes.inventario?.data?.attributes || null
-        }"
-        @clicked="toggleQuickView(product)"
-        :className="`col-lg-3 col-md-6 col-sm-6 col-6 products-col-item`"
-      />
-    </div>
-
-    <div v-if="loading" class="loading-products">
-      <p>Cargando productos...</p>
-    </div>
-
-    <div v-if="!loading && products.length === 0" class="no-products-found">
-      <p>
-        {{ activeWishlistFilter 
-          ? 'No tienes productos favoritos que coincidan con los filtros seleccionados.' 
-          : 'No se encontraron productos con los filtros seleccionados.' 
-        }}
-      </p>
-    </div>
-
-    <nav class="woocommerce-pagination" v-if="totalPages > 1">
-      <ul>
-        <li>
-          <a 
-            href="#" 
-            class="page-numbers" 
-            @click.prevent="changePage(currentPage > 1 ? currentPage - 1 : 1)"
-            :class="{ 'disabled': currentPage === 1 }"
-          >
-            &laquo;
-          </a>
-        </li>
-        <li v-for="page in paginationPages" :key="page">
-          <a
-            href="#"
-            :class="['page-numbers', { 'current': page === currentPage }]"
-            @click.prevent="changePage(page)"
-          >
-            {{ page }}
-          </a>
-        </li>
-        <li>
-          <a 
-            href="#" 
-            class="page-numbers" 
-            @click.prevent="changePage(currentPage < totalPages ? currentPage + 1 : totalPages)"
-            :class="{ 'disabled': currentPage === totalPages }"
-          >
-            &raquo;
-          </a>
-        </li>
-      </ul>
-    </nav>
-
-    <QuckView
-      v-if="selectedProduct"
-      :product="{
-        ...selectedProduct.attributes,
-        id: selectedProduct.id,
-        imageUrl: getProductImageUrl(selectedProduct),
-        precio: selectedProduct.attributes.precio_venta,
-        enOferta: selectedProduct.attributes.en_oferta,
-        precioOferta: selectedProduct.attributes.precio_oferta
-      }"
-    />
   </div>
 </template>
 
 <script>
 import axios from 'axios';
-import QuckView from '../modals/QuckView';
-import ProductoItem from '../landing-one/ProductoItem';
+import { debounce } from 'lodash';
 import { mutations } from '../../utils/sidebar-util';
 
 export default {
-  components: {
-    QuckView,
-    ProductoItem,
-  },
-  props: {
-    initialFilters: {
-      type: Object,
-      default: () => ({})
-    }
-  },
   data() {
     return {
-      products: [],
-      allProducts: [],
-      totalProducts: 0,
-      totalPages: 0,
-      currentPage: 1,
-      pageSize: 12,
-      sortOrder: 'createdAt:desc',
-      selectedProduct: null,
+      activeFilters: [],
+      gruposProductos: [], 
+      productosPopulares: [],
       strapiBaseUrl: process.env.VUE_APP_STRAPI_URL || 'https://delicate-attraction-2c7f961647.strapiapp.com',
-      activeFilters: {},
-      activeWishlistFilter: false,
-      loading: false
+      loading: {
+        gruposProductos: false, 
+        productosPopulares: false,
+        applying: false
+      },
+      priceRange: {
+        min: null,
+        max: null
+      },
+      priceRanges: [
+        { value: '0-100', label: 'Menos de Bs.100' },
+        { value: '100-200', label: 'Bs.100 - Bs.200' },
+        { value: '200-300', label: 'Bs.200 - Bs.300' },
+        { value: '300-400', label: 'Bs.300 - Bs.400' },
+        { value: '400-500', label: 'Bs.400 - Bs.500' },
+        { value: '500-1000', label: 'Bs.500 - Bs.1000' },
+        { value: '1000-999999', label: 'Más de Bs.1000' }
+      ],
+      wishlistIds: []
     };
   },
   computed: {
-    paginationPages() {
-      const showPages = 5; 
-      const pages = [];
-      
-      let startPage = Math.max(1, this.currentPage - Math.floor(showPages / 2));
-      let endPage = Math.min(this.totalPages, startPage + showPages - 1);
-      
-      if (endPage - startPage + 1 < showPages) {
-        startPage = Math.max(1, endPage - showPages + 1);
-      }
-      
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
-      }
-      
-      return pages;
+    isWishlistFilterActive() {
+      return this.activeFilters.some(f => f.type === 'deseados');
     }
+  },
+  created() {
+    this.debouncedNotifyProductsComponent = debounce(this.notifyProductsComponent, 300);
+  },
+  async mounted() {
+    await this.loadGruposProductos();
+    this.loadProductosPopulares();
+    this.loadWishlist();
+    this.loadFiltersFromUrl();
+    
+    this.$root.$on('update-filters', this.updateFiltersFromExternal);
+    this.$root.$on('wishlist-updated', this.loadWishlist);
+    
+    this.initializeWishlistStore();
+  },
+  beforeDestroy() {
+    this.$root.$off('update-filters', this.updateFiltersFromExternal);
+    this.$root.$off('wishlist-updated', this.loadWishlist);
   },
   methods: {
-    async fetchProducts() {
-      this.loading = true;
-      try {
-        const wishlistFilter = this.activeFilters.wishlistFilter;
-        
-        if (wishlistFilter && Array.isArray(wishlistFilter) && wishlistFilter.length > 0) {
-          console.log('Aplicando filtro de wishlist:', wishlistFilter);
-          await this.fetchProductsByIds(wishlistFilter);
-        } else {
-          // Filtros normales
-          const queryParams = this.buildQueryParams();
-          
-          const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-            params: queryParams
-          });
-
-          this.products = response.data.data || [];
-          this.totalProducts = response.data.meta.pagination.total;
-          this.totalPages = response.data.meta.pagination.pageCount;
-        }
-      } catch (error) {
-        console.error('Error al obtener productos:', error.response?.data || error.message);
-        this.$toast.error('Error al cargar productos');
-        this.products = [];
-        this.totalProducts = 0;
-        this.totalPages = 0;
-      } finally {
-        this.loading = false;
+    initializeWishlistStore() {
+      if (!this.$store.state.wishlist) {
+        this.$store.registerModule('wishlist', {
+          state: {
+            items: JSON.parse(localStorage.getItem('wishlist') || '[]')
+          },
+          mutations: {
+            addToWishlist(state, product) {
+              const existingIndex = state.items.findIndex(item => item.id === product.id);
+              if (existingIndex === -1) {
+                state.items.push(product);
+                localStorage.setItem('wishlist', JSON.stringify(state.items));
+              }
+            },
+            removeFromWishlist(state, productId) {
+              state.items = state.items.filter(item => item.id !== productId);
+              localStorage.setItem('wishlist', JSON.stringify(state.items));
+            },
+            clearWishlist(state) {
+              state.items = [];
+              localStorage.setItem('wishlist', '[]');
+            }
+          },
+          getters: {
+            wishlist: state => state.items,
+            wishlistCount: state => state.items.length,
+            isInWishlist: state => productId => {
+              return state.items.some(item => item.id === productId);
+            }
+          }
+        });
       }
     },
     
-    buildQueryParams() {
-      const queryParams = {
-        'pagination[page]': this.currentPage,
-        'pagination[pageSize]': this.pageSize,
-        sort: this.sortOrder,
-        populate: ['imagen_principal', 'images', 'image', 'marca', 'grupo_de_productos', 'categoria'].join(',')
+    loadWishlist() {
+      try {
+        const wishlistData = localStorage.getItem('wishlist');
+        const wishlistItems = wishlistData ? JSON.parse(wishlistData) : [];
+        this.wishlistIds = wishlistItems.map(item => item.id);
+        console.log("Wishlist IDs cargados:", this.wishlistIds);
+      } catch (error) {
+        console.error("Error al cargar wishlist:", error);
+        this.wishlistIds = [];
+      }
+    },
+    
+    toggleWishlistFilter() {
+      if (this.isWishlistFilterActive) {
+        this.removeFilter('deseados');
+      } else {
+        const label = `Mis favoritos (${this.wishlistIds.length})`;
+        this.applyFilter('deseados', this.wishlistIds.join(','), label);
+      }
+    },
+    
+    openQuickView(producto) {
+      const quickViewProduct = {
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio_venta,
+        precioOferta: producto.precio_oferta,
+        enOferta: producto.en_oferta,
+        stock: producto.stock,
+        imageUrl: producto.imagen_principal,
+        marca: producto.marca,
+        grupo_de_productos: producto.grupo_de_productos
       };
-
-      // Aplicar filtros activos
-      if (this.activeFilters && Object.keys(this.activeFilters).length > 0) {
-        Object.entries(this.activeFilters).forEach(([key, value]) => {
-          // Ignorar wishlistFilter aquí ya que se maneja separadamente
-          if (key === 'wishlistFilter') return;
-          
-          if (key === 'precio') {
-            const [min, max] = value.split('-').map(val => parseFloat(val));
-            if (!isNaN(min)) {
-              queryParams['filters[precio_venta][$gte]'] = min;
-            }
-            if (!isNaN(max)) {
-              queryParams['filters[precio_venta][$lte]'] = max;
-            }
-          } else if (key === 'categoria') {
-            queryParams['filters[categoria][id]'] = parseInt(value);
-          } else if (key === 'grupo_producto') {
-            // CORREGIDO: usar la estructura correcta para Strapi
-            queryParams['filters[grupo_de_productos][id][$in]'] = [parseInt(value)];
-          } else if (key === 'en_oferta' && value === true) {
-            queryParams['filters[en_oferta]'] = true;
-          }
-        });
-      }
-
-      console.log('Query params construidos:', queryParams);
-      return queryParams;
+      
+      mutations.openQuickView(quickViewProduct);
     },
-    
-    async fetchProductsByIds(productIds) {
+
+    async loadGruposProductos() {
+      this.loading.gruposProductos = true;
       try {
-        console.log('Obteniendo productos por IDs:', productIds);
+        const endpoints = [
+          'grupos-productos',
+          'grupo-productos',
+          'grupos-producto',
+          'product-groups'
+        ];
         
-        const response = await axios.get(`${this.strapiBaseUrl}/api/productos`, {
-          params: {
-            'filters[id][$in]': productIds,
-            'pagination[pageSize]': 100,
-            sort: this.sortOrder,
-            populate: ['imagen_principal', 'images', 'image', 'marca', 'grupo_de_productos', 'categoria'].join(',')
+        let lastError = null;
+        let success = false;
+        
+        for (const endpoint of endpoints) {
+          try {
+            const response = await axios.get(`${this.strapiBaseUrl}/api/${endpoint}`, {
+              params: {
+                'sort': 'nombre:asc',
+                'pagination[pageSize]': 50
+              }
+            });
+            
+            this.gruposProductos = response.data.data.map(item => ({
+              id: item.id,
+              nombre: item.attributes?.nombre || item.attributes?.name || `Tipo ${item.id}`,
+              codigo: item.attributes?.codigo || ''
+            }));
+            
+            success = true;
+            break; 
+          } catch (error) {
+            lastError = error;
+            continue; 
           }
-        });
-        
-        let filteredProducts = response.data.data || [];
-        console.log('Productos obtenidos del wishlist:', filteredProducts.length);
-        
-        // Aplicar filtros adicionales si existen
-        if (Object.keys(this.activeFilters).length > 1) {
-          filteredProducts = this.applyAdditionalFilters(filteredProducts);
         }
         
-        // Aplicar paginación manual
-        this.totalProducts = filteredProducts.length;
-        this.totalPages = Math.ceil(filteredProducts.length / this.pageSize);
-        
-        const start = (this.currentPage - 1) * this.pageSize;
-        const end = start + this.pageSize;
-        this.products = filteredProducts.slice(start, end);
-        
-        console.log(`Mostrando ${this.products.length} de ${this.totalProducts} productos favoritos`);
-        
+        if (!success && lastError) {
+          throw lastError;
+        }
       } catch (error) {
-        console.error('Error al obtener productos del wishlist:', error);
-        this.$toast.error('Error al cargar productos favoritos');
-        this.products = [];
-        this.totalProducts = 0;
-        this.totalPages = 0;
+        console.error('Error al cargar grupos de productos:', error);
+        this.$toast.error('Error al cargar tipos de productos');
+        this.gruposProductos = [];
+      } finally {
+        this.loading.gruposProductos = false;
       }
     },
-    
-    applyAdditionalFilters(products) {
-      let filtered = [...products];
-      
-      if (this.activeFilters.precio) {
-        const [min, max] = this.activeFilters.precio.split('-').map(val => parseFloat(val));
-        filtered = filtered.filter(product => {
-          const precio = product.attributes.precio_venta;
-          return (!isNaN(min) ? precio >= min : true) && (!isNaN(max) ? precio <= max : true);
-        });
-      }
-      
-      if (this.activeFilters.categoria) {
-        const categoriaId = parseInt(this.activeFilters.categoria);
-        filtered = filtered.filter(product => {
-          return product.attributes.categoria?.data?.id === categoriaId;
-        });
-      }
-      
-      if (this.activeFilters.grupo_producto) {
-        const grupoId = parseInt(this.activeFilters.grupo_producto);
-        filtered = filtered.filter(product => {
-          return product.attributes.grupo_de_productos?.data?.id === grupoId;
-        });
-      }
-      
-      if (this.activeFilters.en_oferta === true) {
-        filtered = filtered.filter(product => product.attributes.en_oferta === true);
-      }
-      
-      console.log(`Filtros adicionales aplicados: ${filtered.length} productos`);
-      return filtered;
-    },
-    
-    getProductImageUrl(product) {
-      let imagenData = null;
-      
-      if (product.attributes?.imagen_principal?.data?.attributes) {
-        imagenData = product.attributes.imagen_principal.data.attributes;
-      }
-      else if (product.imagen_principal?.data?.attributes) {
-        imagenData = product.imagen_principal.data.attributes;
-      }
-      else if (product.attributes?.images?.data?.[0]?.attributes) {
-        imagenData = product.attributes.images.data[0].attributes;
-      }
-      else if (product.attributes?.image?.data?.attributes) {
-        imagenData = product.attributes.image.data.attributes;
-      }
 
-      if (imagenData?.url) {
-        let cleanUrl = imagenData.url.trim();
-        
-        if (cleanUrl.includes('strapiapp.comhttps')) {
-          const mediaUrlMatch = cleanUrl.match(/https:\/\/[^\/]*\.media\.strapiapp\.com\/.*$/);
-          if (mediaUrlMatch) {
-            return mediaUrlMatch[0];
+    async loadProductosPopulares() {
+      this.loading.productosPopulares = true;
+      try {
+        const inventarioResponse = await axios.get(`${this.strapiBaseUrl}/api/inventario-colores`, {
+          params: {
+            'filters[en_oferta][$eq]': true,
+            'filters[estado_producto][$eq]': 'Activo',
+            'filters[stock_actual][$gt]': 0,
+            'sort': 'precio_oferta:asc',
+            'pagination[pageSize]': 10,
+            'populate': ['producto', 'producto.imagen_principal', 'producto.grupos_de_productos', 'color', 'talla']
           }
+        });
+
+        if (inventarioResponse.data?.data?.length > 0) {
+          const productosMap = new Map();
+          
+          inventarioResponse.data.data.forEach(item => {
+            const producto = item.attributes?.producto?.data;
+            if (!producto) return;
+            
+            const productoId = producto.id;
+            
+            if (productosMap.has(productoId)) {
+              const existing = productosMap.get(productoId);
+              if (item.attributes.precio_oferta < existing.precio_oferta) {
+                productosMap.set(productoId, {
+                  id: productoId,
+                  producto: producto,
+                  precio_venta: item.attributes.precio_venta_sugerido,
+                  precio_oferta: item.attributes.precio_oferta,
+                  en_oferta: true
+                });
+              }
+            } else {
+              productosMap.set(productoId, {
+                id: productoId,
+                producto: producto,
+                precio_venta: item.attributes.precio_venta_sugerido,
+                precio_oferta: item.attributes.precio_oferta,
+                en_oferta: true
+              });
+            }
+          });
+          
+          const productosConDescuento = Array.from(productosMap.values()).slice(0, 3);
+          
+          this.productosPopulares = productosConDescuento.map(item => {
+            let imagenPrincipal = '../../assets/img/default-product.jpg';
+            
+            let imageUrl = null;
+            if (item.producto.attributes?.imagen_principal?.data?.attributes?.url) {
+              imageUrl = item.producto.attributes.imagen_principal.data.attributes.url;
+            }
+            
+            if (imageUrl) {
+              if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                imagenPrincipal = imageUrl;
+              } else {
+                imagenPrincipal = `${this.strapiBaseUrl}${imageUrl}`;
+              }
+            }
+
+            let grupoProducto = 'Sin tipo';
+            let grupoProductoId = null;
+            
+            if (item.producto.attributes?.grupos_de_productos?.data?.length > 0) {
+              grupoProducto = item.producto.attributes.grupos_de_productos.data[0].attributes.nombre;
+              grupoProductoId = item.producto.attributes.grupos_de_productos.data[0].id;
+            }
+            
+            return {
+              id: item.id,
+              nombre: item.producto.attributes?.nombre || `Producto ${item.id}`,
+              grupo_producto: grupoProducto,
+              grupo_producto_id: grupoProductoId,
+              precio_venta: item.precio_venta,
+              precio_oferta: item.precio_oferta,
+              en_oferta: true,
+              imagen_principal: imagenPrincipal,
+              marca: item.producto.attributes?.marca?.data || null,
+              grupos_de_productos: item.producto.attributes?.grupos_de_productos?.data || []
+            };
+          });
         }
-        
-        if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-          return cleanUrl;
-        }
-        
-        const baseUrl = this.strapiBaseUrl.endsWith('/') 
-          ? this.strapiBaseUrl.slice(0, -1) 
-          : this.strapiBaseUrl;
-        
-        const finalUrl = `${baseUrl}${cleanUrl.startsWith('/') ? cleanUrl : '/' + cleanUrl}`;
-        return finalUrl;
+      } catch (error) {
+        console.error('Error al cargar productos en oferta:', error);
+        this.$toast.error('Error al cargar productos en oferta');
+        this.productosPopulares = [];
+      } finally {
+        this.loading.productosPopulares = false;
+      }
+    },
+
+    applyFilter(type, value, customLabel = null) {
+      const existingIndex = this.activeFilters.findIndex(
+        filter => filter.type === type && filter.value === value
+      );
+
+      if (existingIndex !== -1) {
+        this.removeFilter(type, value);
+        return;
       }
 
-      return '/images/default-product.jpg';
+      // Solo permitir un filtro del mismo tipo
+      if (['precio', 'grupo_producto', 'deseados'].includes(type)) {
+        const typeIndex = this.activeFilters.findIndex(filter => filter.type === type);
+        if (typeIndex !== -1) {
+          this.activeFilters.splice(typeIndex, 1);
+        }
+      }
+
+      let label = customLabel || String(value);
+      
+      if (!customLabel) {
+        if (type === 'grupo_producto') {
+          const grupo = this.gruposProductos.find(g => g.id === parseInt(value));
+          label = grupo ? grupo.nombre : `Tipo ${value}`;
+        } else if (type === 'en_oferta' && value === true) {
+          label = 'Productos en oferta';
+        } else if (type === 'precio') {
+          const range = this.priceRanges.find(r => r.value === value);
+          label = range ? range.label : value;
+        } else if (type === 'deseados') {
+          label = customLabel || `Mis favoritos (${this.wishlistIds.length})`;
+        }
+      }
+
+      this.activeFilters.push({ type, value, label });
+      this.updateUrlWithFilters();
+      this.notifyProductsComponent();
     },
-    
-    toggleQuickView(product) {
-      this.selectedProduct = product;
-      mutations.toggleQuickView();
-    },
-    
-    changePage(page) {
-      if (page < 1 || page > this.totalPages) return;
-      this.currentPage = page;
-      this.fetchProducts();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-    
-    applyFilters(filters) {
-      console.log('Aplicando filtros recibidos:', filters);
-      this.activeFilters = filters;
-      this.activeWishlistFilter = !!filters.wishlistFilter;
-      this.currentPage = 1;
-      this.fetchProducts();
-    }
-  },
-  mounted() {
-    if (Object.keys(this.initialFilters).length > 0) {
-      this.activeFilters = this.initialFilters;
-    }
-    
-    const urlParams = this.$route.query;
-    if (urlParams) {
+
+    buildFiltersObject() {
       const filters = {};
       
-      if (urlParams.categoria) {
-        filters.categoria = urlParams.categoria;
+      // Separar filtro de wishlist de los demás
+      const wishlistFilter = this.activeFilters.find(f => f.type === 'deseados');
+      
+      if (wishlistFilter) {
+        // Si hay filtro de wishlist, enviarlo separado
+        filters.wishlistFilter = wishlistFilter.value.split(',').map(id => parseInt(id));
       }
       
-      if (urlParams.grupo_producto) {
-        filters.grupo_producto = urlParams.grupo_producto;
+      // Agregar otros filtros
+      this.activeFilters.forEach(filter => {
+        if (filter.type !== 'deseados') {
+          filters[filter.type] = filter.value;
+        }
+      });
+      
+      return filters;
+    },
+
+    applyPriceFilter() {
+      if (this.priceRange.min !== null && this.priceRange.max !== null) {
+        if (parseFloat(this.priceRange.min) > parseFloat(this.priceRange.max)) {
+          this.$toast.warning('El precio mínimo no puede ser mayor que el máximo');
+          return;
+        }
+        
+        const value = `${this.priceRange.min}-${this.priceRange.max}`;
+        const label = `$${this.priceRange.min} - $${this.priceRange.max}`;
+        this.applyFilter('precio', value, label);
+      } else {
+        this.$toast.warning('Por favor ingrese ambos valores de precio');
+      }
+    },
+
+    resetPriceFilter() {
+      this.priceRange.min = null;
+      this.priceRange.max = null;
+      this.removeFilter('precio');
+    },
+
+    removeFilter(type, value) {
+      if (type === 'precio') {
+        this.priceRange.min = null;
+        this.priceRange.max = null;
       }
       
-      if (Object.keys(filters).length > 0) {
-        this.activeFilters = filters;
+      if (value === undefined) {
+        const indices = [];
+        this.activeFilters.forEach((filter, index) => {
+          if (filter.type === type) {
+            indices.push(index);
+          }
+        });
+        
+        for (let i = indices.length - 1; i >= 0; i--) {
+          this.activeFilters.splice(indices[i], 1);
+        }
+      } else {
+        const index = this.activeFilters.findIndex(
+          filter => filter.type === type && filter.value === value
+        );
+        if (index !== -1) {
+          this.activeFilters.splice(index, 1);
+        }
       }
+      
+      this.updateUrlWithFilters();
+      this.notifyProductsComponent();
+    },
+
+    clearFilters() {
+      this.activeFilters = [];
+      this.priceRange.min = null;
+      this.priceRange.max = null;
+      this.updateUrlWithFilters();
+      this.notifyProductsComponent();
+    },
+
+    isActive(type, value) {
+      return this.activeFilters.some(
+        filter => filter.type === type && filter.value === value
+      );
+    },
+
+    updateUrlWithFilters() {
+      if (!this.$router) return;
+
+      const query = {};
+      this.activeFilters.forEach(filter => {
+        if (!query[filter.type]) {
+          query[filter.type] = [];
+        }
+        query[filter.type].push(filter.value);
+      });
+
+      Object.keys(query).forEach(key => {
+        if (Array.isArray(query[key])) {
+          query[key] = query[key].join(',');
+        }
+      });
+
+      if (JSON.stringify(this.$route.query) !== JSON.stringify(query)) {
+        this.$router.replace({ query });
+      }
+    },
+
+    loadFiltersFromUrl() {
+      if (!this.$route || !this.$route.query) return;
+      
+      const query = this.$route.query;
+      Object.keys(query).forEach(type => {
+        const values = query[type].split(',');
+        values.forEach(value => {
+          let processedValue = value;
+          
+          if (value === 'true') processedValue = true;
+          if (value === 'false') processedValue = false;
+          
+          if (!isNaN(value) && type !== 'precio') {
+            processedValue = parseInt(value);
+          }
+          
+          this.applyFilter(type, processedValue, null);
+        });
+      });
+    },
+
+    updateFiltersFromExternal(filters) {
+      this.clearFilters();
+      
+      if (filters && typeof filters === 'object') {
+        Object.keys(filters).forEach(type => {
+          const value = filters[type].value;
+          const label = filters[type].label || null;
+          this.applyFilter(type, value, label);
+        });
+      }
+    },
+
+    notifyProductsComponent() {
+      const filters = this.buildFiltersObject();
+      console.log('Enviando filtros al componente de productos:', filters);
+      
+      // Emitir evento con filtros estructurados correctamente
+      this.$root.$emit('filters-changed', filters);
     }
-    
-    this.fetchProducts();
-    
-    this.$root.$on('filters-changed', (filters) => {
-      console.log('Evento filters-changed recibido:', filters);
-      this.applyFilters(filters);
-    });
-  },
-  
-  beforeDestroy() {
-    this.$root.$off('filters-changed');
   }
 };
 </script>
