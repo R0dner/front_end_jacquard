@@ -469,6 +469,12 @@ export default {
         if (filter.type === 'deseados') {
           // Para deseados, enviar array de IDs
           filters.wishlistFilter = filter.value.split(',').map(id => parseInt(id));
+        } else if (filter.type === 'grupo_producto') {
+          // Convertir grupo_producto a grupos_de_productos para Strapi
+          filters.grupos_de_productos = parseInt(filter.value);
+        } else if (filter.type === 'precio') {
+          // Enviar precio como string para que sea parseado después
+          filters.precio = filter.value;
         } else {
           // Para otros filtros, enviar el valor directamente
           filters[filter.type] = filter.value;
