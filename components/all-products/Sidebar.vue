@@ -243,6 +243,9 @@ export default {
         
         if (!this.isUserLoggedIn) {
           this.clearWishlistFilters();
+        } else {
+          // Si hay usuario logueado, cargar su wishlist específica
+          this.loadUserWishlist(userEmail);
         }
       } catch (error) {
         console.error('Error verificando login:', error);
