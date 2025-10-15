@@ -236,8 +236,9 @@ export default {
     checkUserLogin() {
       try {
         const userEmail = localStorage.getItem('user_email');
+        const userId = localStorage.getItem('user_id');
         const userData = localStorage.getItem('user');
-        this.isUserLoggedIn = !!(userEmail && userData);
+        this.isUserLoggedIn = !!(userEmail && userData && userId);
         
         console.log('Estado de login:', this.isUserLoggedIn ? 'Logueado' : 'No logueado');
         
@@ -251,22 +252,33 @@ export default {
     },
     
     handleUserLogin(user) {
-      console.log('Usuario logueado:', user);
+      console.log('Usuario logueado en sidebar:', user);
       this.isUserLoggedIn = true;
+      
+      // Cargar wishlist desde localStorage (ya fue cargado desde el servidor en login)
       this.loadWishlist();
+      
+      // Pequeño delay para asegurar que el localStorage esté actualizado
+      setTimeout(() => {
+        this.loadWishlist();
+      }, 500);
     },
     
     handleUserLogout() {
-      console.log('Usuario deslogueado');
+      console.log('Usuario deslogueado en sidebar');
       this.isUserLoggedIn = false;
       this.wishlistIds = [];
       this.clearWishlistFilters();
       
-      // Limpiar localStorage del wishlist
+      // Limpiar localStorage del wishlist y datos de usuario
       try {
         localStorage.removeItem('wishlist');
+        localStorage.removeItem('user_email');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('user');
+        localStorage.removeItem('jwt_token');
       } catch (error) {
-        console.error('Error limpiando wishlist:', error);
+        console.error('Error limpiando datos:', error);
       }
     },
     
@@ -282,41 +294,19 @@ export default {
     
     handleWishlistUpdate() {
       if (this.isUserLoggedIn) {
+        console.log('Wishlist actualizado, recargando...');
         this.loadWishlist();
-      }
-    },
-    
-    initializeWishlistStore() {
-      if (!this.$store.state.wishlist) {
-        this.$store.registerModule('wishlist', {
-          state: {
-            items: JSON.parse(localStorage.getItem('wishlist') || '[]')
-          },
-          mutations: {
-            addToWishlist(state, product) {
-              const existingIndex = state.items.findIndex(item => item.id === product.id);
-              if (existingIndex === -1) {
-                state.items.push(product);
-                localStorage.setItem('wishlist', JSON.stringify(state.items));
-              }
-            },
-            removeFromWishlist(state, productId) {
-              state.items = state.items.filter(item => item.id !== productId);
-              localStorage.setItem('wishlist', JSON.stringify(state.items));
-            },
-            clearWishlist(state) {
-              state.items = [];
-              localStorage.setItem('wishlist', '[]');
+        
+        // Si el filtro de wishlist está activo, actualizarlo
+        if (this.isWishlistFilterActive) {
+          this.removeFilter('deseados');
+          setTimeout(() => {
+            if (this.wishlistIds.length > 0) {
+              const label = `Mis favoritos (${this.wishlistIds.length})`;
+              this.applyFilter('deseados', this.wishlistIds.join(','), label);
             }
-          },
-          getters: {
-            wishlist: state => state.items,
-            wishlistCount: state => state.items.length,
-            isInWishlist: state => productId => {
-              return state.items.some(item => item.id === productId);
-            }
-          }
-        });
+          }, 100);
+        }
       }
     },
     
@@ -330,7 +320,7 @@ export default {
         const wishlistData = localStorage.getItem('wishlist');
         const wishlistItems = wishlistData ? JSON.parse(wishlistData) : [];
         this.wishlistIds = wishlistItems.map(item => item.id);
-        console.log("Wishlist IDs cargados:", this.wishlistIds);
+        console.log("Wishlist IDs cargados:", this.wishlistIds.length, "productos");
       } catch (error) {
         console.error("Error al cargar wishlist:", error);
         this.wishlistIds = [];
