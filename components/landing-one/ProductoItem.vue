@@ -38,12 +38,6 @@ div(:class='className')
 
 <script>
 import Timer from './Timer';
-import { 
-  loadUserWishlist, 
-  addToUserWishlist, 
-  removeFromUserWishlist, 
-  isInUserWishlist 
-} from '~/utils/wishlist-helper';
 
 export default {
   name: 'ProductoUnico',
@@ -55,8 +49,7 @@ export default {
       api_url: process.env.strapiBaseUri,
       getExistPId: null,
       loadingInventory: false,
-      inventoryData: null,
-      userWishlist: []
+      inventoryData: null
     }
   },
   props: ['id', 'product', 'className'],
@@ -65,12 +58,17 @@ export default {
       return this.$store.getters.cart
     },
     wishlist() {
-      // Usar la función del helper para obtener el wishlist
-      return this.userWishlist;
+      // Obtener wishlist desde localStorage directamente
+      try {
+        const wishlistData = localStorage.getItem('wishlist');
+        return wishlistData ? JSON.parse(wishlistData) : [];
+      } catch (error) {
+        console.error('Error al leer wishlist:', error);
+        return [];
+      }
     },
     isInWishlist() {
-      // Usar la función del helper para verificar si está en wishlist
-      return isInUserWishlist(this.id);
+      return this.wishlist.some(item => item.id === this.id)
     },
     currentStock() {
       if (this.inventoryData) {
@@ -83,48 +81,33 @@ export default {
     },
     isOutOfStock() {
       return this.currentStock <= 0;
-    },
-    isUserLoggedIn() {
-      try {
-        const userEmail = localStorage.getItem('user_email');
-        return !!userEmail;
-      } catch {
-        return false;
-      }
     }
   },
   methods: {
-    loadWishlistData() {
-      // Cargar wishlist del usuario actual
-      this.userWishlist = loadUserWishlist();
-    },
-
     initializeWishlistStore() {
       if (!this.$store.state.wishlist) {
         this.$store.registerModule('wishlist', {
           state: {
-            items: loadUserWishlist()
+            items: JSON.parse(localStorage.getItem('wishlist') || '[]')
           },
           mutations: {
             addToWishlist(state, product) {
-              if (addToUserWishlist(product)) {
-                state.items = loadUserWishlist();
+              const existingIndex = state.items.findIndex(item => item.id === product.id);
+              if (existingIndex === -1) {
+                state.items.push(product);
+                localStorage.setItem('wishlist', JSON.stringify(state.items));
               }
             },
             removeFromWishlist(state, productId) {
-              if (removeFromUserWishlist(productId)) {
-                state.items = loadUserWishlist();
-              }
-            },
-            loadWishlist(state) {
-              state.items = loadUserWishlist();
+              state.items = state.items.filter(item => item.id !== productId);
+              localStorage.setItem('wishlist', JSON.stringify(state.items));
             }
           },
           getters: {
             wishlist: state => state.items,
             wishlistCount: state => state.items.length,
             isInWishlist: state => productId => {
-              return isInUserWishlist(productId);
+              return state.items.some(item => item.id === productId);
             }
           }
         });
@@ -175,16 +158,6 @@ export default {
     },
 
     toggleWishlist() {
-      // Verificar si el usuario está logueado
-      if (!this.isUserLoggedIn) {
-        this.$toast.warning("Debes iniciar sesión para agregar productos a tu lista de deseos", {
-          icon: 'fas fa-lock'
-        });
-        // Opcionalmente, redirigir al login
-        // this.$router.push('/login');
-        return;
-      }
-
       const wishlistItem = {
         id: this.id,
         name: this.product.nombre,
@@ -196,43 +169,45 @@ export default {
         stock: this.currentStock
       };
 
-      // Verificar si ya está en wishlist usando el helper
-      const isCurrentlyInWishlist = isInUserWishlist(this.id);
-
-      if (isCurrentlyInWishlist) {
-        // Remover del wishlist usando el helper
-        const removed = removeFromUserWishlist(this.id);
-        
-        if (removed) {
-          // Actualizar store si existe
-          if (this.$store.state.wishlist) {
-            this.$store.commit('removeFromWishlist', this.id);
-          }
-          
-          this.$toast.info("Removido de la lista de deseados", {
-            icon: 'fas fa-heart-broken'
-          });
-        }
-      } else {
-        // Añadir al wishlist usando el helper
-        const added = addToUserWishlist(wishlistItem);
-        
-        if (added) {
-          // Actualizar store si existe
-          if (this.$store.state.wishlist) {
-            this.$store.commit('addToWishlist', wishlistItem);
-          }
-          
-          this.$toast.success("Agregado a la lista de deseados", {
-            icon: 'fas fa-heart'
-          });
-        } else {
-          this.$toast.info("El producto ya estaba en tu lista de deseados");
-        }
+      // Obtener wishlist actual
+      let currentWishlist = [];
+      try {
+        const wishlistData = localStorage.getItem('wishlist');
+        currentWishlist = wishlistData ? JSON.parse(wishlistData) : [];
+      } catch (error) {
+        console.error('Error al leer wishlist:', error);
+        currentWishlist = [];
       }
-      
-      // Recargar el wishlist local
-      this.loadWishlistData();
+
+      const existingIndex = currentWishlist.findIndex(item => item.id === this.id);
+
+      if (existingIndex !== -1) {
+        // Remover del wishlist
+        currentWishlist.splice(existingIndex, 1);
+        localStorage.setItem('wishlist', JSON.stringify(currentWishlist));
+        
+        // Actualizar store si existe
+        if (this.$store.state.wishlist) {
+          this.$store.commit('removeFromWishlist', this.id);
+        }
+        
+        this.$toast.info("Removido de la lista de deseados", {
+          icon: 'fas fa-heart-broken'
+        });
+      } else {
+        // Añadir al wishlist
+        currentWishlist.push(wishlistItem);
+        localStorage.setItem('wishlist', JSON.stringify(currentWishlist));
+        
+        // Actualizar store si existe
+        if (this.$store.state.wishlist) {
+          this.$store.commit('addToWishlist', wishlistItem);
+        }
+        
+        this.$toast.success("Agregado a la lista de deseados", {
+          icon: 'fas fa-heart'
+        });
+      }
       
       // Emitir evento global para actualizar el filtro
       this.$root.$emit('wishlist-updated');
@@ -271,6 +246,7 @@ export default {
           return;
         }
         
+        // Primero obtener el producto completo con sus relaciones
         const productResponse = await this.$axios.get(`/api/productos/${this.id}`, {
           params: {
             'populate': ['tallas', 'colores', 'imagen_principal', 'images', 'image']
@@ -278,9 +254,11 @@ export default {
         });
         
         if (productResponse.data.data) {
+          // Actualizar el producto con las relaciones
           Object.assign(this.product, productResponse.data.data.attributes);
         }
         
+        // Luego obtener el inventario
         const response = await this.$axios.get(`/api/inventarios`, {
           params: {
             'filters[producto][id][$eq]': this.id,
@@ -310,17 +288,21 @@ export default {
         return;
       }
 
+      // Verificar si el producto tiene variantes (tallas/colores)
       const hasSizes = item.tallas?.data?.length > 0;
       const hasColors = item.colores?.data?.length > 0;
       
+      // Si el producto tiene tallas o colores, abrir el QuickView
       if (hasSizes || hasColors) {
         this.$toast.info("Por favor selecciona talla y color", {
           icon: 'fas fa-hand-pointer'
         });
+        // Abrir el QuickView en lugar de agregar directamente
         this.quickView(new Event('click'));
         return;
       }
 
+      // Si no tiene variantes, proceder con el flujo normal
       const product = [{
         id: this.id,
         name: item.nombre,
@@ -364,18 +346,6 @@ export default {
           icon: 'fas fa-cart-plus'
         });
       }
-    },
-
-    handleUserLogin() {
-      console.log('Usuario logueado - Cargando wishlist');
-      this.loadWishlistData();
-      this.$forceUpdate();
-    },
-
-    handleUserLogout() {
-      console.log('Usuario deslogueado - Limpiando wishlist');
-      this.userWishlist = [];
-      this.$forceUpdate();
     }
   },
   created() {
@@ -386,21 +356,6 @@ export default {
     }
     
     this.initializeWishlistStore();
-    this.loadWishlistData();
-  },
-  mounted() {
-    // Escuchar eventos de login/logout
-    this.$nuxt.$on('user-logged-in', this.handleUserLogin);
-    this.$nuxt.$on('user-logged-out', this.handleUserLogout);
-    
-    // Escuchar evento de actualización de wishlist
-    this.$root.$on('wishlist-updated', this.loadWishlistData);
-  },
-  beforeDestroy() {
-    // Limpiar listeners
-    this.$nuxt.$off('user-logged-in', this.handleUserLogin);
-    this.$nuxt.$off('user-logged-out', this.handleUserLogout);
-    this.$root.$off('wishlist-updated', this.loadWishlistData);
   }
 }
 </script>
