@@ -80,7 +80,7 @@
             <div class="price-range-wrap mb-3">
               <b-input-group class="mb-2">
                 <b-input-group-prepend>
-                  <span class="input-group-text">$</span>
+                  <span class="input-group-text">Bs.</span>
                 </b-input-group-prepend>
                 <b-form-input 
                   type="number" 
@@ -92,7 +92,7 @@
               </b-input-group>
               <b-input-group>
                 <b-input-group-prepend>
-                  <span class="input-group-text">$</span>
+                  <span class="input-group-text">Bs.</span>
                 </b-input-group-prepend>
                 <b-form-input 
                   type="number" 
@@ -467,16 +467,12 @@ export default {
       
       this.activeFilters.forEach(filter => {
         if (filter.type === 'deseados') {
-          // Para deseados, enviar array de IDs
           filters.wishlistFilter = filter.value.split(',').map(id => parseInt(id));
         } else if (filter.type === 'grupo_producto') {
-          // Convertir grupo_producto a grupos_de_productos para Strapi
           filters.grupos_de_productos = parseInt(filter.value);
         } else if (filter.type === 'precio') {
-          // Enviar precio como string para que sea parseado después
           filters.precio = filter.value;
         } else {
-          // Para otros filtros, enviar el valor directamente
           filters[filter.type] = filter.value;
         }
       });
@@ -493,7 +489,7 @@ export default {
         }
         
         const value = `${this.priceRange.min}-${this.priceRange.max}`;
-        const label = `$${this.priceRange.min} - $${this.priceRange.max}`;
+        const label = `Bs.${this.priceRange.min} - Bs.${this.priceRange.max}`;
         this.applyFilter('precio', value, label);
       } else {
         this.$toast.warning('Por favor ingrese ambos valores de precio');
@@ -609,7 +605,6 @@ export default {
       const filters = this.buildFiltersObject();
       console.log('Enviando filtros al componente de productos:', filters);
       
-      // Emitir evento con filtros estructurados correctamente
       this.$root.$emit('filters-changed', filters);
     }
   }
