@@ -1,3 +1,4 @@
+
 <template>
   <div class="col-lg-8 col-md-12 order-lg-2 order-1">
     <div class="products-filter-options">
@@ -45,7 +46,8 @@
           imageUrl: getProductImageUrl(product),
           precio_venta: product.precio_minimo,
           precio_oferta: product.precio_oferta_minimo,
-          en_oferta: product.tiene_oferta
+          en_oferta: product.tiene_oferta,
+          stock: product.stock_total || 0
         }"
         @clicked="toggleQuickView(product)"
         :className="`col-lg-3 col-md-6 col-sm-6 col-6 products-col-item`"
@@ -191,7 +193,7 @@ export default {
         // PASO 1: Obtener productos únicos del inventario-colores con precios
         const inventoryParams = {
           'filters[estado_producto][$eq]': 'Activo',
-          'filters[stock_actual][$gt]': 0,
+          // REMOVIDO: 'filters[stock_actual][$gt]': 0, - Ahora muestra todos los productos
           'populate': ['producto', 'producto.imagen_principal', 'producto.grupos_de_productos', 'color', 'talla'],
           'pagination[pageSize]': 1000
         };
@@ -236,6 +238,8 @@ export default {
             const precioActual = item.attributes.en_oferta && item.attributes.precio_oferta
               ? item.attributes.precio_oferta
               : item.attributes.precio_venta_sugerido;
+            
+            const stockActual = item.attributes.stock_actual || 0;
 
             if (productosMap.has(productoId)) {
               const existing = productosMap.get(productoId);
@@ -244,6 +248,9 @@ export default {
               if (precioActual < existing.precio_minimo) {
                 existing.precio_minimo = precioActual;
               }
+              
+              // Sumar stock total
+              existing.stock_total += stockActual;
               
               // Actualizar precio de oferta mínimo
               if (item.attributes.en_oferta && item.attributes.precio_oferta) {
@@ -258,7 +265,8 @@ export default {
                 attributes: producto.attributes,
                 precio_minimo: precioActual,
                 precio_oferta_minimo: item.attributes.en_oferta ? item.attributes.precio_oferta : null,
-                tiene_oferta: item.attributes.en_oferta || false
+                tiene_oferta: item.attributes.en_oferta || false,
+                stock_total: stockActual
               });
             }
           });
@@ -294,7 +302,7 @@ export default {
         const inventoryParams = {
           'filters[producto][id][$in]': productIds,
           'filters[estado_producto][$eq]': 'Activo',
-          'filters[stock_actual][$gt]': 0,
+          // REMOVIDO: 'filters[stock_actual][$gt]': 0, - Mostrar todos, incluso agotados
           'populate': ['producto', 'producto.imagen_principal', 'producto.grupos_de_productos', 'color', 'talla'],
           'pagination[pageSize]': 1000
         };
@@ -335,6 +343,8 @@ export default {
             const precioActual = item.attributes.en_oferta && item.attributes.precio_oferta
               ? item.attributes.precio_oferta
               : item.attributes.precio_venta_sugerido;
+            
+            const stockActual = item.attributes.stock_actual || 0;
 
             if (productosMap.has(productoId)) {
               const existing = productosMap.get(productoId);
@@ -342,6 +352,9 @@ export default {
               if (precioActual < existing.precio_minimo) {
                 existing.precio_minimo = precioActual;
               }
+              
+              // Sumar stock total
+              existing.stock_total += stockActual;
               
               if (item.attributes.en_oferta && item.attributes.precio_oferta) {
                 if (!existing.precio_oferta_minimo || item.attributes.precio_oferta < existing.precio_oferta_minimo) {
@@ -355,7 +368,8 @@ export default {
                 attributes: producto.attributes,
                 precio_minimo: precioActual,
                 precio_oferta_minimo: item.attributes.en_oferta ? item.attributes.precio_oferta : null,
-                tiene_oferta: item.attributes.en_oferta || false
+                tiene_oferta: item.attributes.en_oferta || false,
+                stock_total: stockActual
               });
             }
           });
