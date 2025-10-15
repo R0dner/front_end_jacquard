@@ -33,8 +33,8 @@
         </b-collapse>
       </div>
       
-      <!-- Filtro: Productos Deseados -->
-      <div class="filter-section productos-deseados-section">
+      <!-- Filtro: Productos Deseados - Solo visible si hay usuario logueado -->
+      <div class="filter-section productos-deseados-section" v-if="isUserLoggedIn">
         <h4 class="section-title">Productos Deseados</h4>
         <div v-if="wishlistIds.length === 0" class="no-wishlist-items">
           <p>No tienes productos en tu lista de deseos.</p>
@@ -49,6 +49,19 @@
             </a>
           </li>
         </ul>
+      </div>
+      
+      <!-- Mensaje de login requerido para wishlist -->
+      <div class="filter-section productos-deseados-section login-required-section" v-else>
+        <h4 class="section-title">Productos Deseados</h4>
+        <div class="login-required-message">
+          <i class="fas fa-lock mb-2"></i>
+          <p>Inicia sesión para ver tus productos favoritos</p>
+          <nuxt-link to="/login" class="btn btn-sm btn-primary">
+            <i class="fas fa-sign-in-alt mr-1"></i>
+            Iniciar Sesión
+          </nuxt-link>
+        </div>
       </div>
       
       <!-- Tipos de Producto -->
@@ -183,7 +196,8 @@ export default {
         { value: '500-1000', label: 'Bs.500 - Bs.1000' },
         { value: '1000-999999', label: 'Más de Bs.1000' }
       ],
-      wishlistIds: []
+      wishlistIds: [],
+      isUserLoggedIn: false
     };
   },
   computed: {
@@ -195,21 +209,83 @@ export default {
     this.debouncedNotifyProductsComponent = debounce(this.notifyProductsComponent, 300);
   },
   async mounted() {
+    this.checkUserLogin();
     await this.loadGruposProductos();
     this.loadProductosPopulares();
-    this.loadWishlist();
+    
+    if (this.isUserLoggedIn) {
+      this.loadWishlist();
+    }
+    
     this.loadFiltersFromUrl();
     
     this.$root.$on('update-filters', this.updateFiltersFromExternal);
-    this.$root.$on('wishlist-updated', this.loadWishlist);
+    this.$root.$on('wishlist-updated', this.handleWishlistUpdate);
+    this.$nuxt.$on('user-logged-in', this.handleUserLogin);
+    this.$nuxt.$on('user-logged-out', this.handleUserLogout);
     
     this.initializeWishlistStore();
   },
   beforeDestroy() {
     this.$root.$off('update-filters', this.updateFiltersFromExternal);
-    this.$root.$off('wishlist-updated', this.loadWishlist);
+    this.$root.$off('wishlist-updated', this.handleWishlistUpdate);
+    this.$nuxt.$off('user-logged-in', this.handleUserLogin);
+    this.$nuxt.$off('user-logged-out', this.handleUserLogout);
   },
   methods: {
+    checkUserLogin() {
+      try {
+        const userEmail = localStorage.getItem('user_email');
+        const userData = localStorage.getItem('user');
+        this.isUserLoggedIn = !!(userEmail && userData);
+        
+        console.log('Estado de login:', this.isUserLoggedIn ? 'Logueado' : 'No logueado');
+        
+        if (!this.isUserLoggedIn) {
+          this.clearWishlistFilters();
+        }
+      } catch (error) {
+        console.error('Error verificando login:', error);
+        this.isUserLoggedIn = false;
+      }
+    },
+    
+    handleUserLogin(user) {
+      console.log('Usuario logueado:', user);
+      this.isUserLoggedIn = true;
+      this.loadWishlist();
+    },
+    
+    handleUserLogout() {
+      console.log('Usuario deslogueado');
+      this.isUserLoggedIn = false;
+      this.wishlistIds = [];
+      this.clearWishlistFilters();
+      
+      // Limpiar localStorage del wishlist
+      try {
+        localStorage.removeItem('wishlist');
+      } catch (error) {
+        console.error('Error limpiando wishlist:', error);
+      }
+    },
+    
+    clearWishlistFilters() {
+      // Remover cualquier filtro de wishlist activo
+      const wishlistFilterIndex = this.activeFilters.findIndex(f => f.type === 'deseados');
+      if (wishlistFilterIndex !== -1) {
+        this.activeFilters.splice(wishlistFilterIndex, 1);
+        this.updateUrlWithFilters();
+        this.debouncedNotifyProductsComponent();
+      }
+    },
+    
+    handleWishlistUpdate() {
+      if (this.isUserLoggedIn) {
+        this.loadWishlist();
+      }
+    },
+    
     initializeWishlistStore() {
       if (!this.$store.state.wishlist) {
         this.$store.registerModule('wishlist', {
@@ -245,6 +321,11 @@ export default {
     },
     
     loadWishlist() {
+      if (!this.isUserLoggedIn) {
+        this.wishlistIds = [];
+        return;
+      }
+      
       try {
         const wishlistData = localStorage.getItem('wishlist');
         const wishlistItems = wishlistData ? JSON.parse(wishlistData) : [];
@@ -257,9 +338,23 @@ export default {
     },
     
     toggleWishlistFilter() {
+      if (!this.isUserLoggedIn) {
+        this.$toast.warning('Debes iniciar sesión para usar esta función', {
+          icon: 'fas fa-lock'
+        });
+        return;
+      }
+      
       if (this.isWishlistFilterActive) {
         this.removeFilter('deseados');
       } else {
+        if (this.wishlistIds.length === 0) {
+          this.$toast.info('No tienes productos en tu lista de deseos', {
+            icon: 'fas fa-heart'
+          });
+          return;
+        }
+        
         const label = `Mis favoritos (${this.wishlistIds.length})`;
         this.applyFilter('deseados', this.wishlistIds.join(','), label);
       }
@@ -424,6 +519,14 @@ export default {
     },
 
     applyFilter(type, value, customLabel = null) {
+      // Verificar login para filtros de wishlist
+      if (type === 'deseados' && !this.isUserLoggedIn) {
+        this.$toast.warning('Debes iniciar sesión para usar esta función', {
+          icon: 'fas fa-lock'
+        });
+        return;
+      }
+      
       const existingIndex = this.activeFilters.findIndex(
         filter => filter.type === type && filter.value === value
       );
@@ -433,7 +536,6 @@ export default {
         return;
       }
 
-      // Solo permitir un filtro del mismo tipo
       if (['precio', 'grupo_producto', 'deseados'].includes(type)) {
         const typeIndex = this.activeFilters.findIndex(filter => filter.type === type);
         if (typeIndex !== -1) {
@@ -467,6 +569,9 @@ export default {
       
       this.activeFilters.forEach(filter => {
         if (filter.type === 'deseados') {
+          if (!this.isUserLoggedIn) {
+            return; // Ignorar filtro de wishlist si no está logueado
+          }
           filters.wishlistFilter = filter.value.split(',').map(id => parseInt(id));
         } else if (filter.type === 'grupo_producto') {
           filters.grupos_de_productos = parseInt(filter.value);
@@ -573,6 +678,11 @@ export default {
       
       const query = this.$route.query;
       Object.keys(query).forEach(type => {
+        // No cargar filtros de wishlist si no está logueado
+        if (type === 'deseados' && !this.isUserLoggedIn) {
+          return;
+        }
+        
         const values = query[type].split(',');
         values.forEach(value => {
           let processedValue = value;
@@ -629,6 +739,47 @@ export default {
   --sidebar-accent-shadow: 0 4px 15px rgba(129, 147, 164, 0.3);
 }
 
+/* Nuevos estilos para la sección de login requerido */
+.login-required-section {
+  background: linear-gradient(145deg, rgba(74, 137, 220, 0.1), rgba(74, 137, 220, 0.05));
+  border: 2px dashed rgba(74, 137, 220, 0.3);
+}
+
+.login-required-message {
+  text-align: center;
+  padding: 24px 20px;
+  color: var(--sidebar-text-muted);
+}
+
+.login-required-message i {
+  font-size: 32px;
+  color: var(--sidebar-accent);
+  display: block;
+  margin-bottom: 12px;
+}
+
+.login-required-message p {
+  margin-bottom: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.login-required-message .btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.login-required-message .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 137, 220, 0.3);
+}
 /* Contenedor principal del sidebar */
 .sidebar-container {
   background: var(--sidebar-bg);
