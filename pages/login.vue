@@ -78,29 +78,25 @@ export default {
 					this.message = 'Inicio de sesión correcto.'
 					this.user = data.user
 
-					// Guardar el usuario y token en localStorage
+					// Guardar el usuario en localStorage
 					localStorage.setItem('user_email', data.user.email);
-					localStorage.setItem('user_id', data.user.id);
 					localStorage.setItem('user', JSON.stringify(data.user));
-					localStorage.setItem('jwt_token', data.jwt); // Guardar el token JWT
 					
-					// NUEVO: Recuperar wishlist del usuario desde Strapi
-					await this.loadUserWishlist(data.user.id, data.jwt);
-					
-					// Emitir evento global para notificar el login
+					// IMPORTANTE: Emitir evento global para notificar el login
 					this.$nuxt.$emit('user-logged-in', data.user);
 					
-					// Si estás usando Vuex, también actualiza el estado
+					// Si estás usando Vuex, también actualiza el estado (opcional)
 					if (this.$store && this.$store.dispatch) {
 						try {
 							await this.$store.dispatch('auth/setUser', data.user);
 							await this.$store.dispatch('auth/setToken', data.jwt);
 						} catch (storeError) {
 							console.warn('No se pudo actualizar el estado de Vuex:', storeError);
+							// Continuamos aunque falle Vuex
 						}
 					}
 
-					// Mostrar mensaje de bienvenida
+					// Mostrar mensaje moderno con SweetAlert2
 					Swal.fire({
 						title: `Bienvenido, ${this.user.username}`,
 						icon: 'success',
@@ -117,7 +113,8 @@ export default {
 						}
 					});
 
-					// Redirigir después de actualizar el estado
+					// Redirigir a la página principal después de actualizar el estado
+					// IMPORTANTE: esperar un breve momento para asegurar que el evento se procese
 					setTimeout(() => {
 						this.$router.push('/');
 					}, 100);
@@ -128,6 +125,7 @@ export default {
 					this.success = false
 					this.message = 'Error en el inicio de sesión.'
 					
+					// Mostrar error con SweetAlert2
 					Swal.fire({
 						title: 'Error de autenticación',
 						text: 'Credenciales incorrectas o problema de conexión',
@@ -140,87 +138,6 @@ export default {
 				this.errorMensaje = 'Introduzca un Documento de Identidad y Fecha de Nacimiento validas.'
 			}
 		},
-		// NUEVO MÉTODO: Cargar wishlist del usuario desde Strapi
-		async loadUserWishlist(userId, token) {
-			try {
-				console.log('Cargando wishlist para usuario:', userId);
-				
-				// Opción 1: Si tienes una colección "wishlists" en Strapi
-				const response = await this.$axios({
-					baseURL: process.env.strapiBaseUri,
-					url: '/api/wishlists',
-					method: 'get',
-					headers: {
-						Authorization: `Bearer ${token}`
-					},
-					params: {
-						'filters[user][id][$eq]': userId,
-						'populate': ['producto', 'producto.imagen_principal']
-					}
-				});
-
-				if (response.data && response.data.data) {
-					// Transformar los datos de Strapi al formato de tu wishlist local
-					const wishlistItems = response.data.data.map(item => {
-						const producto = item.attributes.producto?.data;
-						if (!producto) return null;
-
-						return {
-							id: producto.id,
-							name: producto.attributes.nombre,
-							price: producto.attributes.precio_oferta || producto.attributes.precio_venta,
-							originalPrice: producto.attributes.precio_venta,
-							onSale: producto.attributes.en_oferta || false,
-							image: this.getProductImageUrl(producto),
-							marca: producto.attributes.marca,
-							stock: producto.attributes.stock || 0
-						};
-					}).filter(item => item !== null);
-
-					// Guardar en localStorage
-					localStorage.setItem('wishlist', JSON.stringify(wishlistItems));
-					
-					console.log('Wishlist cargada:', wishlistItems.length, 'productos');
-					
-					// Emitir evento para actualizar los componentes
-					this.$root.$emit('wishlist-updated');
-					
-					return wishlistItems;
-				}
-			} catch (error) {
-				console.error('Error al cargar wishlist del usuario:', error);
-				
-				// Si hay error, inicializar wishlist vacía
-				localStorage.setItem('wishlist', '[]');
-				
-				// No mostrar error al usuario, solo log
-				return [];
-			}
-		},
-
-		// MÉTODO AUXILIAR: Obtener URL de imagen del producto
-		getProductImageUrl(producto) {
-			if (!producto) return '/images/default-product.jpg';
-			
-			const imagenData = producto.attributes?.imagen_principal?.data?.attributes;
-			
-			if (imagenData?.url) {
-				let cleanUrl = imagenData.url.trim();
-				
-				if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-					return cleanUrl;
-				}
-				
-				const baseUrl = process.env.strapiBaseUri?.endsWith('/') 
-					? process.env.strapiBaseUri.slice(0, -1) 
-					: process.env.strapiBaseUri;
-				
-				return `${baseUrl}${cleanUrl.startsWith('/') ? cleanUrl : '/' + cleanUrl}`;
-			}
-
-			return '/images/default-product.jpg';
-		},
-
 		validateForm() {
 			this.errors = {}
 			const validMail = this.validateString(this.login.email)

@@ -157,19 +157,7 @@ export default {
       event.target.src = '/images/default-product.jpg';
     },
 
-    async toggleWishlist() {
-      // Verificar si el usuario está logueado
-      const userEmail = localStorage.getItem('user_email');
-      const userId = localStorage.getItem('user_id');
-      const token = localStorage.getItem('jwt_token');
-      
-      if (!userEmail || !userId) {
-        this.$toast.warning('Debes iniciar sesión para agregar productos a favoritos', {
-          icon: 'fas fa-lock'
-        });
-        return;
-      }
-
+    toggleWishlist() {
       const wishlistItem = {
         id: this.id,
         name: this.product.nombre,
@@ -192,125 +180,40 @@ export default {
       }
 
       const existingIndex = currentWishlist.findIndex(item => item.id === this.id);
-      const isRemoving = existingIndex !== -1;
 
-      try {
-        if (isRemoving) {
-          // Remover del wishlist en el servidor
-          await this.removeFromServerWishlist(userId, this.id, token);
-          
-          // Remover del localStorage
-          currentWishlist.splice(existingIndex, 1);
-          localStorage.setItem('wishlist', JSON.stringify(currentWishlist));
-          
-          // Actualizar store si existe
-          if (this.$store.state.wishlist) {
-            this.$store.commit('removeFromWishlist', this.id);
-          }
-          
-          this.$toast.info("Removido de la lista de deseados", {
-            icon: 'fas fa-heart-broken'
-          });
-        } else {
-          // Añadir al wishlist en el servidor
-          await this.addToServerWishlist(userId, this.id, token);
-          
-          // Añadir al localStorage
-          currentWishlist.push(wishlistItem);
-          localStorage.setItem('wishlist', JSON.stringify(currentWishlist));
-          
-          // Actualizar store si existe
-          if (this.$store.state.wishlist) {
-            this.$store.commit('addToWishlist', wishlistItem);
-          }
-          
-          this.$toast.success("Agregado a la lista de deseados", {
-            icon: 'fas fa-heart'
-          });
+      if (existingIndex !== -1) {
+        // Remover del wishlist
+        currentWishlist.splice(existingIndex, 1);
+        localStorage.setItem('wishlist', JSON.stringify(currentWishlist));
+        
+        // Actualizar store si existe
+        if (this.$store.state.wishlist) {
+          this.$store.commit('removeFromWishlist', this.id);
         }
         
-        // Emitir evento global para actualizar el filtro
-        this.$root.$emit('wishlist-updated');
-        
-        // Forzar actualización del componente
-        this.$forceUpdate();
-        
-      } catch (error) {
-        console.error('Error al sincronizar wishlist:', error);
-        this.$toast.error('Error al actualizar la lista de deseados', {
-          icon: 'fas fa-exclamation-circle'
+        this.$toast.info("Removido de la lista de deseados", {
+          icon: 'fas fa-heart-broken'
         });
-      }
-    },
-
-    // NUEVO: Añadir producto al wishlist en el servidor
-    async addToServerWishlist(userId, productoId, token) {
-      try {
-        const response = await this.$axios({
-          baseURL: process.env.strapiBaseUri,
-          url: '/api/wishlists',
-          method: 'post',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          data: {
-            data: {
-              user: userId,
-              producto: productoId,
-              fecha_agregado: new Date().toISOString()
-            }
-          }
-        });
+      } else {
+        // Añadir al wishlist
+        currentWishlist.push(wishlistItem);
+        localStorage.setItem('wishlist', JSON.stringify(currentWishlist));
         
-        console.log('Producto agregado al wishlist del servidor:', response.data);
-        return response.data;
-      } catch (error) {
-        // Si el producto ya existe en el servidor, no es un error crítico
-        if (error.response?.status === 400) {
-          console.log('Producto ya existe en el wishlist del servidor');
-          return null;
+        // Actualizar store si existe
+        if (this.$store.state.wishlist) {
+          this.$store.commit('addToWishlist', wishlistItem);
         }
-        throw error;
-      }
-    },
-
-    // NUEVO: Remover producto del wishlist en el servidor
-    async removeFromServerWishlist(userId, productoId, token) {
-      try {
-        // Primero buscar el ID del registro en wishlist
-        const searchResponse = await this.$axios({
-          baseURL: process.env.strapiBaseUri,
-          url: '/api/wishlists',
-          method: 'get',
-          headers: {
-            Authorization: `Bearer ${token}`
-          },
-          params: {
-            'filters[user][id][$eq]': userId,
-            'filters[producto][id][$eq]': productoId
-          }
+        
+        this.$toast.success("Agregado a la lista de deseados", {
+          icon: 'fas fa-heart'
         });
-
-        if (searchResponse.data?.data?.length > 0) {
-          const wishlistId = searchResponse.data.data[0].id;
-          
-          // Eliminar el registro
-          await this.$axios({
-            baseURL: process.env.strapiBaseUri,
-            url: `/api/wishlists/${wishlistId}`,
-            method: 'delete',
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          
-          console.log('Producto removido del wishlist del servidor');
-        }
-      } catch (error) {
-        console.error('Error al remover del wishlist del servidor:', error);
-        throw error;
       }
+      
+      // Emitir evento global para actualizar el filtro
+      this.$root.$emit('wishlist-updated');
+      
+      // Forzar actualización del componente
+      this.$forceUpdate();
     },
 
     quickView(e) {
