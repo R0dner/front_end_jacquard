@@ -98,35 +98,37 @@
     try {
         this.isLoading = true;
         
-        // Obtener todos los pedidos sin filtros
-        const response = await this.$axios.get('/api/pedidos?populate=*&sort=fecha_pedido:desc');
+        // Si no hay usuario logueado, no cargar pedidos
+        if (!this.userEmail) {
+            console.log('No hay usuario logueado');
+            this.pedidos = [];
+            this.isLoading = false;
+            return;
+        }
+        
+        // Filtrar en el servidor usando la API de Strapi
+        const response = await this.$axios.get('/api/pedidos', {
+            params: {
+                populate: '*',
+                sort: 'fecha_pedido:desc',
+                filters: {
+                    user_email: {
+                        $eq: this.userEmail
+                    }
+                }
+            }
+        });
         
         if (response.data?.data) {
-            // Mostrar todos los pedidos para debug
-            const allPedidos = response.data.data.map(item => ({
+            this.pedidos = response.data.data.map(item => ({
                 id: item.id,
                 ...item.attributes
             }));
             
-            console.log('Todos los pedidos disponibles:', allPedidos);
-            console.log('Campo email que buscamos:', this.userEmail);
-            
-            // También imprime los emails disponibles en los pedidos
-            console.log('Emails en pedidos:', allPedidos.map(p => p.user_email || 'sin email'));
-            
-            // Filtrar por email si está disponible
-            if (this.userEmail) {
-                this.pedidos = allPedidos.filter(pedido => 
-                    pedido.user_email === this.userEmail
-                );
-            } else {
-                this.pedidos = [];
-            }
-            
-            console.log('Pedidos filtrados en cliente:', this.pedidos.length);
+            console.log('Pedidos cargados para:', this.userEmail);
+            console.log('Total de pedidos:', this.pedidos.length);
         } else {
             this.pedidos = [];
-            console.log('No se encontraron pedidos en la respuesta');
         }
     } catch (error) {
         console.error('Error al cargar pedidos:', error);
