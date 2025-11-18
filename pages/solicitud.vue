@@ -106,18 +106,12 @@
             return;
         }
         
-        // Filtrar en el servidor usando la API de Strapi
-        const response = await this.$axios.get('/api/pedidos', {
-            params: {
-                populate: '*',
-                sort: 'fecha_pedido:desc',
-                filters: {
-                    user_email: {
-                        $eq: this.userEmail
-                    }
-                }
-            }
-        });
+        // Construir la URL con filtros de Strapi v4
+        const url = `/api/pedidos?populate=*&sort=fecha_pedido:desc&filters[user_email][$eq]=${encodeURIComponent(this.userEmail)}`;
+        
+        console.log('URL de petición:', url);
+        
+        const response = await this.$axios.get(url);
         
         if (response.data?.data) {
             this.pedidos = response.data.data.map(item => ({
@@ -129,9 +123,11 @@
             console.log('Total de pedidos:', this.pedidos.length);
         } else {
             this.pedidos = [];
+            console.log('No se encontraron pedidos en la respuesta');
         }
     } catch (error) {
         console.error('Error al cargar pedidos:', error);
+        console.error('Detalles del error:', error.response?.data);
         this.pedidos = [];
     } finally {
         this.isLoading = false;
