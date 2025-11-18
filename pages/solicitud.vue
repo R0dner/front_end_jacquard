@@ -15,7 +15,18 @@
                 .row
                     .col-lg-12.col-md-12
                         h3 Mis Pedidos
-                        .order-list(v-if="pedidos.length > 0")
+                        
+                        // Mostrar mensaje si no hay usuario logueado
+                        .no-orders(v-if="!userEmail && !isLoading")
+                            p Debes iniciar sesión para ver tus pedidos.
+                            nuxt-link.btn.btn-primary(to='/login' style="margin-top: 15px;") Iniciar Sesión
+                        
+                        // Mostrar loading
+                        .no-orders(v-else-if="isLoading")
+                            p Cargando pedidos...
+                        
+                        // Mostrar pedidos si hay usuario logueado y tiene pedidos
+                        .order-list(v-else-if="userEmail && pedidos.length > 0")
                             .order-item(v-for="pedido in pedidos" :key="pedido.id")
                                 .order-header
                                     h4 Pedido #
@@ -45,173 +56,188 @@
                                             p
                                                 strong Total:
                                                 |  {{ formatCurrency(pedido.total) }}
-                        .no-orders(v-else)
-                            p(v-if="isLoading") Cargando pedidos...
-                            p(v-else) No hay pedidos registrados para este usuario.
-    </template>
-    
-    <script>
-    export default {
-        data() {
-            return {
-                pedidos: [],
-                isLoading: true,
-                userEmail: null,
-                usuario: null
-            }
-        },
-        mounted() {
-            // Verificar usuario logueado primero
-            this.verificarUsuarioLogueado();
-        },
-        methods: {
-            verificarUsuarioLogueado() {
-                if (process.client) { // Solo en el lado del cliente
-                    // Intentar obtener el email directamente (como lo guarda el login)
-                    const userEmail = localStorage.getItem('user_email');
-                    if (userEmail) {
-                        this.userEmail = userEmail;
-                        console.log('Email de usuario encontrado:', this.userEmail);
-                    }
-                    
-                    // También obtener el objeto de usuario completo
-                    const userJSON = localStorage.getItem('user');
-                    if (userJSON) {
-                        try {
-                            this.usuario = JSON.parse(userJSON);
-                            console.log('Usuario logueado:', this.usuario);
-                            
-                            // Si no tenemos email pero tenemos usuario, usar su email
-                            if (!this.userEmail && this.usuario.email) {
-                                this.userEmail = this.usuario.email;
-                            }
-                        } catch (e) {
-                            console.error('Error al parsear usuario de localStorage:', e);
-                        }
-                    }
-                    
-                    // Una vez obtenido el usuario, cargar los pedidos
-                    this.cargarPedidos();
+                        
+                        // Mostrar mensaje si usuario logueado pero sin pedidos
+                        .no-orders(v-else-if="userEmail && pedidos.length === 0")
+                            p No tienes pedidos registrados aún.
+</template>
+
+<script>
+export default {
+    data() {
+        return {
+            pedidos: [],
+            isLoading: true,
+            userEmail: null,
+            usuario: null
+        }
+    },
+    mounted() {
+        // Verificar usuario logueado primero
+        this.verificarUsuarioLogueado();
+    },
+    methods: {
+        verificarUsuarioLogueado() {
+            if (process.client) {
+                // Intentar obtener el email directamente
+                const userEmail = localStorage.getItem('user_email');
+                if (userEmail) {
+                    this.userEmail = userEmail;
+                    console.log('Email de usuario encontrado:', this.userEmail);
                 }
-            },
-            async cargarPedidos() {
-    try {
-        this.isLoading = true;
-        
-        // Si no hay usuario logueado, no cargar pedidos
-        if (!this.userEmail) {
-            console.log('No hay usuario logueado');
-            this.pedidos = [];
-            this.isLoading = false;
-            return;
-        }
-        
-        // Construir la URL con filtros de Strapi v4
-        const url = `/api/pedidos?populate=*&sort=fecha_pedido:desc&filters[user_email][$eq]=${encodeURIComponent(this.userEmail)}`;
-        
-        console.log('URL de petición:', url);
-        
-        const response = await this.$axios.get(url);
-        
-        if (response.data?.data) {
-            this.pedidos = response.data.data.map(item => ({
-                id: item.id,
-                ...item.attributes
-            }));
-            
-            console.log('Pedidos cargados para:', this.userEmail);
-            console.log('Total de pedidos:', this.pedidos.length);
-        } else {
-            this.pedidos = [];
-            console.log('No se encontraron pedidos en la respuesta');
-        }
-    } catch (error) {
-        console.error('Error al cargar pedidos:', error);
-        console.error('Detalles del error:', error.response?.data);
-        this.pedidos = [];
-    } finally {
-        this.isLoading = false;
-    }
-},
-            getProductos(productosJson) {
-                // Parsear los productos si vienen como string JSON
-                if (typeof productosJson === 'string') {
+                
+                // Obtener el objeto de usuario completo
+                const userJSON = localStorage.getItem('user');
+                if (userJSON) {
                     try {
-                        return JSON.parse(productosJson)
+                        this.usuario = JSON.parse(userJSON);
+                        console.log('Usuario logueado:', this.usuario);
+                        
+                        // Si no tenemos email pero tenemos usuario, usar su email
+                        if (!this.userEmail && this.usuario.email) {
+                            this.userEmail = this.usuario.email;
+                        }
                     } catch (e) {
-                        console.error('Error al parsear productos JSON:', e)
-                        return []
+                        console.error('Error al parsear usuario de localStorage:', e);
                     }
                 }
                 
-                // Si ya es un array u objeto, devolverlo directamente
-                return productosJson || []
-            },
-            getStatusClass(estado) {
-                // Mapea cada estado posible a una clase CSS
-                const statusMap = {
-                    'pendiente': 'pendiente',
-                    'procesando': 'en-proceso',
-                    'enviado': 'enviado',
-                    'entregado': 'entregado',
-                    'cancelado': 'cancelado'
+                // Si no hay usuario logueado, NO cargar pedidos
+                if (!this.userEmail && !this.usuario) {
+                    console.log('No hay usuario logueado');
+                    this.isLoading = false;
+                    return;
                 }
-                return statusMap[estado] || 'default'
-            },
-            getStatusLabel(estado) {
-                // Mapea cada código de estado a un texto legible
-                const statusLabels = {
-                    'pendiente': 'Pendiente',
-                    'procesando': 'En Proceso',
-                    'enviado': 'Enviado',
-                    'entregado': 'Entregado',
-                    'cancelado': 'Cancelado'
-                }
-                return statusLabels[estado] || estado
-            },
-            getMetodoPagoLabel(metodo) {
-                // Mapea los códigos de método de pago a textos legibles
-                const metodosLabels = {
-                    'transferencia_bancaria': 'Transferencia Bancaria',
-                    'pago_qr': 'Pago QR',
-                    'efectivo': 'Efectivo'
-                }
-                return metodosLabels[metodo] || metodo
-            },
-            formatDate(dateString) {
-                if (!dateString) return 'N/A'
                 
-                try {
-                    const date = new Date(dateString)
-                    return date.toLocaleString('es-ES', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })
-                } catch (e) {
-                    console.error('Error al formatear fecha:', e)
-                    return dateString
-                }
-            },
-            formatCurrency(value) {
-                if (value === undefined || value === null) return 'N/A'
+                // Si hay usuario, cargar los pedidos
+                this.cargarPedidos();
+            }
+        },
+        
+        async cargarPedidos() {
+            try {
+                this.isLoading = true;
                 
-                try {
-                    return new Intl.NumberFormat('es-BO', {
-                        style: 'currency',
-                        currency: 'BOB'
-                    }).format(value)
-                } catch (e) {
-                    console.error('Error al formatear moneda:', e)
-                    return `${value} BOB`
+                // Si no hay usuario logueado, no cargar pedidos
+                if (!this.userEmail) {
+                    console.log('No hay usuario logueado');
+                    this.pedidos = [];
+                    this.isLoading = false;
+                    return;
                 }
+                
+                // Construir la URL con filtros de Strapi v4
+                const url = `/api/pedidos?populate=*&sort=fecha_pedido:desc&filters[user_email][$eq]=${encodeURIComponent(this.userEmail)}`;
+                
+                console.log('URL de petición:', url);
+                
+                const response = await this.$axios.get(url);
+                
+                if (response.data?.data) {
+                    this.pedidos = response.data.data.map(item => ({
+                        id: item.id,
+                        ...item.attributes
+                    }));
+                    
+                    console.log('Pedidos cargados para:', this.userEmail);
+                    console.log('Total de pedidos:', this.pedidos.length);
+                } else {
+                    this.pedidos = [];
+                    console.log('No se encontraron pedidos en la respuesta');
+                }
+            } catch (error) {
+                console.error('Error al cargar pedidos:', error);
+                console.error('Detalles del error:', error.response?.data);
+                this.pedidos = [];
+            } finally {
+                this.isLoading = false;
+            }
+        },
+        
+        getProductos(productosJson) {
+            // Parsear los productos si vienen como string JSON
+            if (typeof productosJson === 'string') {
+                try {
+                    return JSON.parse(productosJson)
+                } catch (e) {
+                    console.error('Error al parsear productos JSON:', e)
+                    return []
+                }
+            }
+            
+            // Si ya es un array u objeto, devolverlo directamente
+            return productosJson || []
+        },
+        
+        getStatusClass(estado) {
+            // Mapea cada estado posible a una clase CSS
+            const statusMap = {
+                'pendiente': 'pendiente',
+                'procesando': 'en-proceso',
+                'enviado': 'enviado',
+                'entregado': 'entregado',
+                'cancelado': 'cancelado'
+            }
+            return statusMap[estado] || 'default'
+        },
+        
+        getStatusLabel(estado) {
+            // Mapea cada código de estado a un texto legible
+            const statusLabels = {
+                'pendiente': 'Pendiente',
+                'procesando': 'En Proceso',
+                'enviado': 'Enviado',
+                'entregado': 'Entregado',
+                'cancelado': 'Cancelado'
+            }
+            return statusLabels[estado] || estado
+        },
+        
+        getMetodoPagoLabel(metodo) {
+            // Mapea los códigos de método de pago a textos legibles
+            const metodosLabels = {
+                'transferencia_bancaria': 'Transferencia Bancaria',
+                'pago_qr': 'Pago QR',
+                'efectivo': 'Efectivo'
+            }
+            return metodosLabels[metodo] || metodo
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return 'N/A'
+            
+            try {
+                const date = new Date(dateString)
+                return date.toLocaleString('es-ES', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+            } catch (e) {
+                console.error('Error al formatear fecha:', e)
+                return dateString
+            }
+        },
+        
+        formatCurrency(value) {
+            if (value === undefined || value === null) return 'N/A'
+            
+            try {
+                return new Intl.NumberFormat('es-BO', {
+                    style: 'currency',
+                    currency: 'BOB'
+                }).format(value)
+            } catch (e) {
+                console.error('Error al formatear moneda:', e)
+                return `${value} BOB`
             }
         }
     }
-    </script>
-    
+}
+</script>
+
     <style scoped>
     /* Estilos base mejorados */
 .order-list {
