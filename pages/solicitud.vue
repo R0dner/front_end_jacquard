@@ -17,7 +17,7 @@
                         h3 Mis Pedidos
                         
                         // Mostrar mensaje si no hay usuario logueado
-                        .no-orders(v-if="!userEmail && !isLoading")
+                        .no-orders(v-if="!isUserLoggedIn && !isLoading")
                             p Debes iniciar sesión para ver tus pedidos.
                             nuxt-link.btn.btn-primary(to='/login' style="margin-top: 15px;") Iniciar Sesión
                         
@@ -26,7 +26,7 @@
                             p Cargando pedidos...
                         
                         // Mostrar pedidos si hay usuario logueado y tiene pedidos
-                        .order-list(v-else-if="userEmail && pedidos.length > 0")
+                        .order-list(v-else-if="isUserLoggedIn && pedidos.length > 0")
                             .order-item(v-for="pedido in pedidos" :key="pedido.id")
                                 .order-header
                                     h4 Pedido #
@@ -58,7 +58,7 @@
                                                 |  {{ formatCurrency(pedido.total) }}
                         
                         // Mostrar mensaje si usuario logueado pero sin pedidos
-                        .no-orders(v-else-if="userEmail && pedidos.length === 0")
+                        .no-orders(v-else-if="isUserLoggedIn && pedidos.length === 0")
                             p No tienes pedidos registrados aún.
 </template>
 
@@ -69,21 +69,107 @@ export default {
             pedidos: [],
             isLoading: true,
             userEmail: null,
-            usuario: null
+            usuario: null,
+            checkInterval: null // Para verificar periódicamente
         }
     },
+    
+    computed: {
+        // Computed property para verificar si hay usuario en tiempo real
+        isUserLoggedIn() {
+            if (!process.client) return false;
+            
+            const userEmail = localStorage.getItem('user_email');
+            const userJSON = localStorage.getItem('user');
+            
+            return !!(userEmail || userJSON);
+        }
+    },
+    
+    watch: {
+        // Vigilar cambios en la ruta para re-verificar usuario
+        '$route'() {
+            this.verificarUsuarioLogueado();
+        },
+        
+        // Vigilar el computed property isUserLoggedIn
+        isUserLoggedIn(newVal) {
+            if (!newVal) {
+                // Si el usuario deja de estar logueado, limpiar pedidos
+                console.log('⚠️ isUserLoggedIn cambió a false - Limpiando pedidos');
+                this.handleLogout();
+            }
+        }
+    },
+    
     mounted() {
         // Verificar usuario logueado primero
         this.verificarUsuarioLogueado();
+        
+        // Escuchar evento de cierre de sesión
+        if (process.client) {
+            window.addEventListener('user-logged-out', this.handleLogout);
+            
+            // También escuchar cambios en localStorage
+            window.addEventListener('storage', this.handleStorageChange);
+            
+            // Verificar cada 500ms si el usuario sigue logueado
+            this.checkInterval = setInterval(() => {
+                if (!this.isUserLoggedIn && this.pedidos.length > 0) {
+                    console.log('⚠️ Usuario no logueado detectado - Limpiando pedidos');
+                    this.handleLogout();
+                }
+            }, 500);
+        }
     },
+    
+    beforeDestroy() {
+        // Limpiar los listeners cuando el componente se destruye
+        if (process.client) {
+            window.removeEventListener('user-logged-out', this.handleLogout);
+            window.removeEventListener('storage', this.handleStorageChange);
+            
+            // Limpiar el intervalo
+            if (this.checkInterval) {
+                clearInterval(this.checkInterval);
+            }
+        }
+    },
+    
     methods: {
+        handleLogout() {
+            // Limpiar todos los datos del usuario
+            this.pedidos = [];
+            this.userEmail = null;
+            this.usuario = null;
+            this.isLoading = false;
+            console.log('✓ Sesión cerrada - Pedidos limpiados');
+        },
+        
+        handleStorageChange(e) {
+            // Detectar si se eliminó el user_email o user del localStorage
+            if (e.key === 'user_email' || e.key === 'user') {
+                if (!e.newValue) {
+                    // Si se borró el valor, limpiar los pedidos
+                    console.log('✓ Cambio en localStorage detectado - Limpiando pedidos');
+                    this.handleLogout();
+                }
+            }
+        },
+        
         verificarUsuarioLogueado() {
             if (process.client) {
+                // Limpiar primero para evitar datos antiguos
+                this.pedidos = [];
+                this.isLoading = true;
+                
                 // Intentar obtener el email directamente
                 const userEmail = localStorage.getItem('user_email');
                 if (userEmail) {
                     this.userEmail = userEmail;
-                    console.log('Email de usuario encontrado:', this.userEmail);
+                    console.log('✓ Email de usuario encontrado:', this.userEmail);
+                } else {
+                    this.userEmail = null;
                 }
                 
                 // Obtener el objeto de usuario completo
@@ -91,7 +177,7 @@ export default {
                 if (userJSON) {
                     try {
                         this.usuario = JSON.parse(userJSON);
-                        console.log('Usuario logueado:', this.usuario);
+                        console.log('✓ Usuario logueado:', this.usuario);
                         
                         // Si no tenemos email pero tenemos usuario, usar su email
                         if (!this.userEmail && this.usuario.email) {
@@ -99,12 +185,16 @@ export default {
                         }
                     } catch (e) {
                         console.error('Error al parsear usuario de localStorage:', e);
+                        this.usuario = null;
                     }
+                } else {
+                    this.usuario = null;
                 }
                 
                 // Si no hay usuario logueado, NO cargar pedidos
                 if (!this.userEmail && !this.usuario) {
-                    console.log('No hay usuario logueado');
+                    console.log('✗ No hay usuario logueado');
+                    this.pedidos = [];
                     this.isLoading = false;
                     return;
                 }
@@ -120,7 +210,7 @@ export default {
                 
                 // Si no hay usuario logueado, no cargar pedidos
                 if (!this.userEmail) {
-                    console.log('No hay usuario logueado');
+                    console.log('✗ No hay usuario logueado');
                     this.pedidos = [];
                     this.isLoading = false;
                     return;
@@ -129,7 +219,7 @@ export default {
                 // Construir la URL con filtros de Strapi v4
                 const url = `/api/pedidos?populate=*&sort=fecha_pedido:desc&filters[user_email][$eq]=${encodeURIComponent(this.userEmail)}`;
                 
-                console.log('URL de petición:', url);
+                console.log('→ URL de petición:', url);
                 
                 const response = await this.$axios.get(url);
                 
@@ -139,14 +229,14 @@ export default {
                         ...item.attributes
                     }));
                     
-                    console.log('Pedidos cargados para:', this.userEmail);
-                    console.log('Total de pedidos:', this.pedidos.length);
+                    console.log('✓ Pedidos cargados para:', this.userEmail);
+                    console.log('✓ Total de pedidos:', this.pedidos.length);
                 } else {
                     this.pedidos = [];
-                    console.log('No se encontraron pedidos en la respuesta');
+                    console.log('✗ No se encontraron pedidos en la respuesta');
                 }
             } catch (error) {
-                console.error('Error al cargar pedidos:', error);
+                console.error('✗ Error al cargar pedidos:', error);
                 console.error('Detalles del error:', error.response?.data);
                 this.pedidos = [];
             } finally {
@@ -237,6 +327,7 @@ export default {
     }
 }
 </script>
+
 
     <style scoped>
     /* Estilos base mejorados */
