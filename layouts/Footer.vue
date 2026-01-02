@@ -36,7 +36,7 @@ footer.footer-area
           ul.footer-contact-info
             li
               i.fas.fa-map-marker-alt
-              |  Dirección: 2750 Quadra Street Victoria, Canada
+              |  Dirección: Calle Justo Germán Varela #51 Zona La Portada
             li
               i.fas.fa-phone
               |  Teléfono:  
