@@ -161,14 +161,11 @@ export default {
       try {
         const { data } = await this.$axios({
           baseURL: process.env.strapiBaseUri,
-          url: '/api/users?populate=role',
+          url: '/api/reportes/usuarios',
           method: 'get',
           headers: this.getHeaders()
         })
-        this.usuarios = data.filter(u => {
-          const rol = u.role?.name || ''
-          return ['administrador', 'Super Admin', 'preventista'].includes(rol)
-        })
+        this.usuarios = data.data || []
       } catch (e) {
         console.error('Error cargando usuarios:', e)
       }
@@ -179,11 +176,20 @@ export default {
       this.movimientos = []
 
       try {
-        const ingresos = this.filtros.tipo !== 'salidas' ? await this.fetchIngresos() : []
-        const salidas = this.filtros.tipo !== 'ingresos' ? await this.fetchSalidas() : []
-        const todos = [...ingresos, ...salidas]
-        todos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-        this.movimientos = todos
+        const params = new URLSearchParams()
+        if (this.filtros.usuario_id) params.append('usuario_id', this.filtros.usuario_id)
+        if (this.filtros.tipo) params.append('tipo', this.filtros.tipo)
+        if (this.filtros.fecha_desde) params.append('fecha_desde', this.filtros.fecha_desde)
+        if (this.filtros.fecha_hasta) params.append('fecha_hasta', this.filtros.fecha_hasta)
+        if (this.filtros.estado) params.append('estado', this.filtros.estado)
+
+        const { data } = await this.$axios({
+          baseURL: process.env.strapiBaseUri,
+          url: `/api/reportes/movimientos?${params.toString()}`,
+          method: 'get',
+          headers: this.getHeaders()
+        })
+        this.movimientos = data.data || []
       } catch (e) {
         console.error('Error cargando datos:', e)
       } finally {
@@ -193,10 +199,6 @@ export default {
 
     buildFiltrosIngreso() {
       const params = new URLSearchParams()
-      params.append('populate[ingresado_por]', 'true')
-      params.append('populate[aprobado_por]', 'true')
-      params.append('populate[Productos]', 'true')
-
       if (this.filtros.usuario_id) {
         params.append('filters[ingresado_por][id][$eq]', this.filtros.usuario_id)
       }
@@ -215,10 +217,6 @@ export default {
 
     buildFiltrosSalida() {
       const params = new URLSearchParams()
-      params.append('populate[solicitado_por]', 'true')
-      params.append('populate[aprobado_por]', 'true')
-      params.append('populate[Productos]', 'true')
-
       if (this.filtros.usuario_id) {
         params.append('filters[solicitado_por][id][$eq]', this.filtros.usuario_id)
       }
