@@ -101,8 +101,7 @@ div
 </template>
 
 <script>
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+// jsPDF se carga desde CDN para compatibilidad con Nuxt 2 / Webpack
 
 export default {
   name: 'ReportesPage',
@@ -313,85 +312,105 @@ export default {
       this.cargarDatos()
     },
 
-    exportarPDF() {
-      const doc = new jsPDF({ orientation: 'landscape' })
-
-      // Cabecera
-      doc.setFontSize(18)
-      doc.setTextColor(40, 40, 40)
-      doc.text('JACQUARD TEX', 14, 18)
-
-      doc.setFontSize(11)
-      doc.setTextColor(100)
-      doc.text('Reporte de Movimientos de Inventario', 14, 26)
-
-      // Info de filtros
-      const hoy = new Date().toLocaleDateString('es-BO')
-      const usuarioFiltro = this.filtros.usuario_id
-        ? this.usuarios.find(u => u.id == this.filtros.usuario_id)
-        : null
-      const nombreUsuario = usuarioFiltro
-        ? `${usuarioFiltro.firstname} ${usuarioFiltro.lastname}`
-        : 'Todos'
-
-      doc.setFontSize(9)
-      doc.setTextColor(120)
-      doc.text(`Generado: ${hoy}`, 14, 33)
-      doc.text(`Usuario: ${nombreUsuario}`, 80, 33)
-      doc.text(`Tipo: ${this.filtros.tipo || 'Ingresos y Salidas'}`, 160, 33)
-      if (this.filtros.fecha_desde || this.filtros.fecha_hasta) {
-        doc.text(`Período: ${this.filtros.fecha_desde || '---'} al ${this.filtros.fecha_hasta || '---'}`, 14, 39)
-      }
-
-      // Línea separadora
-      doc.setDrawColor(200)
-      doc.line(14, 42, 283, 42)
-
-      // Resumen
-      doc.setFontSize(9)
-      doc.setTextColor(60)
-      doc.text(`Total: ${this.movimientos.length}  |  Ingresos: ${this.totalIngresos}  |  Salidas: ${this.totalSalidas}  |  Costo total ingresos: Bs. ${this.costoTotalIngresos.toFixed(2)}`, 14, 48)
-
-      // Tabla
-      const filas = this.movimientos.map((mov, i) => [
-        i + 1,
-        mov.tipo,
-        this.formatFecha(mov.fecha),
-        mov.descripcion,
-        mov.usuario,
-        mov.estado,
-        mov.total_items || '-',
-        mov.tipo === 'Ingreso'
-          ? (mov.total_costo ? `Bs. ${Number(mov.total_costo).toFixed(2)}` : '-')
-          : (mov.numero_documento || '-')
-      ])
-
-      autoTable(doc, {
-        startY: 52,
-        head: [['#', 'Tipo', 'Fecha', 'Movimiento', 'Usuario', 'Estado', 'Items', 'Costo / Doc.']],
-        body: filas,
-        styles: { fontSize: 8, cellPadding: 3 },
-        headStyles: { fillColor: [30, 30, 30], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
-        didDrawCell(data) {
-          if (data.section === 'body' && data.column.index === 1) {
-            // color tipo
-          }
+    cargarScript(src) {
+      return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) {
+          resolve()
+          return
         }
+        const script = document.createElement('script')
+        script.src = src
+        script.onload = resolve
+        script.onerror = reject
+        document.head.appendChild(script)
       })
+    },
 
-      // Pie de página
-      const pageCount = doc.internal.getNumberOfPages()
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i)
-        doc.setFontSize(8)
-        doc.setTextColor(150)
-        doc.text(`Página ${i} de ${pageCount}`, 14, doc.internal.pageSize.height - 8)
-        doc.text('Jacquard Tex — Reporte confidencial', 200, doc.internal.pageSize.height - 8)
+    async exportarPDF() {
+      try {
+        // Cargar jsPDF y autotable desde CDN (compatible con Nuxt 2 / Webpack)
+        await this.cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+        await this.cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js')
+
+        const { jsPDF } = window.jspdf
+        const doc = new jsPDF({ orientation: 'landscape' })
+
+        // Cabecera
+        doc.setFontSize(18)
+        doc.setTextColor(40, 40, 40)
+        doc.text('JACQUARD TEX', 14, 18)
+
+        doc.setFontSize(11)
+        doc.setTextColor(100)
+        doc.text('Reporte de Movimientos de Inventario', 14, 26)
+
+        // Info de filtros
+        const hoy = new Date().toLocaleDateString('es-BO')
+        const usuarioFiltro = this.filtros.usuario_id
+          ? this.usuarios.find(u => u.id == this.filtros.usuario_id)
+          : null
+        const nombreUsuario = usuarioFiltro
+          ? `${usuarioFiltro.firstname} ${usuarioFiltro.lastname}`
+          : 'Todos'
+
+        doc.setFontSize(9)
+        doc.setTextColor(120)
+        doc.text(`Generado: ${hoy}`, 14, 33)
+        doc.text(`Usuario: ${nombreUsuario}`, 80, 33)
+        doc.text(`Tipo: ${this.filtros.tipo || 'Ingresos y Salidas'}`, 160, 33)
+        if (this.filtros.fecha_desde || this.filtros.fecha_hasta) {
+          doc.text(`Período: ${this.filtros.fecha_desde || '---'} al ${this.filtros.fecha_hasta || '---'}`, 14, 39)
+        }
+
+        // Línea separadora
+        doc.setDrawColor(200)
+        doc.line(14, 42, 283, 42)
+
+        // Resumen
+        doc.setFontSize(9)
+        doc.setTextColor(60)
+        doc.text(`Total: ${this.movimientos.length}  |  Ingresos: ${this.totalIngresos}  |  Salidas: ${this.totalSalidas}  |  Costo total: Bs. ${this.costoTotalIngresos.toFixed(2)}`, 14, 48)
+
+        // Tabla
+        const filas = this.movimientos.map((mov, i) => [
+          i + 1,
+          mov.tipo,
+          this.formatFecha(mov.fecha),
+          mov.descripcion,
+          mov.usuario,
+          mov.estado,
+          mov.total_items || '-',
+          mov.tipo === 'Ingreso'
+            ? (mov.total_costo ? `Bs. ${Number(mov.total_costo).toFixed(2)}` : '-')
+            : (mov.numero_documento || '-')
+        ])
+
+        doc.autoTable({
+          startY: 52,
+          head: [['#', 'Tipo', 'Fecha', 'Movimiento', 'Usuario', 'Estado', 'Items', 'Costo / Doc.']],
+          body: filas,
+          styles: { fontSize: 8, cellPadding: 3 },
+          headStyles: { fillColor: [30, 30, 30], textColor: 255, fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [245, 245, 245] }
+        })
+
+        // Pie de página
+        const pageCount = doc.internal.getNumberOfPages()
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i)
+          doc.setFontSize(8)
+          doc.setTextColor(150)
+          doc.text(`Página ${i} de ${pageCount}`, 14, doc.internal.pageSize.height - 8)
+          doc.text('Jacquard Tex — Reporte confidencial', 200, doc.internal.pageSize.height - 8)
+        }
+
+        const nombreArchivo = `reporte_${usuarioFiltro ? nombreUsuario.replace(/ /g, '_') : 'todos'}_${hoy.replace(/\//g, '-')}.pdf`
+        doc.save(nombreArchivo)
+
+      } catch (e) {
+        console.error('Error generando PDF:', e)
+        alert('Hubo un error al generar el PDF. Intenta de nuevo.')
       }
-
-      const nombreArchivo = `reporte_${usuarioFiltro ? nombreUsuario.replace(/ /g, '_') : 'todos'}_${hoy.replace(/\//g, '-')}.pdf`
-      doc.save(nombreArchivo)
     }
   }
 }
