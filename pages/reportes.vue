@@ -76,9 +76,8 @@ div
               th Tipo
               th Fecha
               th Movimiento
-              th Usuario
               th Estado
-              th Items
+              th(v-if="hayItems") Items
               th Costo / Doc.
           tbody
             tr(v-for="(mov, i) in movimientos" :key="mov.id + mov.tipo")
@@ -87,10 +86,9 @@ div
                 span.badge(:class="mov.tipo === 'Ingreso' ? 'badge-ingreso' : 'badge-salida'") {{ mov.tipo }}
               td {{ formatFecha(mov.fecha) }}
               td {{ mov.descripcion }}
-              td {{ mov.usuario }}
               td
                 span.estado(:class="estadoClase(mov.estado)") {{ mov.estado }}
-              td {{ mov.total_items || '-' }}
+              td(v-if="hayItems") {{ mov.total_items || '-' }}
               td {{ mov.tipo === 'Ingreso' ? (mov.total_costo ? 'Bs. ' + Number(mov.total_costo).toFixed(2) : '-') : (mov.numero_documento || '-') }}
 
       .empty-state(v-if="!cargando && movimientos.length === 0")
@@ -133,6 +131,9 @@ export default {
       return this.movimientos
         .filter(m => m.tipo === 'Ingreso' && m.total_costo)
         .reduce((acc, m) => acc + Number(m.total_costo), 0)
+    },
+    hayItems() {
+      return this.movimientos.some(m => m.total_items && m.total_items > 0)
     }
   },
 
@@ -370,22 +371,31 @@ export default {
         doc.text(`Total: ${this.movimientos.length}  |  Ingresos: ${this.totalIngresos}  |  Salidas: ${this.totalSalidas}  |  Costo total: Bs. ${this.costoTotalIngresos.toFixed(2)}`, 14, 48)
 
         // Tabla
-        const filas = this.movimientos.map((mov, i) => [
-          i + 1,
-          mov.tipo,
-          this.formatFecha(mov.fecha),
-          mov.descripcion,
-          mov.usuario,
-          mov.estado,
-          mov.total_items || '-',
-          mov.tipo === 'Ingreso'
-            ? (mov.total_costo ? `Bs. ${Number(mov.total_costo).toFixed(2)}` : '-')
-            : (mov.numero_documento || '-')
-        ])
+        const conItems = this.hayItems
+        const filas = this.movimientos.map((mov, i) => {
+          const fila = [
+            i + 1,
+            mov.tipo,
+            this.formatFecha(mov.fecha),
+            mov.descripcion,
+            mov.estado,
+          ]
+          if (conItems) fila.push(mov.total_items || '-')
+          fila.push(
+            mov.tipo === 'Ingreso'
+              ? (mov.total_costo ? `Bs. ${Number(mov.total_costo).toFixed(2)}` : '-')
+              : (mov.numero_documento || '-')
+          )
+          return fila
+        })
+
+        const cabeceras = ['#', 'Tipo', 'Fecha', 'Movimiento', 'Estado']
+        if (conItems) cabeceras.push('Items')
+        cabeceras.push('Costo / Doc.')
 
         doc.autoTable({
           startY: 52,
-          head: [['#', 'Tipo', 'Fecha', 'Movimiento', 'Usuario', 'Estado', 'Items', 'Costo / Doc.']],
+          head: [cabeceras],
           body: filas,
           styles: { fontSize: 8, cellPadding: 3 },
           headStyles: { fillColor: [30, 30, 30], textColor: 255, fontStyle: 'bold' },
