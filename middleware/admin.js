@@ -1,14 +1,12 @@
-export default function ({ store, redirect }) {
+export default function ({ redirect }) {
   const user = JSON.parse(localStorage.getItem('user') || 'null')
-  
-  if (!user) {
-    return redirect('/')
-  }
+  if (!user) return redirect('/')
 
-  const role = user.role?.name || user.roleName || ''
-  const allowed = ['administrador', 'Super Admin']
+  const tipo = user.tipo_usuario || ''
+  const rol = user.role?.name || ''
+  const allowed = ['Administrador', 'administrador', 'Super Admin']
 
-  if (!allowed.includes(role)) {
+  if (!allowed.includes(tipo) && !allowed.includes(rol)) {
     return redirect('/')
   }
 }

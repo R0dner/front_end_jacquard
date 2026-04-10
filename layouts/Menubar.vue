@@ -170,13 +170,16 @@ export default {
 
         // ✅ NUEVO: verifica si el usuario logueado es administrador o Super Admin
         esAdmin() {
-            try {
-                if (!this.user) return false
-                const rol = this.user.role?.name || ''
-                return ['administrador', 'Super Admin'].includes(rol)
-            } catch {
-                return false
-            }
+        try {
+            if (!this.user) return false
+            // Usar tipo_usuario que ya viene en el objeto guardado
+            const tipo = this.user.tipo_usuario || ''
+            const rol = this.user.role?.name || ''
+            return ['Administrador', 'administrador', 'Super Admin'].includes(tipo) ||
+                ['administrador', 'Super Admin'].includes(rol)
+        } catch {
+            return false
+        }
         }
     },
     methods: {
