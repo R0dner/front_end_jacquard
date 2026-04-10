@@ -61,82 +61,75 @@ export default {
 			}
 		},
 		async loginForm() {
-			if (this.login.email != '' && this.login.password != '') {
-				this.errorMensaje = ''
-				try {
-					const { data } = await this.$axios({
-						baseURL: process.env.strapiBaseUri,
-						url: '/api/auth/local',
-						method: 'post',
-						data: {
-							identifier: this.login.email.trim(),
-							password: this.login.password.trim()
-						}
-					})
-					console.log(data)
-					this.success = true
-					this.message = 'Inicio de sesión correcto.'
-					this.user = data.user
-
-					// Guardar el usuario en localStorage
-					localStorage.setItem('user_email', data.user.email);
-					localStorage.setItem('user', JSON.stringify(data.user));
-					
-					// IMPORTANTE: Emitir evento global para notificar el login
-					this.$nuxt.$emit('user-logged-in', data.user);
-					
-					// Si estás usando Vuex, también actualiza el estado (opcional)
-					if (this.$store && this.$store.dispatch) {
-						try {
-							await this.$store.dispatch('auth/setUser', data.user);
-							await this.$store.dispatch('auth/setToken', data.jwt);
-						} catch (storeError) {
-							console.warn('No se pudo actualizar el estado de Vuex:', storeError);
-							// Continuamos aunque falle Vuex
-						}
-					}
-
-					// Mostrar mensaje moderno con SweetAlert2
-					Swal.fire({
-						title: `Bienvenido, ${this.user.username}`,
-						icon: 'success',
-						background: '#1e1e2f',
-						color: '#ffffff',
-						showConfirmButton: false,
-						timer: 1500,
-						timerProgressBar: true,
-						position: 'top-end',
-						toast: true,
-						width: '300px',
-						customClass: {
-							popup: 'modern-toast',
-						}
-					});
-
-					// Redirigir a la página principal después de actualizar el estado
-					// IMPORTANTE: esperar un breve momento para asegurar que el evento se procese
-					setTimeout(() => {
-						this.$router.push('/');
-					}, 100);
-
-				} catch (error) {
-					console.error(error);
-					this.errorMensaje = 'Error.'
-					this.success = false
-					this.message = 'Error en el inicio de sesión.'
-					
-					// Mostrar error con SweetAlert2
-					Swal.fire({
-						title: 'Error de autenticación',
-						text: 'Credenciales incorrectas o problema de conexión',
-						icon: 'error',
-						background: '#1e1e2f',
-						color: '#ffffff',
-					});
+		if (this.login.email != '' && this.login.password != '') {
+			this.errorMensaje = ''
+			try {
+			const { data } = await this.$axios({
+				baseURL: process.env.strapiBaseUri,
+				url: '/api/auth/local',
+				method: 'post',
+				data: {
+				identifier: this.login.email.trim(),
+				password: this.login.password.trim()
 				}
-			} else {
-				this.errorMensaje = 'Introduzca un Documento de Identidad y Fecha de Nacimiento validas.'
+			})
+		
+			// ✅ NUEVO: obtener el rol completo del usuario
+			const { data: userConRol } = await this.$axios({
+				baseURL: process.env.strapiBaseUri,
+				url: '/api/users/me?populate=role',
+				method: 'get',
+				headers: { Authorization: `Bearer ${data.jwt}` }
+			})
+		
+			// Guardar usuario con rol incluido
+			const usuarioCompleto = { ...data.user, role: userConRol.role, jwt: data.jwt }
+			localStorage.setItem('user', JSON.stringify(usuarioCompleto))
+			localStorage.setItem('user_email', data.user.email)
+		
+			this.success = true
+			this.message = 'Inicio de sesión correcto.'
+			this.user = usuarioCompleto
+		
+			this.$nuxt.$emit('user-logged-in', usuarioCompleto)
+		
+			if (this.$store && this.$store.dispatch) {
+				try {
+				await this.$store.dispatch('auth/setUser', usuarioCompleto)
+				await this.$store.dispatch('auth/setToken', data.jwt)
+				} catch (storeError) {
+				console.warn('No se pudo actualizar Vuex:', storeError)
+				}
 			}
+		
+			Swal.fire({
+				title: `Bienvenido, ${this.user.username}`,
+				icon: 'success',
+				background: '#1e1e2f',
+				color: '#ffffff',
+				showConfirmButton: false,
+				timer: 1500,
+				timerProgressBar: true,
+				position: 'top-end',
+				toast: true,
+				width: '300px',
+			})
+		
+			setTimeout(() => { this.$router.push('/') }, 100)
+		
+			} catch (error) {
+			console.error(error)
+			this.success = false
+			this.message = 'Error en el inicio de sesión.'
+			Swal.fire({
+				title: 'Error de autenticación',
+				text: 'Credenciales incorrectas o problema de conexión',
+				icon: 'error',
+				background: '#1e1e2f',
+				color: '#ffffff',
+			})
+			}
+		}
 		},
 		validateForm() {
 			this.errors = {}

@@ -14,12 +14,11 @@
                             <b-collapse class="collapse navbar-collapse" id="navbarSupportedContent" is-nav>
                                 
                                 <ul class="navbar-nav mx-auto">
-                                    <!-- Enlaces del menú con índices para animación -->
                                     <li class="nav-item" :style="{'--item-index': 0}">
                                         <nuxt-link to="/" class="nav-link" exact @click.native="navigateTo('/')">Inicio</nuxt-link>
                                     </li>
                                     <li class="nav-item" :style="{'--item-index': 1}">
-                                        <nuxt-link to="/solicitud" class="nav-link" @click.native="navigateTo('/solicitud')">Tus Pedidos </nuxt-link>
+                                        <nuxt-link to="/solicitud" class="nav-link" @click.native="navigateTo('/solicitud')">Tus Pedidos</nuxt-link>
                                     </li>
                                     <li class="nav-item" :style="{'--item-index': 2}">
                                         <nuxt-link to="/products" class="nav-link" @click.native="navigateTo('/products')">Galeria de productos</nuxt-link>
@@ -36,19 +35,24 @@
                                     <li class="nav-item" :style="{'--item-index': 4}">
                                         <nuxt-link to="/contact" class="nav-link" @click.native="navigateTo('/contact')">Contactanos</nuxt-link>
                                     </li>
+
+                                    <!-- ✅ NUEVO: Link de Reportes, solo visible para administrador y Super Admin -->
+                                    <li v-if="esAdmin" class="nav-item" :style="{'--item-index': 5}">
+                                        <nuxt-link to="/reportes" class="nav-link nav-link-reportes" @click.native="navigateTo('/reportes')">
+                                            <i class="fas fa-chart-bar" style="margin-right: 5px; font-size: 12px;"></i>
+                                            Reportes
+                                        </nuxt-link>
+                                    </li>
                                 </ul>
 
                                 <div class="others-option">
-                                    <!-- Ícono de login con dropdown moderno -->
                                     <div class="option-item dropdown">
                                         <a href="#" class="auth-link dropdown-toggle" @click.prevent="toggleMobileDropdown($event)">
                                             <i class="fas fa-user"></i>
-                                            <!-- Solo mostrar información del usuario si está logueado -->
                                             <span v-if="user" class="user-text">
                                                 <span class="username">{{ user.username }}</span>
                                                 <i class="fas fa-chevron-down"></i>
                                             </span>
-                                            <!-- Eliminamos el texto "Iniciar sesión" cuando no hay usuario -->
                                         </a>
                                         <ul class="dropdown-menu user-dropdown-menu">
                                             <li class="nav-item" v-if="!user">
@@ -94,6 +98,12 @@
                     <i class="fas fa-shopping-bag"></i>
                     <span class="count">{{cart.length}}</span>
                 </a>
+            </div>
+            <!-- ✅ NUEVO: ícono de reportes en móvil, solo para admins -->
+            <div v-if="esAdmin" class="option-item">
+                <nuxt-link to="/reportes" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                </nuxt-link>
             </div>
             <div class="option-item">
                 <a href="#" class="auth-link" @click.prevent="toggleMobileDropdown($event)">
@@ -148,16 +158,25 @@ export default {
         });
     },
     beforeDestroy() {
-
         document.removeEventListener('click', this.closeDropdowns);
         window.removeEventListener('scroll', this.handleScroll);
         clearInterval(this.checkLocalStorageInterval);
-        
         this.$nuxt.$off('user-logged-in', this.updateUser);
     },
     computed: {
         cart() {
             return this.$store.getters.cart;
+        },
+
+        // ✅ NUEVO: verifica si el usuario logueado es administrador o Super Admin
+        esAdmin() {
+            try {
+                if (!this.user) return false
+                const rol = this.user.role?.name || ''
+                return ['administrador', 'Super Admin'].includes(rol)
+            } catch {
+                return false
+            }
         }
     },
     methods: {
@@ -170,7 +189,6 @@ export default {
         },
         toggleMobileMenu() {
             this.isMobileMenuOpen = !this.isMobileMenuOpen;
-
             if (this.isMobileMenuOpen) {
                 document.body.classList.add('menu-open');
             } else {
@@ -209,7 +227,6 @@ export default {
                 const dropdownMenu = dropdown.querySelector('.dropdown-menu');
                 const isOpen = dropdownMenu.classList.contains('show');
                 
-                // Cerrar todos los dropdowns primero
                 document.querySelectorAll('.dropdown-menu').forEach(menu => {
                     menu.classList.remove('show');
                     const toggleButton = menu.previousElementSibling;
@@ -234,7 +251,6 @@ export default {
         closeAllDropdowns() {
             document.querySelectorAll('.dropdown-menu').forEach(menu => {
                 menu.classList.remove('show');
-                
                 const icon = menu.previousElementSibling?.querySelector('.fa-chevron-down');
                 if (icon) {
                     icon.classList.remove('rotate-icon');
@@ -298,7 +314,6 @@ export default {
                 const storedUser = localStorage.getItem('user');
                 if (storedUser) {
                     this.user = JSON.parse(storedUser);
-                    console.log('Usuario cargado desde localStorage:', this.user);
                 } else {
                     this.user = null;
                 }
@@ -315,25 +330,17 @@ export default {
             const newUserString = JSON.stringify(currentUser);
             
             if (currentUserString !== newUserString) {
-                console.log('Detectado cambio en localStorage, actualizando usuario');
                 this.user = currentUser;
             }
         },
-        // Método para actualizar el usuario cuando se recibe el evento
         updateUser(newUser) {
-            console.log('Evento user-logged-in recibido:', newUser);
             this.user = newUser;
         },
         logout() {
-            // Eliminar el usuario del localStorage y del estado
             localStorage.removeItem('user');
             this.user = null;
-            
-            // Emitir evento para otros componentes
             this.$nuxt.$emit('user-logged-out');
-            
             this.$router.push('/'); 
-            
             document.querySelectorAll('.dropdown-menu.show').forEach(el => {
                 el.classList.remove('show');
             });
@@ -343,3 +350,21 @@ export default {
     }
 };
 </script>
+
+<style scoped>
+/* Estilo del link de Reportes en el navbar desktop */
+.nav-link-reportes {
+    color: #e05c2e !important;
+    font-weight: 600;
+    border: 1px solid rgba(224, 92, 46, 0.3);
+    border-radius: 4px;
+    padding: 5px 12px !important;
+    transition: all 0.2s ease;
+}
+
+.nav-link-reportes:hover {
+    background: #e05c2e;
+    color: #fff !important;
+    border-color: #e05c2e;
+}
+</style>
